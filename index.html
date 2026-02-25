@@ -110,6 +110,7 @@
         .status-ok { background-color: #E8F5E9; color: var(--success-status); border: 1px solid var(--success-status); }
         .status-warning { background-color: #FFF3E0; color: var(--warning-status); border: 1px solid var(--warning-status); }
         .status-error { background-color: #FFEBEE; color: var(--error-status); border: 1px solid var(--error-status); }
+        .status-neutral { background-color: #E3F2FD; color: #1565C0; border: 1px solid #1565C0; }
 
         /* MODAL */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; }
@@ -117,6 +118,7 @@
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; border-bottom: 2px solid var(--border-color); padding-bottom: 1rem; }
         .close { font-size: 2rem; cursor: pointer; color: var(--text-light); transition: color 0.2s ease; }
         .close:hover { color: var(--accent-red); }
+        .modal-body p { margin-bottom: 0.8rem; font-size: 1.1rem; }
 
         /* BUTTONS & FORMS */
         button { padding: 0.6rem 1rem; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem; font-weight: 600; transition: all 0.3s ease; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.2rem; }
@@ -138,7 +140,7 @@
         /* --- STYLE DO DRUKU --- */
         @media print {
             body { background: white; color: black; }
-            .sidebar, .header, .footer, .btn-primary, .btn-secondary, form, #form-shipment-container, #form-components-container, #form-incoming-container, #form-production-container { display: none !important; }
+            .sidebar, .header, .footer, .btn-primary, .btn-secondary, form, #form-shipment-container, #form-components-container, #form-incoming-container, #form-production-container, #form-adjustments-container { display: none !important; }
             .main-content { margin-left: 0; padding: 0; }
             .content { padding: 0; }
             .section { box-shadow: none; border: 1px solid #ccc; margin-bottom: 1rem; page-break-inside: avoid; }
@@ -188,6 +190,7 @@
                     <li><a href="#" onclick="switchTab('tab-dashboard')" class="nav-item active">📊 Dashboard</a></li>
                     <li><a href="#" onclick="switchTab('tab-inventory')" class="nav-item">📦 Inwentarz</a></li>
                     <li><a href="#" onclick="switchTab('tab-shipments')" class="nav-item">🚚 Dostawy</a></li>
+                    <li><a href="#" onclick="switchTab('tab-adjustments')" class="nav-item">🛠️ Regulacja Lamp</a></li>
                     <li id="nav-history"><a href="#" onclick="switchTab('tab-history')" class="nav-item">📋 Historia</a></li>
                     <li><a href="#" onclick="switchTab('tab-components')" class="nav-item">⚡ Komponenty</a></li>
                     <li id="nav-reports"><a href="#" onclick="switchTab('tab-reports')" class="nav-item">🔧 Produkcja</a></li>
@@ -216,7 +219,8 @@
                     <div class="stats-bar">
                         <div class="stat-card"><h3>Razem Downlighty</h3><div class="value" data-stat="total">0</div></div>
                         <div class="stat-card"><h3>Gotowe do Wysyłki</h3><div class="value" data-stat="ready">0</div></div>
-                        <div class="stat-card"><h3>Planowane Dostawy</h3><div class="value" data-stat="shipments">0</div></div>
+                        <div class="stat-card"><h3>Potwierdzone Dostawy</h3><div class="value" data-stat="shipments">0</div></div>
+                        <div class="stat-card"><h3>Oprawy w Serwisie</h3><div class="value" data-stat="service">0</div></div>
                     </div>
                     <div class="section">
                         <div class="section-header"><h2>Stany Downlightów - Gotowe do Wysyłki</h2></div>
@@ -238,6 +242,16 @@
                             <table>
                                 <thead><tr><th>Produkt</th><th>SKU</th><th>Gotowe</th><th>W Montażu</th><th>Razem</th><th>Status</th></tr></thead>
                                 <tbody id="products-table"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <div class="section-header"><h2>Oprawy w Serwisie</h2></div>
+                        <div class="section-content">
+                            <table>
+                                <thead><tr><th>Produkt</th><th>Ilość w serwisie</th></tr></thead>
+                                <tbody id="service-table"></tbody>
                             </table>
                         </div>
                     </div>
@@ -264,12 +278,22 @@
                     </div>
 
                     <div class="section">
-                        <div class="section-header"><h2>Dostawy do klientów - Szczegóły</h2><div class="badge" id="shipments-count">0 dostaw</div></div>
+                        <div class="section-header"><h2 style="color: #CD853F;">⏳ Dostawy Oczekujące (Niepotwierdzona Data)</h2></div>
+                        <div class="section-content">
+                            <table>
+                                <thead><tr><th>Data Wstępna</th><th>Miejsce</th><th>Firma Odbierająca</th><th>Sztuk</th><th>Kąty</th><th>Status</th><th class="admin-only-col">Akcja</th></tr></thead>
+                                <tbody id="shipments-unconfirmed-table"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <div class="section-header"><h2>🚚 Dostawy Potwierdzone i Zrealizowane</h2><div class="badge" id="shipments-count">0 dostaw</div></div>
                         <div class="section-content">
                             <button class="btn-primary" onclick="window.print()" style="margin-bottom: 1.5rem;">📥 Wydrukuj listę dostaw</button>
                             <table>
-                                <thead><tr><th>Data</th><th>Miejsce</th><th>Razem sztuk</th><th>Status</th><th id="col-action">Akcja</th></tr></thead>
-                                <tbody id="shipments-table"></tbody>
+                                <thead><tr><th>Data Potwierdzona</th><th>Miejsce</th><th>Firma Odbierająca</th><th>Sztuk</th><th>Kąty</th><th>Status</th><th class="admin-only-col">Akcja</th></tr></thead>
+                                <tbody id="shipments-confirmed-table"></tbody>
                             </table>
                         </div>
                     </div>
@@ -279,8 +303,9 @@
                         <div class="section-content">
                             <form id="shipmentForm">
                                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
-                                    <div class="form-group"><label>Data</label><input type="date" name="date" required></div>
+                                    <div class="form-group"><label>Data Wstępna</label><input type="date" name="date" required></div>
                                     <div class="form-group"><label>Miejsce</label><input type="text" name="location" required></div>
+                                    <div class="form-group"><label>Firma Odbierająca</label><input type="text" name="company" placeholder="np. DPD, Własna" required></div>
                                     <div class="form-group"><label>22°-15W</label><input type="number" name="p1" value="0" min="0"></div>
                                     <div class="form-group"><label>37°-15W</label><input type="number" name="p2" value="0" min="0"></div>
                                     <div class="form-group"><label>58°-15W</label><input type="number" name="p3" value="0" min="0"></div>
@@ -290,6 +315,33 @@
                                 <div style="margin-top: 1.5rem; display: flex; gap: 1rem;">
                                     <button type="submit" class="btn-primary">📤 Dodaj Dostawę</button>
                                 </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="tab-adjustments" class="tab-content">
+                    <h2 style="margin-bottom: 1.5rem; color: var(--text-dark);">Regulacja Lamp (Wyjazdy)</h2>
+                    
+                    <div class="section">
+                        <div class="section-header"><h2>Lista zaplanowanych regulacji</h2></div>
+                        <div class="section-content">
+                            <table>
+                                <thead><tr><th>Data Regulacji</th><th>Miejscowość</th><th class="admin-only-col">Akcja</th></tr></thead>
+                                <tbody id="adjustments-table"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div id="form-adjustments-container" class="section">
+                        <div class="section-header"><h2>➕ Zaplanuj Nową Regulację</h2></div>
+                        <div class="section-content">
+                            <form id="adjustmentForm">
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
+                                    <div class="form-group"><label>Data Wyjazdu</label><input type="date" name="adj_date" required></div>
+                                    <div class="form-group"><label>Miejscowość</label><input type="text" name="adj_location" required placeholder="np. Warszawa"></div>
+                                </div>
+                                <div style="margin-top: 1.5rem;"><button type="submit" class="btn-primary">💾 Dodaj Regulację</button></div>
                             </form>
                         </div>
                     </div>
@@ -376,10 +428,10 @@
     <div id="modal" class="modal">
         <div class="modal-dialog">
             <div class="modal-header">
-                <h2 id="modal-title" style="margin: 0; color: var(--text-dark);">Edycja</h2>
+                <h2 id="modal-title" style="margin: 0; color: var(--text-dark);">...</h2>
                 <span class="close" onclick="closeModal()">&times;</span>
             </div>
-            <div id="modal-content"></div>
+            <div id="modal-content" class="modal-body"></div>
         </div>
     </div>
 
@@ -394,10 +446,10 @@
         // ===== KONFIGURACJA UPRAWNIEŃ (RÓL) =====
         // ==========================================
         const ROLES = {
-            'b.hajduk@masterlight.pl': 'admin',      // Ty (Pełny dostęp)
-            'm.olejnik@masterlight.pl': 'viewer',         // Szef 1 (Tylko podgląd + PDF)
-            'szef2@masterlight.pl': 'viewer',         // Szef 2 (Tylko podgląd + PDF)
-            'd.lewandowska@masterlight.pl': 'worker'      // Pracownik
+            'b.hajduk@masterlight.pl': 'admin',      
+            'm.olejnik@masterlight.pl': 'viewer',         
+            'szef2@masterlight.pl': 'viewer',         
+            'd.lewandowska@masterlight.pl': 'worker'      
         };
 
         let currentUserEmail = '';
@@ -457,9 +509,12 @@
                 document.getElementById('form-shipment-container').style.display = 'none';
                 document.getElementById('form-incoming-container').style.display = 'none';
                 document.getElementById('form-components-container').style.display = 'none';
+                document.getElementById('form-production-container').style.display = 'none';
+                document.getElementById('form-adjustments-container').style.display = 'none';
                 document.getElementById('nav-history').style.display = 'none';
-                document.getElementById('nav-reports').style.display = 'none'; // Szef nie widzi produkcji
+                document.getElementById('nav-reports').style.display = 'none';
                 document.querySelectorAll('.editable').forEach(el => el.classList.remove('editable'));
+                document.querySelectorAll('.admin-only-col').forEach(el => el.style.display = 'none');
             }
             
             if (currentRole === 'worker') {
@@ -490,6 +545,7 @@
                 this.products = [];
                 this.shipments = [];
                 this.history = [];
+                this.adjustments = [];
                 this.components = { ps_raw: 0, clips_normal: 0, clips_pass: 0 };
             }
 
@@ -508,6 +564,9 @@
                 const { data: ships } = await db.from('shipments').select('*').order('date');
                 if (ships) this.shipments = ships;
 
+                const { data: adjs } = await db.from('adjustments').select('*').order('date');
+                if (adjs) this.adjustments = adjs;
+
                 const { data: hist } = await db.from('history').select('*').order('created_at', { ascending: false }).limit(20);
                 if (hist) {
                     this.history = hist.map(h => ({ 
@@ -516,14 +575,13 @@
                     }));
                 }
 
-                // AKTUALIZACJA PRZESZŁYCH DAT NA DZISIEJSZE
+                // AKTUALIZACJA PRZESZŁYCH DAT NA DZISIEJSZE DLA NIEPOTWIERDZONYCH LUB NIEUKOŃCZONYCH
                 const todayObj = new Date();
                 const yyyy = todayObj.getFullYear();
                 const mm = String(todayObj.getMonth() + 1).padStart(2, '0');
                 const dd = String(todayObj.getDate()).padStart(2, '0');
                 const todayFormatted = `${yyyy}-${mm}-${dd}`;
 
-                let needsDbUpdate = false;
                 for (let s of this.shipments) {
                     if (s.status !== 'completed' && s.date < todayFormatted) {
                         if (currentRole === 'admin' || currentRole === 'worker') {
@@ -569,19 +627,46 @@
                 }
             }
 
+            // REGULACJA LAMP
+            async addAdjustment(date, location) {
+                if (currentRole === 'viewer') return;
+                await db.from('adjustments').insert([{ date, location }]);
+                this.addHistory('Dodano wyjazd serwisowy', `${location} - ${date}`);
+            }
+
+            async deleteAdjustment(id) {
+                if (currentRole !== 'admin') return;
+                await db.from('adjustments').delete().eq('id', id);
+                this.addHistory('Usunięto wyjazd serwisowy', `Usunięto z bazy`);
+            }
+
             // DOSTAWA DO KLIENTA (ZAPLANOWANIE)
             async addShipment(shipment) {
                 if (currentRole === 'viewer') return;
                 await db.from('shipments').insert([{ 
-                    date: shipment.date, location: shipment.location, products: shipment.products, status: 'planned'
+                    date: shipment.date, 
+                    location: shipment.location, 
+                    company: shipment.company,
+                    products: shipment.products, 
+                    status: 'planned',
+                    is_confirmed: false
                 }]);
-                this.addHistory('Nowa zaplanowana wysyłka', `${shipment.location} - ${shipment.date}`);
+                this.addHistory('Nowa zaplanowana dostawa', `${shipment.location} (${shipment.company})`);
+            }
+
+            async confirmShipment(id) {
+                if (currentRole === 'viewer') return;
+                const shipment = this.shipments.find(s => s.id === id);
+                if (shipment) {
+                    await db.from('shipments').update({ is_confirmed: true }).eq('id', id);
+                    this.addHistory('Potwierdzono datę dostawy', `${shipment.location}`);
+                }
             }
 
             async deleteShipment(id) {
                 if (currentRole !== 'admin') return;
                 await db.from('shipments').delete().eq('id', id);
-                this.addHistory('Usunięta wysyłka', `Z systemu usunięto zaplanowaną wysyłkę`);
+                this.addHistory('Usunięto dostawę', `Z systemu usunięto zamówienie`);
             }
 
             async updateShipmentDateInDB(id, newDate) {
@@ -589,7 +674,7 @@
                 const shipment = this.shipments.find(s => s.id === id);
                 if (shipment) {
                     await db.from('shipments').update({ date: newDate }).eq('id', id);
-                    this.addHistory('Zmiana daty dostawy', `${shipment.location}: zmiana na ${newDate}`);
+                    this.addHistory('Zmiana daty dostawy', `${shipment.location}: na ${newDate}`);
                 }
             }
 
@@ -628,12 +713,13 @@
                 if (Object.keys(missing).length > 0) {
                     newStatus = 'partial';
                     partialMissing = missing;
-                    historyMsg = `Dostawa niepełna: ${shipment.location} (braki wyszczególnione na wydruku)`;
+                    historyMsg = `Dostawa niepełna: ${shipment.location} (braki)`;
                 } else {
-                    historyMsg = `Dostawa zrealizowana: ${shipment.location} (odjęto ze stanu)`;
+                    historyMsg = `Dostawa zrealizowana: ${shipment.location}`;
                 }
 
-                await db.from('shipments').update({ status: newStatus, partial_missing: partialMissing }).eq('id', id);
+                // Zrealizowanie dostawy wymusza, że staje się ona potwierdzona (jeśli jeszcze nie była)
+                await db.from('shipments').update({ status: newStatus, partial_missing: partialMissing, is_confirmed: true }).eq('id', id);
                 this.addHistory(newStatus === 'completed' ? 'Dostawa zrealizowana' : 'Dostawa niepełna', historyMsg);
             }
 
@@ -702,7 +788,7 @@
                     }
                 }
                 if (totalAdded > 0) {
-                    this.addHistory('Dostawa przychodząca', `${supplier} - dodano ${totalAdded} szt obudów do montażu`);
+                    this.addHistory('Dostawa przychodząca', `${supplier} - dodano ${totalAdded} szt obudów`);
                 }
             }
 
@@ -713,16 +799,14 @@
                 const totalToProduce = Object.values(produced).reduce((sum, val) => sum + val, 0);
                 if (totalToProduce === 0) return;
 
-                // 1. Sprawdzamy czy mamy komponenty
                 const { ps_raw, clips_normal, clips_pass } = this.components;
                 const componentsAvailable = Math.min(ps_raw, clips_normal, clips_pass);
 
                 if (totalToProduce > componentsAvailable) {
-                    alert(`⚠️ Niewystarczająca liczba komponentów na stanie! Masz zasilaczy/klapek tylko dla ${componentsAvailable} szt.`);
+                    alert(`⚠️ Niewystarczająca liczba komponentów! Masz zestawów tylko dla ${componentsAvailable} szt.`);
                     return; 
                 }
 
-                // 2. Weryfikacja wspólnych pul (grup)
                 const groupReq = {};
                 for (const [id, qty] of Object.entries(produced)) {
                     if (qty > 0) {
@@ -745,12 +829,11 @@
                     }
                     
                     if (qtyReq > available) {
-                        alert(`❌ Zbyt mało opraw "W Montażu" dla puli ${key === '37' || key === '58' ? key + '°' : key}. Chcesz zmontować łącznie ${qtyReq} szt, a masz w puli tylko ${available}.`);
-                        return; // Przerwij działanie, nie zapisuj nic!
+                        alert(`❌ Zbyt mało opraw "W Montażu" dla puli ${key === '37' || key === '58' ? key + '°' : key}. Wymagane ${qtyReq}, a masz ${available}.`);
+                        return; 
                     }
                 }
 
-                // 3. Właściwa rejestracja (skoro przeszliśmy weryfikację, jesteśmy bezpieczni)
                 let totalProduced = 0;
                 const details = [];
 
@@ -759,14 +842,13 @@
                         const product = this.products.find(p => p.id === parseInt(id));
                         if (product) {
                             const newReady = product.ready + qty;
-                            const newAssembly = product.assembly - qty; // Bezpieczne odjęcie
+                            const newAssembly = product.assembly - qty;
 
                             await db.from('products').update({ ready: newReady }).eq('id', product.id);
                             product.ready = newReady;
 
                             if (product.assembly_group) {
                                 await db.from('products').update({ assembly: newAssembly }).eq('assembly_group', product.assembly_group);
-                                // Aktualizujemy lokalnie od razu wszystkie produkty z tej grupy, żeby kolejna iteracja miała poprawną bazę!
                                 this.products.filter(p => p.assembly_group === product.assembly_group).forEach(p => p.assembly = newAssembly);
                             } else {
                                 await db.from('products').update({ assembly: newAssembly }).eq('id', product.id);
@@ -786,9 +868,9 @@
                         clips_pass: clips_pass - totalProduced
                     }).eq('id', 1);
 
-                    this.addHistory('Rejestracja produkcji', details.join(', ') + ` (zużyto ${totalProduced} kpl części)`);
-                    alert(`✅ Zarejestrowano produkcję: ${totalProduced} szt. Lampy przeniesiono z "W Montażu" do "Gotowe".`);
-                    updateDashboard(); // Odśwież UI od razu
+                    this.addHistory('Rejestracja produkcji', details.join(', '));
+                    alert(`✅ Wyprodukowano: ${totalProduced} szt. Lampy dodane do "Gotowe".`);
+                    updateDashboard(); 
                 }
             }
 
@@ -801,25 +883,15 @@
                     } else { totalAssembly += p.assembly; }
                 });
                 const totalReady = this.products.reduce((s, p) => s + p.ready, 0);
-                return { totalReady, totalAssembly, totalAll: totalReady + totalAssembly };
+                // Doliczamy serwis do globalnej sumy zgodnie z życzeniem
+                const totalService = this.products.reduce((s, p) => s + (p.service || 0), 0);
+                return { totalReady, totalAssembly, totalService, totalAll: totalReady + totalAssembly + totalService };
             }
 
             async updateComponent(field, value) {
                 if (currentRole === 'viewer') return;
                 await db.from('components').update({ [field]: value }).eq('id', 1);
                 this.addHistory('Edycja komponentu', `Zaktualizowano stan zasilaczy/klapek`);
-            }
-
-            async addComponentsShipment(supplier, newComps) {
-                if (currentRole === 'viewer') return;
-                const { data: current } = await db.from('components').select('*').eq('id', 1).single();
-                const updated = {
-                    ps_raw: current.ps_raw + (newComps.ps_raw || 0),
-                    clips_normal: current.clips_normal + (newComps.clips_normal || 0),
-                    clips_pass: current.clips_pass + (newComps.clips_pass || 0)
-                };
-                await db.from('components').update(updated).eq('id', 1);
-                this.addHistory('Dostawa komponentów', `Dostawca: ${supplier}`);
             }
         }
 
@@ -846,7 +918,9 @@
             const totals = window.inventory.getTotals();
             document.querySelector('[data-stat="total"]').textContent = totals.totalAll;
             document.querySelector('[data-stat="ready"]').textContent = totals.totalReady;
-            document.querySelector('[data-stat="shipments"]').textContent = window.inventory.shipments.filter(s => s.status !== 'completed').length;
+            // Zmieniono na Potwierdzone dostawy w dashboardzie:
+            document.querySelector('[data-stat="shipments"]').textContent = window.inventory.shipments.filter(s => s.status !== 'completed' && s.is_confirmed).length;
+            document.querySelector('[data-stat="service"]').textContent = totals.totalService;
 
             const dashboardTbody = document.getElementById('products-dashboard');
             dashboardTbody.innerHTML = '';
@@ -857,18 +931,21 @@
             });
 
             updateInventoryTable();
-            updateShipmentsTable();
+            updateShipmentsTables();
+            updateAdjustmentsTable();
             if(currentRole !== 'worker') updateHistoryTable(); 
             updateComponentsDisplay();
         }
 
         function updateInventoryTable() {
             const tbody = document.getElementById('products-table');
+            const tbodyService = document.getElementById('service-table');
             tbody.innerHTML = '';
+            tbodyService.innerHTML = '';
             const isViewer = currentRole === 'viewer';
             
             window.inventory.products.forEach(p => {
-                const total = p.ready + p.assembly;
+                const total = p.ready + p.assembly + (p.service || 0);
                 const row = document.createElement('tr');
                 const readyCell = isViewer ? `<td>${p.ready}</td>` : `<td onclick="editCell(this, 'ready', ${p.id})" class="editable">${p.ready}</td>`;
                 const assemblyCell = isViewer ? `<td>${p.assembly}</td>` : `<td onclick="editCell(this, 'assembly', ${p.id})" class="editable">${p.assembly}</td>`;
@@ -881,56 +958,98 @@
                     <td><span class="status-badge ${getStatusClass(p.id)}">${getStatusText(p.id)}</span></td>
                 `;
                 tbody.appendChild(row);
+
+                // Tabela serwisowa
+                const serviceRow = document.createElement('tr');
+                const serviceCell = isViewer ? `<td>${p.service || 0}</td>` : `<td onclick="editCell(this, 'service', ${p.id})" class="editable">${p.service || 0}</td>`;
+                serviceRow.innerHTML = `<td>${p.name}</td>${serviceCell}`;
+                tbodyService.appendChild(serviceRow);
             });
         }
 
-        function updateShipmentsTable() {
-            const tbody = document.getElementById('shipments-table');
-            tbody.innerHTML = '';
-            window.inventory.shipments.forEach(s => {
-                let total = 0;
-                if(s.products) { total = Object.values(s.products).reduce((a, b) => a + b, 0); }
-                
-                let statusBadge = '';
-                if (s.status === 'completed') statusBadge = '<span class="status-badge status-ok">✓ Zrealizowana</span>';
-                else if (s.status === 'partial') statusBadge = '<span class="status-badge status-warning">⚠ Niepełna</span>';
-                else statusBadge = '<span class="status-badge status-warning">⏳ Planowana</span>';
+        function renderShipmentRow(s, isConfirmedTable) {
+            let total = 0;
+            if(s.products) { total = Object.values(s.products).reduce((a, b) => a + b, 0); }
+            
+            let statusBadge = '';
+            if (s.status === 'completed') statusBadge = '<span class="status-badge status-ok">✓ Zrealizowana</span>';
+            else if (s.status === 'partial') statusBadge = '<span class="status-badge status-warning">⚠ Niepełna</span>';
+            else if (s.is_confirmed) statusBadge = '<span class="status-badge status-neutral">📅 Potwierdzona</span>';
+            else statusBadge = '<span class="status-badge status-warning">⏳ Oczekująca</span>';
 
-                let actionButton = '';
-                
-                if (currentRole !== 'viewer') {
-                    if (s.status === 'completed') {
-                        if (currentRole === 'admin') actionButton = `<button class="btn-small btn-secondary" onclick="deleteShipment(${s.id})">🗑️ Usuń</button>`;
-                    } else if (s.status === 'partial') {
-                        actionButton = `<button class="btn-small btn-primary" onclick="completeRemainingShipmentUI(${s.id})">✓ Dokończ</button> 
-                                        <button class="btn-small btn-secondary" onclick="printMissingPdf(${s.id})">📄 PDF Braki</button>
-                                        <button class="btn-small btn-secondary" onclick="editShipmentDate(${s.id})">📅 Data</button>`;
-                        if (currentRole === 'admin') actionButton += ` <button class="btn-small btn-secondary" onclick="deleteShipment(${s.id})">🗑️ Usuń</button>`;
-                    } else {
-                        actionButton = `<button class="btn-small btn-primary" onclick="completeShipmentUI(${s.id})">✓ Zrealizuj</button>
-                                        <button class="btn-small btn-secondary" onclick="editShipmentDate(${s.id})">📅 Data</button>`;
-                        if (currentRole === 'admin') actionButton += ` <button class="btn-small btn-secondary" onclick="deleteShipment(${s.id})">🗑️ Usuń</button>`;
-                    }
+            let actionButton = '';
+            
+            if (currentRole !== 'viewer') {
+                if (!s.is_confirmed && s.status === 'planned') {
+                    actionButton = `<button class="btn-small btn-primary" onclick="confirmShipmentDateUI(${s.id})">✓ Potwierdź Datę</button>
+                                    <button class="btn-small btn-secondary" onclick="editShipmentDate(${s.id})">📅 Zmień Datę</button>`;
+                    if (currentRole === 'admin') actionButton += ` <button class="btn-small btn-secondary" onclick="deleteShipment(${s.id})">🗑️ Usuń</button>`;
+                } else if (s.status === 'completed') {
+                    if (currentRole === 'admin') actionButton = `<button class="btn-small btn-secondary" onclick="deleteShipment(${s.id})">🗑️ Usuń</button>`;
+                } else if (s.status === 'partial') {
+                    actionButton = `<button class="btn-small btn-primary" onclick="completeRemainingShipmentUI(${s.id})">✓ Dokończ</button> 
+                                    <button class="btn-small btn-secondary" onclick="printMissingPdf(${s.id})">📄 PDF Braki</button>
+                                    <button class="btn-small btn-secondary" onclick="editShipmentDate(${s.id})">📅 Data</button>`;
+                    if (currentRole === 'admin') actionButton += ` <button class="btn-small btn-secondary" onclick="deleteShipment(${s.id})">🗑️ Usuń</button>`;
                 } else {
-                    if (s.status === 'partial') {
-                        actionButton = `<button class="btn-small btn-secondary" onclick="printMissingPdf(${s.id})">📄 PDF Braki</button>`;
-                    }
+                    // Potwierdzona, gotowa do realizacji
+                    actionButton = `<button class="btn-small btn-primary" onclick="completeShipmentUI(${s.id})">✓ Zrealizuj</button>
+                                    <button class="btn-small btn-secondary" onclick="editShipmentDate(${s.id})">📅 Data</button>`;
+                    if (currentRole === 'admin') actionButton += ` <button class="btn-small btn-secondary" onclick="deleteShipment(${s.id})">🗑️ Usuń</button>`;
                 }
+            } else {
+                if (s.status === 'partial') actionButton = `<button class="btn-small btn-secondary" onclick="printMissingPdf(${s.id})">📄 PDF Braki</button>`;
+            }
 
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td><strong>${s.date}</strong></td>
+                <td>${s.location}</td>
+                <td>${s.company || '-'}</td>
+                <td><strong>${total}</strong></td>
+                <td><button class="btn-small btn-secondary" onclick="showAnglesDemand(${s.id})" style="margin:0; background-color:#8B6F47; border-color:#8B6F47;">👁️ Kąty</button></td>
+                <td>${statusBadge}</td>
+                ${currentRole !== 'viewer' || s.status === 'partial' ? `<td>${actionButton}</td>` : '<td class="admin-only-col"></td>'}
+            `;
+            return row;
+        }
+
+        function updateShipmentsTables() {
+            const tbodyUnconf = document.getElementById('shipments-unconfirmed-table');
+            const tbodyConf = document.getElementById('shipments-confirmed-table');
+            tbodyUnconf.innerHTML = '';
+            tbodyConf.innerHTML = '';
+
+            let confCount = 0;
+
+            window.inventory.shipments.forEach(s => {
+                // Jeśli niepotwierdzona i zaplanowana - leci do oczekujących
+                if (!s.is_confirmed && s.status === 'planned') {
+                    tbodyUnconf.appendChild(renderShipmentRow(s, false));
+                } else {
+                    // Potwierdzona lub zrealizowana/niepełna
+                    tbodyConf.appendChild(renderShipmentRow(s, true));
+                    confCount++;
+                }
+            });
+            document.getElementById('shipments-count').textContent = confCount + ' dostaw';
+        }
+
+        function updateAdjustmentsTable() {
+            const tbody = document.getElementById('adjustments-table');
+            if(!tbody) return;
+            tbody.innerHTML = '';
+            window.inventory.adjustments.forEach(a => {
                 const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${s.date}</td><td>${s.location}</td>
-                    <td><strong>${total}</strong></td>
-                    <td>${statusBadge}</td>
-                    <td>${actionButton}</td>
-                `;
+                const actionCell = currentRole === 'admin' ? `<td><button class="btn-small btn-secondary" onclick="deleteAdjustment(${a.id})">🗑️ Usuń</button></td>` : `<td class="admin-only-col"></td>`;
+                row.innerHTML = `<td><strong>${a.date}</strong></td><td>${a.location}</td>${actionCell}`;
                 tbody.appendChild(row);
             });
-            document.getElementById('shipments-count').textContent = window.inventory.shipments.length + ' dostawy';
         }
 
         function updateHistoryTable() {
             const tbody = document.getElementById('history-table');
+            if(!tbody) return;
             tbody.innerHTML = '';
             window.inventory.history.slice(0, 20).forEach(h => {
                 const row = document.createElement('tr');
@@ -962,7 +1081,7 @@
             if (cell.querySelector('input')) return;
             const product = window.inventory.products.find(p => p.id === productId);
             const input = document.createElement('input');
-            input.type = 'number'; input.value = product[field]; input.style.width = '100%';
+            input.type = 'number'; input.value = product[field] || 0; input.style.width = '100%';
             
             cell.innerHTML = ''; cell.appendChild(input); input.focus(); input.select();
 
@@ -991,14 +1110,20 @@
         }
 
         // AKCJE UI DLA DOSTAW
+        function confirmShipmentDateUI(id) {
+            if (confirm('✓ Potwierdzić datę dostawy?\nPrzeniesie to dostawę do tabeli potwierdzonych.')) {
+                window.inventory.confirmShipment(id);
+            }
+        }
+
         function completeShipmentUI(id) {
-            if (confirm('✓ Czy na pewno zrealizować tę dostawę?\n\nIlości zostaną automatycznie odjęte z "Gotowe do wysyłki".')) {
+            if (confirm('✓ Zrealizować tę dostawę?\nOdjęte zostanie wszystko z kolumny "Gotowe do wysyłki".')) {
                 window.inventory.completeShipment(id);
             }
         }
 
         function completeRemainingShipmentUI(id) {
-            if (confirm('✓ Czy na pewno dokończyć tę dostawę?\n\nBrakujące ilości zostaną odjęte z Twoich obecnych stanów magazynowych.')) {
+            if (confirm('✓ Dokończyć tę dostawę?\nBrakujące ilości zostaną odjęte z Twoich obecnych stanów magazynowych.')) {
                 window.inventory.completeRemainingShipment(id);
             }
         }
@@ -1009,6 +1134,28 @@
             } 
         }
 
+        function showAnglesDemand(id) {
+            const shipment = window.inventory.shipments.find(s => s.id === id);
+            if(!shipment) return;
+            
+            const p = shipment.products;
+            const a22 = p[1] || 0;
+            const a37 = (p[2] || 0) + (p[4] || 0);
+            const a58 = (p[3] || 0) + (p[5] || 0);
+
+            const content = `
+                <div style="text-align: center;">
+                    <p style="color: var(--text-light); margin-bottom: 1rem;">Zapotrzebowanie dla: <strong>${shipment.location}</strong></p>
+                    <div style="display:flex; justify-content: space-around; background: var(--background); padding: 1.5rem; border-radius: 8px;">
+                        <div><div style="font-size: 0.9rem; color: var(--primary-terracotta);">22°</div><div style="font-size: 2rem; font-weight: bold;">${a22}</div></div>
+                        <div><div style="font-size: 0.9rem; color: var(--primary-terracotta);">37°</div><div style="font-size: 2rem; font-weight: bold;">${a37}</div></div>
+                        <div><div style="font-size: 0.9rem; color: var(--primary-terracotta);">58°</div><div style="font-size: 2rem; font-weight: bold;">${a58}</div></div>
+                    </div>
+                </div>
+            `;
+            showModal('👁️ Zapotrzebowanie Kątów', content);
+        }
+
         function editShipmentDate(id) {
             if (currentRole === 'viewer') return;
             const shipment = window.inventory.shipments.find(s => s.id === id);
@@ -1017,7 +1164,7 @@
             const form = `
                 <div style="display: grid; gap: 1rem;">
                     <div class="form-group">
-                        <label>Nowa data dostawy dla: <strong>${shipment.location}</strong></label>
+                        <label>Nowa data dla: <strong>${shipment.location}</strong></label>
                         <input type="date" id="edit_shipment_date" value="${shipment.date}">
                     </div>
                     <div style="display: flex; gap: 1rem;">
@@ -1033,6 +1180,12 @@
             if (!newDate) return;
             await window.inventory.updateShipmentDateInDB(id, newDate);
             closeModal();
+        }
+
+        function deleteAdjustment(id) {
+            if (currentRole === 'admin' && confirm('🗑️ Usunąć ten wpis z regulacji?')) {
+                window.inventory.deleteAdjustment(id);
+            }
         }
 
         function printMissingPdf(id) {
@@ -1064,11 +1217,11 @@
                 <div class="info-box">
                     <h3>Informacje o dostawie</h3>
                     <p><strong>Lokalizacja:</strong> ${shipment.location}</p>
+                    <p><strong>Firma Odbierająca:</strong> ${shipment.company || '-'}</p>
                     <p><strong>Data planowana:</strong> ${shipment.date}</p>
                     <p><strong>Data raportu:</strong> ${date}</p>
-                    <p class="warning">⚠️ Dostawa zrealizowana częściowo ze względu na brak produktów na stanie</p>
                 </div>
-                <h2>Lista brakujących produktów do wysłania</h2>
+                <h2>Lista brakujących produktów</h2>
                 <table>
                     <thead><tr><th>Produkt</th><th>SKU</th><th>Ilość brakująca</th></tr></thead>
                     <tbody>
@@ -1087,7 +1240,6 @@
                     </tbody>
                 </table>
                 <div class="info-box">
-                    <h3>Podsumowanie</h3>
                     <p><strong>Razem brakujących opraw:</strong> <span class="warning">${totalMissing} szt</span></p>
                 </div>
             </body>
@@ -1111,15 +1263,30 @@
                 3: parseInt(formData.get('p3')) || 0, 4: parseInt(formData.get('p4')) || 0,
                 5: parseInt(formData.get('p5')) || 0
             };
-            window.inventory.addShipment({ date: formData.get('date'), location: formData.get('location'), products });
+            window.inventory.addShipment({ 
+                date: formData.get('date'), 
+                location: formData.get('location'), 
+                company: formData.get('company'),
+                products: products 
+            });
             this.reset(); 
         });
+
+        const adjForm = document.getElementById('adjustmentForm');
+        if(adjForm) {
+            adjForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                if (currentRole === 'viewer') return;
+                const formData = new FormData(this);
+                window.inventory.addAdjustment(formData.get('adj_date'), formData.get('adj_location'));
+                this.reset();
+            });
+        }
 
         document.getElementById('incomingForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             if (currentRole === 'viewer') return;
             const formData = new FormData(this);
-            // Formularz przyjmuje p1 = 22°, p2 = 37°, p3 = 58°
             const products = {
                 1: parseInt(formData.get('p1')) || 0, 
                 2: parseInt(formData.get('p2')) || 0,
