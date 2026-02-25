@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pl">
 <head>
     <meta charset="UTF-8">
@@ -110,6 +110,13 @@
         .status-ok { background-color: #E8F5E9; color: var(--success-status); border: 1px solid var(--success-status); }
         .status-warning { background-color: #FFF3E0; color: var(--warning-status); border: 1px solid var(--warning-status); }
         .status-error { background-color: #FFEBEE; color: var(--error-status); border: 1px solid var(--error-status); }
+
+        /* MODAL */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; }
+        .modal-dialog { background: white; padding: 2rem; border-radius: 8px; max-width: 500px; margin: 100px auto; box-shadow: 0 10px 40px rgba(0,0,0,0.2); border-top: 4px solid var(--primary-terracotta); }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; border-bottom: 2px solid var(--border-color); padding-bottom: 1rem; }
+        .close { font-size: 2rem; cursor: pointer; color: var(--text-light); transition: color 0.2s ease; }
+        .close:hover { color: var(--accent-red); }
 
         /* BUTTONS & FORMS */
         button { padding: 0.6rem 1rem; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem; font-weight: 600; transition: all 0.3s ease; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.2rem; }
@@ -241,9 +248,9 @@
                             <form id="incomingForm">
                                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
                                     <div class="form-group"><label>Dostawca</label><input type="text" name="supplier" required></div>
-                                    <div class="form-group"><label>22°-15W</label><input type="number" name="p1" value="0" min="0"></div>
-                                    <div class="form-group"><label>37°-15W</label><input type="number" name="p2" value="0" min="0"></div>
-                                    <div class="form-group"><label>58°-15W</label><input type="number" name="p3" value="0" min="0"></div>
+                                    <div class="form-group"><label>22°</label><input type="number" name="p1" value="0" min="0"></div>
+                                    <div class="form-group"><label>37°</label><input type="number" name="p2" value="0" min="0"></div>
+                                    <div class="form-group"><label>58°</label><input type="number" name="p3" value="0" min="0"></div>
                                 </div>
                                 <div style="margin-top: 1.5rem; display: flex; gap: 1rem;">
                                     <button type="submit" class="btn-primary">📥 Zarejestruj Dostawę</button>
@@ -362,6 +369,16 @@
         </div>
     </div>
 
+    <div id="modal" class="modal">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h2 id="modal-title" style="margin: 0; color: var(--text-dark);">Edycja</h2>
+                <span class="close" onclick="closeModal()">&times;</span>
+            </div>
+            <div id="modal-content"></div>
+        </div>
+    </div>
+
     <script>
         // ==========================================
         // ===== KONFIGURACJA SUPABASE =====
@@ -375,11 +392,10 @@
         const ROLES = {
             'b.hajduk@masterlight.pl': 'admin',      // Ty (Pełny dostęp)
             'm.olejnik@masterlight.pl': 'viewer',         // Szef 1 (Tylko podgląd + PDF)
-            'robert@masterlight.pl': 'viewer',         // Szef 2 (Tylko podgląd + PDF)
-            'd.lewandowska@masterlight.pl': 'worker'      // Pracownik (Edycja + Dodawanie + Zdejmowanie ze stanu)
+            'szef2@masterlight.pl': 'viewer',         // Szef 2 (Tylko podgląd + PDF)
+            'd.lewandowska@masterlight.pl': 'worker'      // Pracownik
         };
 
-        // Zmienne globalne do przechowywania sesji
         let currentUserEmail = '';
         let currentRole = 'viewer';
 
@@ -438,6 +454,8 @@
                 document.getElementById('form-incoming-container').style.display = 'none';
                 document.getElementById('form-components-container').style.display = 'none';
                 document.getElementById('form-production-container').style.display = 'none';
+                document.getElementById('nav-history').style.display = 'none';
+                document.getElementById('nav-reports').style.display = 'none';
                 document.querySelectorAll('.editable').forEach(el => el.classList.remove('editable'));
             }
             
@@ -460,6 +478,17 @@
 
         checkSession();
         addLogoutButton();
+
+        // FUNKCJE MODALA
+        function showModal(title, content) {
+            document.getElementById('modal-title').textContent = title;
+            document.getElementById('modal-content').innerHTML = content;
+            document.getElementById('modal').style.display = 'block';
+        }
+
+        function closeModal() {
+            document.getElementById('modal').style.display = 'none';
+        }
 
         class CloudInventoryManager {
             constructor() {
@@ -491,6 +520,25 @@
                         action: h.action, details: h.details 
                     }));
                 }
+
+                // AKTUALIZACJA PRZESZŁYCH DAT NA DZISIEJSZE
+                let dateChanged = false;
+                const todayObj = new Date();
+                const yyyy = todayObj.getFullYear();
+                const mm = String(todayObj.getMonth() + 1).padStart(2, '0');
+                const dd = String(todayObj.getDate()).padStart(2, '0');
+                const todayFormatted = `${yyyy}-${mm}-${dd}`;
+
+                for (let s of this.shipments) {
+                    if (s.status !== 'completed' && s.date < todayFormatted) {
+                        if (currentRole === 'admin' || currentRole === 'worker') {
+                            await db.from('shipments').update({ date: todayFormatted }).eq('id', s.id);
+                        }
+                        s.date = todayFormatted;
+                        dateChanged = true;
+                    }
+                }
+
                 updateDashboard();
             }
 
@@ -517,7 +565,6 @@
 
             async updateProduct(id, updates) {
                 if (currentRole === 'viewer') return; 
-
                 const product = this.products.find(p => p.id === id);
                 if (product) {
                     await db.from('products').update(updates).eq('id', id);
@@ -532,24 +579,27 @@
             async addShipment(shipment) {
                 if (currentRole === 'viewer') return;
                 await db.from('shipments').insert([{ 
-                    date: shipment.date, 
-                    location: shipment.location, 
-                    products: shipment.products,
-                    status: 'planned'
+                    date: shipment.date, location: shipment.location, products: shipment.products, status: 'planned'
                 }]);
                 this.addHistory('Nowa zaplanowana wysyłka', `${shipment.location} - ${shipment.date}`);
             }
 
             async deleteShipment(id) {
-                if (currentRole !== 'admin') {
-                    alert('Brak uprawnień. Tylko kierownik może usuwać zaplanowane dostawy.');
-                    return;
-                }
+                if (currentRole !== 'admin') return;
                 await db.from('shipments').delete().eq('id', id);
                 this.addHistory('Usunięta wysyłka', `Z systemu usunięto zaplanowaną wysyłkę`);
             }
 
-            // REALIZACJA DOSTAWY (ZDEJMOWANIE Z "GOTOWE") I WYLICZANIE BRAKÓW
+            async updateShipmentDateInDB(id, newDate) {
+                if (currentRole === 'viewer') return;
+                const shipment = this.shipments.find(s => s.id === id);
+                if (shipment) {
+                    await db.from('shipments').update({ date: newDate }).eq('id', id);
+                    this.addHistory('Zmiana daty dostawy', `${shipment.location}: ${shipment.date} → ${newDate}`);
+                }
+            }
+
+            // REALIZACJA DOSTAWY (ZDEJMOWANIE Z "GOTOWE")
             async completeShipment(id) {
                 if (currentRole === 'viewer') return;
                 const shipment = this.shipments.find(s => s.id === id);
@@ -636,7 +686,7 @@
                 this.addHistory('Dokończenie dostawy', historyMsg);
             }
 
-            // DOSTAWA PRZYCHODZĄCA (DOWNLIGHTY DO MONTAŻU)
+            // DOSTAWA PRZYCHODZĄCA (WSPÓLNA PULA "W MONTAŻU")
             async addIncomingShipment(supplier, newProducts) {
                 if (currentRole === 'viewer') return;
                 let totalAdded = 0;
@@ -645,17 +695,25 @@
                     if (qty > 0) {
                         const product = this.products.find(p => p.id === parseInt(id));
                         if (product) {
-                            await db.from('products').update({ assembly: product.assembly + qty }).eq('id', product.id);
+                            const newAssembly = product.assembly + qty;
+                            if (product.assembly_group) {
+                                await db.from('products').update({ assembly: newAssembly }).eq('assembly_group', product.assembly_group);
+                                // Zaktualizuj stan lokalny dla logiki
+                                this.products.filter(p => p.assembly_group === product.assembly_group).forEach(p => p.assembly = newAssembly);
+                            } else {
+                                await db.from('products').update({ assembly: newAssembly }).eq('id', product.id);
+                                product.assembly = newAssembly;
+                            }
                             totalAdded += qty;
                         }
                     }
                 }
                 if (totalAdded > 0) {
-                    this.addHistory('Dostawa przychodząca', `${supplier} - dodano ${totalAdded} szt do montażu`);
+                    this.addHistory('Dostawa przychodząca', `${supplier} - dodano ${totalAdded} szt obudów do montażu`);
                 }
             }
 
-            // REJESTRACJA PRODUKCJI
+            // REJESTRACJA PRODUKCJI (ZDEJMOWANIE ZE WSPÓLNEJ PULI)
             async registerProduction(produced) {
                 if (currentRole === 'viewer') return;
                 
@@ -666,7 +724,7 @@
                 const componentsAvailable = Math.min(ps_raw, clips_normal, clips_pass);
 
                 if (totalToProduce > componentsAvailable) {
-                    alert(`⚠️ Niewystarczająca liczba komponentów na stanie! Masz zestawy tylko dla ${componentsAvailable} szt.`);
+                    alert(`⚠️ Niewystarczająca liczba komponentów na stanie! Masz zasilaczy/klapek tylko dla ${componentsAvailable} szt.`);
                     return; 
                 }
 
@@ -679,10 +737,21 @@
                         if (product) {
                             const actualQty = Math.min(qty, product.assembly);
                             if (actualQty > 0) {
-                                await db.from('products').update({ 
-                                    assembly: product.assembly - actualQty,
-                                    ready: product.ready + actualQty
-                                }).eq('id', product.id);
+                                const newAssembly = product.assembly - actualQty;
+                                const newReady = product.ready + actualQty;
+
+                                await db.from('products').update({ ready: newReady }).eq('id', product.id);
+                                product.ready = newReady;
+
+                                if (product.assembly_group) {
+                                    await db.from('products').update({ assembly: newAssembly }).eq('assembly_group', product.assembly_group);
+                                    // BARDZO WAŻNE: Aktualizacja lokalnej puli, by kolejne pętle (np z 20W) miały poprawną pulę!
+                                    this.products.filter(p => p.assembly_group === product.assembly_group).forEach(p => p.assembly = newAssembly);
+                                } else {
+                                    await db.from('products').update({ assembly: newAssembly }).eq('id', product.id);
+                                    product.assembly = newAssembly;
+                                }
+
                                 totalProduced += actualQty;
                                 details.push(`${product.name}: ${actualQty} szt`);
                             }
@@ -697,10 +766,10 @@
                         clips_pass: clips_pass - totalProduced
                     }).eq('id', 1);
 
-                    this.addHistory('Rejestracja produkcji', details.join(', ') + ` (zużyto ${totalProduced} kompletów części)`);
-                    alert(`✅ Zarejestrowano produkcję ${totalProduced} szt. Lampy przeniesiono z "W Montażu" do "Gotowe do wysyłki".`);
+                    this.addHistory('Rejestracja produkcji', details.join(', ') + ` (zużyto ${totalProduced} kpl części)`);
+                    alert(`✅ Zarejestrowano produkcję ${totalProduced} szt. Lampy przeniesiono z "W Montażu" do "Gotowe".`);
                 } else {
-                    alert('❌ Operacja nie powiodła się. Upewnij się, że wpisane produkty mają wystarczający stan w "W Montażu".');
+                    alert('❌ Zbyt mało obudów "W Montażu", aby zrealizować tę produkcję.');
                 }
             }
 
@@ -815,14 +884,15 @@
                         if (currentRole === 'admin') actionButton = `<button class="btn-small btn-secondary" onclick="deleteShipment(${s.id})">🗑️ Usuń</button>`;
                     } else if (s.status === 'partial') {
                         actionButton = `<button class="btn-small btn-primary" onclick="completeRemainingShipmentUI(${s.id})">✓ Dokończ</button> 
-                                        <button class="btn-small btn-secondary" onclick="printMissingPdf(${s.id})">📄 PDF Braki</button>`;
+                                        <button class="btn-small btn-secondary" onclick="printMissingPdf(${s.id})">📄 PDF Braki</button>
+                                        <button class="btn-small btn-secondary" onclick="editShipmentDate(${s.id})">📅 Data</button>`;
                         if (currentRole === 'admin') actionButton += ` <button class="btn-small btn-secondary" onclick="deleteShipment(${s.id})">🗑️ Usuń</button>`;
                     } else {
-                        actionButton = `<button class="btn-small btn-primary" onclick="completeShipmentUI(${s.id})">✓ Zrealizuj</button>`;
+                        actionButton = `<button class="btn-small btn-primary" onclick="completeShipmentUI(${s.id})">✓ Zrealizuj</button>
+                                        <button class="btn-small btn-secondary" onclick="editShipmentDate(${s.id})">📅 Data</button>`;
                         if (currentRole === 'admin') actionButton += ` <button class="btn-small btn-secondary" onclick="deleteShipment(${s.id})">🗑️ Usuń</button>`;
                     }
                 } else {
-                    // Szef może wygenerować PDF z brakami w niepełnej dostawie
                     if (s.status === 'partial') {
                         actionButton = `<button class="btn-small btn-secondary" onclick="printMissingPdf(${s.id})">📄 PDF Braki</button>`;
                     }
@@ -903,7 +973,7 @@
 
         // AKCJE UI DLA DOSTAW
         function completeShipmentUI(id) {
-            if (confirm('✓ Czy na pewno zrealizować tę dostawę?\n\nOdpowiednie ilości downlightów zostaną odjęte ze stanów magazynowych (z kolumny "Gotowe").')) {
+            if (confirm('✓ Czy na pewno zrealizować tę dostawę?\n\nIlości zostaną automatycznie odjęte z "Gotowe do wysyłki".')) {
                 window.inventory.completeShipment(id);
             }
         }
@@ -918,6 +988,32 @@
             if (currentRole === 'admin' && confirm('🗑️ Na pewno usunąć tę dostawę z bazy?')) { 
                 window.inventory.deleteShipment(id); 
             } 
+        }
+
+        function editShipmentDate(id) {
+            if (currentRole === 'viewer') return;
+            const shipment = window.inventory.shipments.find(s => s.id === id);
+            if (!shipment) return;
+            
+            const form = `
+                <div style="display: grid; gap: 1rem;">
+                    <div class="form-group">
+                        <label>Nowa data dostawy dla: <strong>${shipment.location}</strong></label>
+                        <input type="date" id="edit_shipment_date" value="${shipment.date}">
+                    </div>
+                    <div style="display: flex; gap: 1rem;">
+                        <button class="btn-primary" onclick="saveShipmentDate(${id})">💾 Zapisz</button>
+                    </div>
+                </div>
+            `;
+            showModal(`📅 Zmiana daty dostawy`, form);
+        }
+
+        async function saveShipmentDate(id) {
+            const newDate = document.getElementById('edit_shipment_date').value;
+            if (!newDate) return;
+            await window.inventory.updateShipmentDateInDB(id, newDate);
+            closeModal();
         }
 
         function printMissingPdf(id) {
