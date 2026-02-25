@@ -73,7 +73,7 @@
         }
         .header-title h1 { font-size: 2rem; margin-bottom: 0.3rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); letter-spacing: 1px; }
         .header-title p { opacity: 0.9; font-size: 0.95rem; }
-        .user-badge { background: rgba(0,0,0,0.2); padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.9rem; border: 1px solid rgba(255,255,255,0.3); text-align: right; }
+        .user-badge { background: rgba(0,0,0,0.2); padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.9rem; border: 1px solid rgba(255,255,255,0.3); text-align: left; display: flex; align-items: center; gap: 15px; }
         
         .content { flex: 1; padding: 2rem; }
 
@@ -152,6 +152,7 @@
             .main-content { margin-left: 0; }
             .stats-bar { grid-template-columns: 1fr; }
             .header { flex-direction: column; align-items: flex-start; gap: 1rem; }
+            .user-badge { flex-direction: column; text-align: center; gap: 5px; }
         }
     </style>
 </head>
@@ -201,8 +202,11 @@
                     <p>System Zarządzania Magazynem - Baza danych w Chmurze</p>
                 </div>
                 <div class="user-badge" id="user-info">
-                    👤 Użytkownik: <strong id="logged-email">...</strong> <br>
-                    🛡️ Rola: <strong id="logged-role">...</strong>
+                    <div>
+                        👤 Zalogowano: <strong id="logged-email">...</strong> <br>
+                        🛡️ Rola: <strong id="logged-role">...</strong>
+                    </div>
+                    <button onclick="logoutUser()" class="btn-secondary btn-small" style="margin: 0; height: fit-content;">🚪 Wyloguj</button>
                 </div>
             </header>
 
@@ -355,8 +359,8 @@
                                 <div style="margin-top: 1.5rem;"><button type="submit" class="btn-primary">✅ Zarejestruj Produkcję</button></div>
                             </form>
                             <p style="margin-top: 1rem; color: var(--text-light); font-size: 0.9rem;">
-                                ℹ️ Podane ilości zostaną odjęte z kolumny "W Montażu" i dodane do "Gotowe do Wysyłki"<br>
-                                ⚠️ Na każdy wyprodukowany downlight zużywa się: 1x zasilacz, 1x klapka zwykła, 1x klapka przelotowa
+                                ℹ️ Podane ilości zostaną odjęte z kolumny "W Montażu" (jako wspólna pula) i dodane do "Gotowe do Wysyłki".<br>
+                                ⚠️ Na każdy wyprodukowany downlight zużywa się: 1x zasilacz, 1x klapka zwykła, 1x klapka przelotowa.
                             </p>
                         </div>
                     </div>
@@ -453,9 +457,8 @@
                 document.getElementById('form-shipment-container').style.display = 'none';
                 document.getElementById('form-incoming-container').style.display = 'none';
                 document.getElementById('form-components-container').style.display = 'none';
-                document.getElementById('form-production-container').style.display = 'none';
                 document.getElementById('nav-history').style.display = 'none';
-                document.getElementById('nav-reports').style.display = 'none';
+                document.getElementById('nav-reports').style.display = 'none'; // Szef nie widzi produkcji
                 document.querySelectorAll('.editable').forEach(el => el.classList.remove('editable'));
             }
             
@@ -464,20 +467,12 @@
             }
         }
 
-        function addLogoutButton() {
-            const nav = document.getElementById('nav-list');
-            const logoutLi = document.createElement('li');
-            logoutLi.innerHTML = `<a href="#" onclick="logoutUser()" style="color: #ffcccc; border-top: 1px solid rgba(255,255,255,0.1); margin-top: 1rem;">🚪 Wyloguj</a>`;
-            nav.appendChild(logoutLi);
-        }
-
         async function logoutUser() {
             await db.auth.signOut();
             window.location.reload(); 
         }
 
         checkSession();
-        addLogoutButton();
 
         // FUNKCJE MODALA
         function showModal(title, content) {
@@ -522,20 +517,19 @@
                 }
 
                 // AKTUALIZACJA PRZESZŁYCH DAT NA DZISIEJSZE
-                let dateChanged = false;
                 const todayObj = new Date();
                 const yyyy = todayObj.getFullYear();
                 const mm = String(todayObj.getMonth() + 1).padStart(2, '0');
                 const dd = String(todayObj.getDate()).padStart(2, '0');
                 const todayFormatted = `${yyyy}-${mm}-${dd}`;
 
+                let needsDbUpdate = false;
                 for (let s of this.shipments) {
                     if (s.status !== 'completed' && s.date < todayFormatted) {
                         if (currentRole === 'admin' || currentRole === 'worker') {
                             await db.from('shipments').update({ date: todayFormatted }).eq('id', s.id);
                         }
                         s.date = todayFormatted;
-                        dateChanged = true;
                     }
                 }
 
@@ -595,7 +589,7 @@
                 const shipment = this.shipments.find(s => s.id === id);
                 if (shipment) {
                     await db.from('shipments').update({ date: newDate }).eq('id', id);
-                    this.addHistory('Zmiana daty dostawy', `${shipment.location}: ${shipment.date} → ${newDate}`);
+                    this.addHistory('Zmiana daty dostawy', `${shipment.location}: zmiana na ${newDate}`);
                 }
             }
 
@@ -698,7 +692,6 @@
                             const newAssembly = product.assembly + qty;
                             if (product.assembly_group) {
                                 await db.from('products').update({ assembly: newAssembly }).eq('assembly_group', product.assembly_group);
-                                // Zaktualizuj stan lokalny dla logiki
                                 this.products.filter(p => p.assembly_group === product.assembly_group).forEach(p => p.assembly = newAssembly);
                             } else {
                                 await db.from('products').update({ assembly: newAssembly }).eq('id', product.id);
@@ -720,6 +713,7 @@
                 const totalToProduce = Object.values(produced).reduce((sum, val) => sum + val, 0);
                 if (totalToProduce === 0) return;
 
+                // 1. Sprawdzamy czy mamy komponenty
                 const { ps_raw, clips_normal, clips_pass } = this.components;
                 const componentsAvailable = Math.min(ps_raw, clips_normal, clips_pass);
 
@@ -728,6 +722,35 @@
                     return; 
                 }
 
+                // 2. Weryfikacja wspólnych pul (grup)
+                const groupReq = {};
+                for (const [id, qty] of Object.entries(produced)) {
+                    if (qty > 0) {
+                        const product = this.products.find(p => p.id === parseInt(id));
+                        if (product) {
+                            const key = product.assembly_group || `single_${product.id}`;
+                            groupReq[key] = (groupReq[key] || 0) + qty;
+                        }
+                    }
+                }
+
+                for (const [key, qtyReq] of Object.entries(groupReq)) {
+                    let available = 0;
+                    if (key.startsWith('single_')) {
+                        const pid = parseInt(key.replace('single_', ''));
+                        available = this.products.find(p => p.id === pid).assembly;
+                    } else {
+                        const p = this.products.find(p => p.assembly_group === key);
+                        available = p ? p.assembly : 0;
+                    }
+                    
+                    if (qtyReq > available) {
+                        alert(`❌ Zbyt mało opraw "W Montażu" dla puli ${key === '37' || key === '58' ? key + '°' : key}. Chcesz zmontować łącznie ${qtyReq} szt, a masz w puli tylko ${available}.`);
+                        return; // Przerwij działanie, nie zapisuj nic!
+                    }
+                }
+
+                // 3. Właściwa rejestracja (skoro przeszliśmy weryfikację, jesteśmy bezpieczni)
                 let totalProduced = 0;
                 const details = [];
 
@@ -735,26 +758,23 @@
                     if (qty > 0) {
                         const product = this.products.find(p => p.id === parseInt(id));
                         if (product) {
-                            const actualQty = Math.min(qty, product.assembly);
-                            if (actualQty > 0) {
-                                const newAssembly = product.assembly - actualQty;
-                                const newReady = product.ready + actualQty;
+                            const newReady = product.ready + qty;
+                            const newAssembly = product.assembly - qty; // Bezpieczne odjęcie
 
-                                await db.from('products').update({ ready: newReady }).eq('id', product.id);
-                                product.ready = newReady;
+                            await db.from('products').update({ ready: newReady }).eq('id', product.id);
+                            product.ready = newReady;
 
-                                if (product.assembly_group) {
-                                    await db.from('products').update({ assembly: newAssembly }).eq('assembly_group', product.assembly_group);
-                                    // BARDZO WAŻNE: Aktualizacja lokalnej puli, by kolejne pętle (np z 20W) miały poprawną pulę!
-                                    this.products.filter(p => p.assembly_group === product.assembly_group).forEach(p => p.assembly = newAssembly);
-                                } else {
-                                    await db.from('products').update({ assembly: newAssembly }).eq('id', product.id);
-                                    product.assembly = newAssembly;
-                                }
-
-                                totalProduced += actualQty;
-                                details.push(`${product.name}: ${actualQty} szt`);
+                            if (product.assembly_group) {
+                                await db.from('products').update({ assembly: newAssembly }).eq('assembly_group', product.assembly_group);
+                                // Aktualizujemy lokalnie od razu wszystkie produkty z tej grupy, żeby kolejna iteracja miała poprawną bazę!
+                                this.products.filter(p => p.assembly_group === product.assembly_group).forEach(p => p.assembly = newAssembly);
+                            } else {
+                                await db.from('products').update({ assembly: newAssembly }).eq('id', product.id);
+                                product.assembly = newAssembly;
                             }
+
+                            totalProduced += qty;
+                            details.push(`${product.name}: ${qty} szt`);
                         }
                     }
                 }
@@ -767,9 +787,8 @@
                     }).eq('id', 1);
 
                     this.addHistory('Rejestracja produkcji', details.join(', ') + ` (zużyto ${totalProduced} kpl części)`);
-                    alert(`✅ Zarejestrowano produkcję ${totalProduced} szt. Lampy przeniesiono z "W Montażu" do "Gotowe".`);
-                } else {
-                    alert('❌ Zbyt mało obudów "W Montażu", aby zrealizować tę produkcję.');
+                    alert(`✅ Zarejestrowano produkcję: ${totalProduced} szt. Lampy przeniesiono z "W Montażu" do "Gotowe".`);
+                    updateDashboard(); // Odśwież UI od razu
                 }
             }
 
@@ -1100,6 +1119,7 @@
             e.preventDefault();
             if (currentRole === 'viewer') return;
             const formData = new FormData(this);
+            // Formularz przyjmuje p1 = 22°, p2 = 37°, p3 = 58°
             const products = {
                 1: parseInt(formData.get('p1')) || 0, 
                 2: parseInt(formData.get('p2')) || 0,
