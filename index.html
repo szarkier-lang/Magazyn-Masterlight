@@ -1,0 +1,1041 @@
+﻿<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Masterlight - System Magazynowy</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --primary-terracotta: #C4704B;
+            --primary-dark: #A85A3A;
+            --accent-red: #D84C4C;
+            --accent-red-dark: #C23E3E;
+            --warm-beige: #F5E6D3;
+            --beige-light: #E8D7C3;
+            --text-dark: #3E2723;
+            --text-light: #6D4C41;
+            --border-color: #D7CCC8;
+            --success-status: #B8860B;
+            --warning-status: #CD853F;
+            --error-status: #8B4513;
+            --background: #FBF7F2;
+            --sidebar-bg: #8B6F47;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--background);
+            color: var(--text-dark);
+            line-height: 1.6;
+            margin: 0; padding: 0;
+        }
+
+        /* EKRAN LOGOWANIA */
+        #auth-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-terracotta) 100%);
+            display: flex; justify-content: center; align-items: center; z-index: 9999;
+        }
+        .auth-box {
+            background: white; padding: 3rem; border-radius: 8px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3); width: 100%; max-width: 400px; text-align: center;
+        }
+        .auth-box h2 { color: var(--primary-dark); margin-bottom: 1.5rem; }
+        .hidden { display: none !important; }
+
+        /* SIDEBAR */
+        .sidebar {
+            width: 250px; background: linear-gradient(180deg, var(--sidebar-bg) 0%, #6F5A3A 100%);
+            color: #fff; padding: 2rem 0; position: fixed; left: 0; top: 0; height: 100vh;
+            overflow-y: auto; box-shadow: 2px 0 15px rgba(0,0,0,0.2);
+        }
+        .sidebar-logo { padding: 0 1.5rem; margin-bottom: 2rem; border-bottom: 2px solid rgba(255,255,255,0.2); padding-bottom: 1.5rem; }
+        .sidebar-logo h2 { font-size: 1.3rem; letter-spacing: 1px; text-shadow: 1px 1px 3px rgba(0,0,0,0.3); }
+        .sidebar-nav { list-style: none; padding: 0; }
+        .sidebar-nav li { margin: 0; }
+        .sidebar-nav a {
+            display: flex; align-items: center; gap: 1rem; padding: 1rem 1.5rem;
+            color: rgba(255,255,255,0.85); text-decoration: none; transition: all 0.3s ease;
+            border-left: 4px solid transparent; cursor: pointer; font-size: 0.95rem;
+        }
+        .sidebar-nav a:hover { background-color: rgba(255,255,255,0.1); border-left-color: var(--accent-red); color: #fff; }
+        .sidebar-nav a.active { background-color: rgba(255,255,255,0.15); border-left-color: var(--accent-red); color: #fff; font-weight: 600; }
+
+        /* MAIN CONTENT */
+        .main-content { margin-left: 250px; flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
+        .header {
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-terracotta) 100%);
+            color: #fff; padding: 1.5rem 2rem; box-shadow: 0 4px 15px rgba(0,0,0,0.2); border-bottom: 4px solid var(--accent-red);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .header-title h1 { font-size: 2rem; margin-bottom: 0.3rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); letter-spacing: 1px; }
+        .header-title p { opacity: 0.9; font-size: 0.95rem; }
+        .user-badge { background: rgba(0,0,0,0.2); padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.9rem; border: 1px solid rgba(255,255,255,0.3); text-align: right; }
+        
+        .content { flex: 1; padding: 2rem; }
+
+        /* TABS */
+        .tabs-container { display: flex; gap: 0; border-bottom: 2px solid var(--border-color); margin-bottom: 2rem; }
+        .tab-content { display: none; animation: fadeIn 0.3s ease; }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* STATS & SECTIONS */
+        .stats-bar { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+        .stat-card {
+            background: #fff; padding: 1.2rem; border-radius: 8px; border-left: 5px solid var(--primary-terracotta);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1); transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .stat-card:hover { transform: translateY(-5px); box-shadow: 0 4px 12px rgba(196, 112, 75, 0.2); }
+        .stat-card h3 { color: var(--primary-terracotta); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem; opacity: 0.8; }
+        .stat-card .value { font-size: 2rem; font-weight: bold; color: var(--accent-red); }
+
+        .section { background: #fff; margin-bottom: 2rem; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); overflow: hidden; border-top: 4px solid var(--primary-terracotta); }
+        .section-header { background: linear-gradient(135deg, var(--beige-light) 0%, var(--warm-beige) 100%); padding: 1.2rem 1.5rem; border-bottom: 2px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
+        .section-header h2 { color: var(--text-dark); font-size: 1.3rem; margin: 0; }
+        .section-header .badge { background: var(--accent-red); color: white; padding: 0.3rem 0.7rem; border-radius: 20px; font-size: 0.8rem; font-weight: bold; }
+        .section-content { padding: 1.5rem; }
+
+        /* TABLES */
+        table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.9rem; }
+        table th { background-color: var(--primary-terracotta); color: white; padding: 0.8rem; text-align: left; font-weight: 600; border: 1px solid var(--primary-dark); }
+        table td { padding: 0.7rem 0.8rem; border-bottom: 1px solid var(--border-color); color: var(--text-dark); }
+        table tbody tr:hover { background-color: var(--warm-beige); }
+        table tbody tr:nth-child(even) { background-color: #FAFAF8; }
+
+        .status-badge { display: inline-block; padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; text-align: center; min-width: 70px; }
+        .status-ok { background-color: #E8F5E9; color: var(--success-status); border: 1px solid var(--success-status); }
+        .status-warning { background-color: #FFF3E0; color: var(--warning-status); border: 1px solid var(--warning-status); }
+        .status-error { background-color: #FFEBEE; color: var(--error-status); border: 1px solid var(--error-status); }
+
+        /* BUTTONS & FORMS */
+        button { padding: 0.6rem 1rem; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem; font-weight: 600; transition: all 0.3s ease; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.2rem; }
+        .btn-primary { background-color: var(--primary-terracotta); color: white; border: 2px solid var(--primary-terracotta); }
+        .btn-primary:hover { background-color: var(--primary-dark); box-shadow: 0 4px 12px rgba(168, 90, 58, 0.3); }
+        .btn-secondary { background-color: var(--accent-red); color: white; border: 2px solid var(--accent-red); }
+        .btn-secondary:hover { background-color: var(--accent-red-dark); box-shadow: 0 4px 12px rgba(200, 62, 62, 0.3); }
+        .btn-small { padding: 0.3rem 0.6rem; font-size: 0.75rem; }
+
+        .form-group { margin-bottom: 1rem; display: flex; flex-direction: column; gap: 0.3rem; }
+        .form-group label { font-weight: 600; color: var(--text-dark); text-transform: uppercase; font-size: 0.8rem; letter-spacing: 0.5px; }
+        input[type="text"], input[type="number"], input[type="date"], input[type="email"], input[type="password"] { padding: 0.6rem; border: 2px solid var(--border-color); border-radius: 4px; font-size: 0.9rem; color: var(--text-dark); width: 100%; }
+        input:focus { outline: none; border-color: var(--primary-terracotta); box-shadow: 0 0 0 3px rgba(196, 112, 75, 0.1); }
+
+        .editable { cursor: pointer; background-color: rgba(196, 112, 75, 0.05); }
+        .editable:hover { background-color: rgba(196, 112, 75, 0.15); }
+        .footer { text-align: center; padding: 1.5rem; color: var(--text-light); font-size: 0.85rem; border-top: 2px solid var(--border-color); margin-top: 2rem; }
+
+        /* --- STYLE DO DRUKU --- */
+        @media print {
+            body { background: white; color: black; }
+            .sidebar, .header, .footer, .btn-primary, .btn-secondary, form, #form-shipment-container, #form-components-container, #form-incoming-container, #form-production-container { display: none !important; }
+            .main-content { margin-left: 0; padding: 0; }
+            .content { padding: 0; }
+            .section { box-shadow: none; border: 1px solid #ccc; margin-bottom: 1rem; page-break-inside: avoid; }
+            .tab-content { display: block !important; } 
+            #tab-dashboard, #tab-history, #tab-reports { display: none !important; } 
+        }
+
+        @media (max-width: 768px) {
+            #app-container { flex-direction: column; }
+            .sidebar { width: 100%; height: auto; position: static; padding: 1rem 0; }
+            .main-content { margin-left: 0; }
+            .stats-bar { grid-template-columns: 1fr; }
+            .header { flex-direction: column; align-items: flex-start; gap: 1rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="auth-screen">
+        <div class="auth-box">
+            <h2><span style="font-size: 2rem;">Ⓜ️</span> MASTERLIGHT</h2>
+            <p style="margin-bottom: 1.5rem; color: var(--text-light);">Zaloguj się do systemu chmurowego</p>
+            <form id="login-form">
+                <div class="form-group" style="text-align: left;">
+                    <label>E-mail</label>
+                    <input type="email" id="login-email" required placeholder="np. admin@masterlight.pl">
+                </div>
+                <div class="form-group" style="text-align: left;">
+                    <label>Hasło</label>
+                    <input type="password" id="login-password" required>
+                </div>
+                <button type="submit" class="btn-primary" style="width: 100%; margin-top: 1rem; padding: 0.8rem;">Zaloguj się</button>
+            </form>
+            <p id="login-error" style="color: var(--accent-red); margin-top: 1rem; display: none;"></p>
+        </div>
+    </div>
+
+    <div id="app-container" class="hidden" style="display: flex; width: 100%; height: 100vh;">
+        
+        <aside class="sidebar">
+            <div class="sidebar-logo">
+                <h2><span style="font-size: 2rem;">Ⓜ️</span> MASTERLIGHT</h2>
+            </div>
+            <nav class="sidebar-nav">
+                <ul id="nav-list">
+                    <li><a href="#" onclick="switchTab('tab-dashboard')" class="nav-item active">📊 Dashboard</a></li>
+                    <li><a href="#" onclick="switchTab('tab-inventory')" class="nav-item">📦 Inwentarz</a></li>
+                    <li><a href="#" onclick="switchTab('tab-shipments')" class="nav-item">🚚 Dostawy</a></li>
+                    <li id="nav-history"><a href="#" onclick="switchTab('tab-history')" class="nav-item">📋 Historia</a></li>
+                    <li><a href="#" onclick="switchTab('tab-components')" class="nav-item">⚡ Komponenty</a></li>
+                    <li id="nav-reports"><a href="#" onclick="switchTab('tab-reports')" class="nav-item">🔧 Produkcja</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <div class="main-content">
+            <header class="header">
+                <div class="header-title">
+                    <h1><span style="font-size: 2.5rem;">Ⓜ️</span> MASTERLIGHT</h1>
+                    <p>System Zarządzania Magazynem - Baza danych w Chmurze</p>
+                </div>
+                <div class="user-badge" id="user-info">
+                    👤 Użytkownik: <strong id="logged-email">...</strong> <br>
+                    🛡️ Rola: <strong id="logged-role">...</strong>
+                </div>
+            </header>
+
+            <div class="content">
+                <div id="tab-dashboard" class="tab-content active">
+                    <h2 style="margin-bottom: 1.5rem; color: var(--text-dark);">Dashboard</h2>
+                    <div class="stats-bar">
+                        <div class="stat-card"><h3>Razem Downlighty</h3><div class="value" data-stat="total">0</div></div>
+                        <div class="stat-card"><h3>Gotowe do Wysyłki</h3><div class="value" data-stat="ready">0</div></div>
+                        <div class="stat-card"><h3>Planowane Dostawy</h3><div class="value" data-stat="shipments">0</div></div>
+                    </div>
+                    <div class="section">
+                        <div class="section-header"><h2>Stany Downlightów - Gotowe do Wysyłki</h2></div>
+                        <div class="section-content">
+                            <table>
+                                <thead><tr><th>Produkt</th><th>Ilość Gotowych</th><th>Status</th></tr></thead>
+                                <tbody id="products-dashboard"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="tab-inventory" class="tab-content">
+                    <h2 style="margin-bottom: 1.5rem; color: var(--text-dark);">Downlighty - Wszystkie</h2>
+                    <div class="section">
+                        <div class="section-header"><h2>Stan Magazynowy Downlightów</h2></div>
+                        <div class="section-content">
+                            <button class="btn-primary" onclick="window.print()" style="margin-bottom: 1.5rem;">📥 Eksportuj do PDF / Drukuj</button>
+                            <table>
+                                <thead><tr><th>Produkt</th><th>SKU</th><th>Gotowe</th><th>W Montażu</th><th>Razem</th><th>Status</th></tr></thead>
+                                <tbody id="products-table"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="tab-shipments" class="tab-content">
+                    <h2 style="margin-bottom: 1.5rem; color: var(--text-dark);">Zarządzanie Dostawami</h2>
+                    
+                    <div id="form-incoming-container" class="section">
+                        <div class="section-header"><h2>📦 Zarejestruj Dostawę Przychodzącą (Dopisz do montażu)</h2></div>
+                        <div class="section-content">
+                            <form id="incomingForm">
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
+                                    <div class="form-group"><label>Dostawca</label><input type="text" name="supplier" required></div>
+                                    <div class="form-group"><label>22°-15W</label><input type="number" name="p1" value="0" min="0"></div>
+                                    <div class="form-group"><label>37°-15W</label><input type="number" name="p2" value="0" min="0"></div>
+                                    <div class="form-group"><label>58°-15W</label><input type="number" name="p3" value="0" min="0"></div>
+                                </div>
+                                <div style="margin-top: 1.5rem; display: flex; gap: 1rem;">
+                                    <button type="submit" class="btn-primary">📥 Zarejestruj Dostawę</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <div class="section-header"><h2>Dostawy do klientów - Szczegóły</h2><div class="badge" id="shipments-count">0 dostaw</div></div>
+                        <div class="section-content">
+                            <button class="btn-primary" onclick="window.print()" style="margin-bottom: 1.5rem;">📥 Wydrukuj listę dostaw</button>
+                            <table>
+                                <thead><tr><th>Data</th><th>Miejsce</th><th>Razem sztuk</th><th>Status</th><th id="col-action">Akcja</th></tr></thead>
+                                <tbody id="shipments-table"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div id="form-shipment-container" class="section">
+                        <div class="section-header"><h2>Zaplanuj Nową Dostawę Do Klienta</h2></div>
+                        <div class="section-content">
+                            <form id="shipmentForm">
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
+                                    <div class="form-group"><label>Data</label><input type="date" name="date" required></div>
+                                    <div class="form-group"><label>Miejsce</label><input type="text" name="location" required></div>
+                                    <div class="form-group"><label>22°-15W</label><input type="number" name="p1" value="0" min="0"></div>
+                                    <div class="form-group"><label>37°-15W</label><input type="number" name="p2" value="0" min="0"></div>
+                                    <div class="form-group"><label>58°-15W</label><input type="number" name="p3" value="0" min="0"></div>
+                                    <div class="form-group"><label>37°-20W</label><input type="number" name="p4" value="0" min="0"></div>
+                                    <div class="form-group"><label>58°-20W</label><input type="number" name="p5" value="0" min="0"></div>
+                                </div>
+                                <div style="margin-top: 1.5rem; display: flex; gap: 1rem;">
+                                    <button type="submit" class="btn-primary">📤 Dodaj Dostawę</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="tab-history" class="tab-content">
+                    <h2 style="margin-bottom: 1.5rem; color: var(--text-dark);">Historia Operacji</h2>
+                    <div class="section">
+                        <div class="section-header"><h2>Pełna Historia (Tylko Szefostwo / Admin)</h2></div>
+                        <div class="section-content">
+                            <button class="btn-primary" onclick="window.print()" style="margin-bottom: 1.5rem;">📥 Drukuj Logi</button>
+                            <table>
+                                <thead><tr><th>Czas</th><th>Typ Operacji</th><th>Szczegóły</th></tr></thead>
+                                <tbody id="history-table"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="tab-components" class="tab-content">
+                    <h2 style="margin-bottom: 1.5rem; color: var(--text-dark);">Komponenty</h2>
+                    
+                    <div id="form-components-container" class="section">
+                        <div class="section-header"><h2>📦 Dodaj Dostawę Komponentów</h2></div>
+                        <div class="section-content">
+                            <form id="componentsIncomingForm">
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
+                                    <div class="form-group"><label>Dostawca</label><input type="text" name="supplier" required></div>
+                                    <div class="form-group"><label>Zasilacze</label><input type="number" name="ps_raw" value="0" min="0"></div>
+                                    <div class="form-group"><label>Klapki Zwykłe</label><input type="number" name="clips_normal" value="0" min="0"></div>
+                                    <div class="form-group"><label>Klapki Przelotowe</label><input type="number" name="clips_pass" value="0" min="0"></div>
+                                </div>
+                                <div style="margin-top: 1.5rem;"><button type="submit" class="btn-primary">📥 Zarejestruj</button></div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <div class="section-header"><h2>⚡ Zasilacze i Klapki (Stan)</h2></div>
+                        <div class="section-content">
+                            <table>
+                                <thead><tr><th>Typ</th><th>Ilość</th></tr></thead>
+                                <tbody>
+                                    <tr><td><strong>Zasilacze</strong></td><td onclick="editComponentCell(this, 'ps_raw')" class="editable" id="ps-raw-cell">0</td></tr>
+                                    <tr><td><strong>Klapki Zwykłe</strong></td><td onclick="editComponentCell(this, 'clips_normal')" class="editable" id="clips-normal-cell">0</td></tr>
+                                    <tr><td><strong>Klapki Przelotowe</strong></td><td onclick="editComponentCell(this, 'clips_pass')" class="editable" id="clips-pass-cell">0</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="tab-reports" class="tab-content">
+                    <h2 style="margin-bottom: 1.5rem; color: var(--text-dark);">Raporty - Produkcja</h2>
+                    
+                    <div id="form-production-container" class="section">
+                        <div class="section-header"><h2>🔧 Rejestracja Produkcji</h2></div>
+                        <div class="section-content">
+                            <form id="productionForm">
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
+                                    <div class="form-group"><label>22°-15W</label><input type="number" name="p1" value="0" min="0"></div>
+                                    <div class="form-group"><label>37°-15W</label><input type="number" name="p2" value="0" min="0"></div>
+                                    <div class="form-group"><label>58°-15W</label><input type="number" name="p3" value="0" min="0"></div>
+                                    <div class="form-group"><label>37°-20W</label><input type="number" name="p4" value="0" min="0"></div>
+                                    <div class="form-group"><label>58°-20W</label><input type="number" name="p5" value="0" min="0"></div>
+                                </div>
+                                <div style="margin-top: 1.5rem;"><button type="submit" class="btn-primary">✅ Zarejestruj Produkcję</button></div>
+                            </form>
+                            <p style="margin-top: 1rem; color: var(--text-light); font-size: 0.9rem;">
+                                ℹ️ Podane ilości zostaną odjęte z kolumny "W Montażu" i dodane do "Gotowe do Wysyłki"<br>
+                                ⚠️ Na każdy wyprodukowany downlight zużywa się: 1x zasilacz, 1x klapka zwykła, 1x klapka przelotowa
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <footer class="footer">
+                    <p>© 2026 Masterlight - Wersja Chmurowa ☁️</p>
+                </footer>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // ===== KONFIGURACJA SUPABASE =====
+        // ==========================================
+        const supabaseUrl = 'https://ghdswvjhqpxupzcrixlu.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdoZHN3dmpocXB4dXB6Y3JpeGx1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4NTEwMDAsImV4cCI6MjA4NzQyNzAwMH0._sk7mCv27tC153DTvqp_7O3CUyYsk3iuYuf0f93GCfo';
+        
+        // ==========================================
+        // ===== KONFIGURACJA UPRAWNIEŃ (RÓL) =====
+        // ==========================================
+        const ROLES = {
+            'b.hajduk@masterlight.pl': 'admin',      // Ty (Pełny dostęp)
+            'm.olejnik@masterlight.pl': 'viewer',         // Szef 1 (Tylko podgląd + PDF)
+            'robert@masterlight.pl': 'viewer',         // Szef 2 (Tylko podgląd + PDF)
+            'd.lewandowska@masterlight.pl': 'worker'      // Pracownik (Edycja + Dodawanie + Zdejmowanie ze stanu)
+        };
+
+        // Zmienne globalne do przechowywania sesji
+        let currentUserEmail = '';
+        let currentRole = 'viewer';
+
+        const db = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            const errorElement = document.getElementById('login-error');
+            const submitBtn = document.querySelector('#login-form button');
+            
+            errorElement.style.display = 'none';
+            submitBtn.textContent = 'Logowanie...';
+
+            const { data, error } = await db.auth.signInWithPassword({ email, password });
+
+            if (error) {
+                console.error("Błąd logowania:", error.message);
+                errorElement.textContent = 'Błędny e-mail lub hasło!';
+                errorElement.style.display = 'block';
+                submitBtn.textContent = 'Zaloguj się';
+            } else {
+                initApp(data.user); 
+            }
+        });
+
+        async function checkSession() {
+            const { data: { session } } = await db.auth.getSession();
+            if (session) initApp(session.user);
+        }
+
+        function initApp(user) {
+            currentUserEmail = user.email;
+            currentRole = ROLES[currentUserEmail] || 'viewer'; 
+
+            document.getElementById('logged-email').textContent = currentUserEmail;
+            
+            let roleText = 'Obserwator (Tylko Podgląd)';
+            if (currentRole === 'admin') roleText = 'Kierownik (Pełen Dostęp)';
+            if (currentRole === 'worker') roleText = 'Pracownik (Edycja Magazynu)';
+            document.getElementById('logged-role').textContent = roleText;
+
+            document.getElementById('auth-screen').classList.add('hidden');
+            document.getElementById('app-container').classList.remove('hidden');
+            
+            applyPermissions();
+
+            window.inventory = new CloudInventoryManager();
+            window.inventory.init();
+        }
+
+        function applyPermissions() {
+            if (currentRole === 'viewer') {
+                document.getElementById('form-shipment-container').style.display = 'none';
+                document.getElementById('form-incoming-container').style.display = 'none';
+                document.getElementById('form-components-container').style.display = 'none';
+                document.getElementById('form-production-container').style.display = 'none';
+                document.querySelectorAll('.editable').forEach(el => el.classList.remove('editable'));
+            }
+            
+            if (currentRole === 'worker') {
+                document.getElementById('nav-history').style.display = 'none';
+            }
+        }
+
+        function addLogoutButton() {
+            const nav = document.getElementById('nav-list');
+            const logoutLi = document.createElement('li');
+            logoutLi.innerHTML = `<a href="#" onclick="logoutUser()" style="color: #ffcccc; border-top: 1px solid rgba(255,255,255,0.1); margin-top: 1rem;">🚪 Wyloguj</a>`;
+            nav.appendChild(logoutLi);
+        }
+
+        async function logoutUser() {
+            await db.auth.signOut();
+            window.location.reload(); 
+        }
+
+        checkSession();
+        addLogoutButton();
+
+        class CloudInventoryManager {
+            constructor() {
+                this.products = [];
+                this.shipments = [];
+                this.history = [];
+                this.components = { ps_raw: 0, clips_normal: 0, clips_pass: 0 };
+            }
+
+            async init() {
+                await this.fetchData();
+                this.setupRealtime();
+            }
+
+            async fetchData() {
+                const { data: prods } = await db.from('products').select('*').order('id');
+                if (prods) this.products = prods;
+
+                const { data: comps } = await db.from('components').select('*').eq('id', 1).single();
+                if (comps) this.components = comps;
+
+                const { data: ships } = await db.from('shipments').select('*').order('date');
+                if (ships) this.shipments = ships;
+
+                const { data: hist } = await db.from('history').select('*').order('created_at', { ascending: false }).limit(20);
+                if (hist) {
+                    this.history = hist.map(h => ({ 
+                        timestamp: new Date(h.created_at).toLocaleString('pl-PL'), 
+                        action: h.action, details: h.details 
+                    }));
+                }
+                updateDashboard();
+            }
+
+            setupRealtime() {
+                db.channel('public:all')
+                    .on('postgres_changes', { event: '*', schema: 'public' }, payload => {
+                        this.fetchData();
+                    }).subscribe();
+            }
+
+            async addHistory(action, details) {
+                const detailWithUser = `${details} (User: ${currentUserEmail})`;
+                await db.from('history').insert([{ action, details: detailWithUser }]);
+            }
+
+            getStatus(productId) {
+                const product = this.products.find(p => p.id === productId);
+                if (!product) return 'unknown';
+                const total = product.ready + product.assembly;
+                if (total === 0) return 'error';
+                if (total >= 50) return 'ok';
+                return 'warning';
+            }
+
+            async updateProduct(id, updates) {
+                if (currentRole === 'viewer') return; 
+
+                const product = this.products.find(p => p.id === id);
+                if (product) {
+                    await db.from('products').update(updates).eq('id', id);
+                    if (updates.assembly !== undefined && product.assembly_group) {
+                        await db.from('products').update({ assembly: updates.assembly }).eq('assembly_group', product.assembly_group);
+                    }
+                    this.addHistory('Edycja produktu', `${product.name}`);
+                }
+            }
+
+            // DOSTAWA DO KLIENTA (ZAPLANOWANIE)
+            async addShipment(shipment) {
+                if (currentRole === 'viewer') return;
+                await db.from('shipments').insert([{ 
+                    date: shipment.date, 
+                    location: shipment.location, 
+                    products: shipment.products,
+                    status: 'planned'
+                }]);
+                this.addHistory('Nowa zaplanowana wysyłka', `${shipment.location} - ${shipment.date}`);
+            }
+
+            async deleteShipment(id) {
+                if (currentRole !== 'admin') {
+                    alert('Brak uprawnień. Tylko kierownik może usuwać zaplanowane dostawy.');
+                    return;
+                }
+                await db.from('shipments').delete().eq('id', id);
+                this.addHistory('Usunięta wysyłka', `Z systemu usunięto zaplanowaną wysyłkę`);
+            }
+
+            // REALIZACJA DOSTAWY (ZDEJMOWANIE Z "GOTOWE") I WYLICZANIE BRAKÓW
+            async completeShipment(id) {
+                if (currentRole === 'viewer') return;
+                const shipment = this.shipments.find(s => s.id === id);
+                if (!shipment) return;
+
+                const missing = {};
+                const updates = []; 
+
+                for (const productId of Object.keys(shipment.products)) {
+                    const quantity = shipment.products[productId];
+                    if (quantity > 0) {
+                        const product = this.products.find(p => p.id === parseInt(productId));
+                        if (product) {
+                            const toDeduct = Math.min(quantity, product.ready);
+                            const newReady = product.ready - toDeduct;
+                            const lack = quantity - toDeduct;
+
+                            if (lack > 0) missing[productId] = lack;
+                            if (toDeduct > 0) updates.push({ id: product.id, ready: newReady });
+                        }
+                    }
+                }
+
+                for (const u of updates) {
+                    await db.from('products').update({ ready: u.ready }).eq('id', u.id);
+                }
+
+                let newStatus = 'completed';
+                let partialMissing = null;
+                let historyMsg = '';
+
+                if (Object.keys(missing).length > 0) {
+                    newStatus = 'partial';
+                    partialMissing = missing;
+                    historyMsg = `Dostawa niepełna: ${shipment.location} (braki wyszczególnione na wydruku)`;
+                } else {
+                    historyMsg = `Dostawa zrealizowana: ${shipment.location} (odjęto ze stanu)`;
+                }
+
+                await db.from('shipments').update({ status: newStatus, partial_missing: partialMissing }).eq('id', id);
+                this.addHistory(newStatus === 'completed' ? 'Dostawa zrealizowana' : 'Dostawa niepełna', historyMsg);
+            }
+
+            // DOKOŃCZENIE NIEPEŁNEJ DOSTAWY
+            async completeRemainingShipment(id) {
+                if (currentRole === 'viewer') return;
+                const shipment = this.shipments.find(s => s.id === id);
+                if (!shipment || shipment.status !== 'partial' || !shipment.partial_missing) return;
+
+                const missing = shipment.partial_missing;
+                const stillMissing = {};
+                const updates = [];
+
+                for (const productId of Object.keys(missing)) {
+                    const need = missing[productId];
+                    const product = this.products.find(p => p.id === parseInt(productId));
+                    if (product) {
+                        const toDeduct = Math.min(need, product.ready);
+                        const newReady = product.ready - toDeduct;
+                        const left = need - toDeduct;
+
+                        if (left > 0) stillMissing[productId] = left;
+                        if (toDeduct > 0) updates.push({ id: product.id, ready: newReady });
+                    }
+                }
+
+                for (const u of updates) {
+                    await db.from('products').update({ ready: u.ready }).eq('id', u.id);
+                }
+
+                let newStatus = 'completed';
+                let newPartialMissing = null;
+                let historyMsg = '';
+
+                if (Object.keys(stillMissing).length > 0) {
+                    newStatus = 'partial';
+                    newPartialMissing = stillMissing;
+                    historyMsg = `Dokończenie dostawy (wciąż są braki): ${shipment.location}`;
+                } else {
+                    historyMsg = `Dokończenie dostawy: ${shipment.location} (teraz kompletna)`;
+                }
+
+                await db.from('shipments').update({ status: newStatus, partial_missing: newPartialMissing }).eq('id', id);
+                this.addHistory('Dokończenie dostawy', historyMsg);
+            }
+
+            // DOSTAWA PRZYCHODZĄCA (DOWNLIGHTY DO MONTAŻU)
+            async addIncomingShipment(supplier, newProducts) {
+                if (currentRole === 'viewer') return;
+                let totalAdded = 0;
+                
+                for (const [id, qty] of Object.entries(newProducts)) {
+                    if (qty > 0) {
+                        const product = this.products.find(p => p.id === parseInt(id));
+                        if (product) {
+                            await db.from('products').update({ assembly: product.assembly + qty }).eq('id', product.id);
+                            totalAdded += qty;
+                        }
+                    }
+                }
+                if (totalAdded > 0) {
+                    this.addHistory('Dostawa przychodząca', `${supplier} - dodano ${totalAdded} szt do montażu`);
+                }
+            }
+
+            // REJESTRACJA PRODUKCJI
+            async registerProduction(produced) {
+                if (currentRole === 'viewer') return;
+                
+                const totalToProduce = Object.values(produced).reduce((sum, val) => sum + val, 0);
+                if (totalToProduce === 0) return;
+
+                const { ps_raw, clips_normal, clips_pass } = this.components;
+                const componentsAvailable = Math.min(ps_raw, clips_normal, clips_pass);
+
+                if (totalToProduce > componentsAvailable) {
+                    alert(`⚠️ Niewystarczająca liczba komponentów na stanie! Masz zestawy tylko dla ${componentsAvailable} szt.`);
+                    return; 
+                }
+
+                let totalProduced = 0;
+                const details = [];
+
+                for (const [id, qty] of Object.entries(produced)) {
+                    if (qty > 0) {
+                        const product = this.products.find(p => p.id === parseInt(id));
+                        if (product) {
+                            const actualQty = Math.min(qty, product.assembly);
+                            if (actualQty > 0) {
+                                await db.from('products').update({ 
+                                    assembly: product.assembly - actualQty,
+                                    ready: product.ready + actualQty
+                                }).eq('id', product.id);
+                                totalProduced += actualQty;
+                                details.push(`${product.name}: ${actualQty} szt`);
+                            }
+                        }
+                    }
+                }
+
+                if (totalProduced > 0) {
+                    await db.from('components').update({
+                        ps_raw: ps_raw - totalProduced,
+                        clips_normal: clips_normal - totalProduced,
+                        clips_pass: clips_pass - totalProduced
+                    }).eq('id', 1);
+
+                    this.addHistory('Rejestracja produkcji', details.join(', ') + ` (zużyto ${totalProduced} kompletów części)`);
+                    alert(`✅ Zarejestrowano produkcję ${totalProduced} szt. Lampy przeniesiono z "W Montażu" do "Gotowe do wysyłki".`);
+                } else {
+                    alert('❌ Operacja nie powiodła się. Upewnij się, że wpisane produkty mają wystarczający stan w "W Montażu".');
+                }
+            }
+
+            getTotals() {
+                const processedGroups = new Set();
+                let totalAssembly = 0;
+                this.products.forEach(p => {
+                    if (p.assembly_group) {
+                        if (!processedGroups.has(p.assembly_group)) { totalAssembly += p.assembly; processedGroups.add(p.assembly_group); }
+                    } else { totalAssembly += p.assembly; }
+                });
+                const totalReady = this.products.reduce((s, p) => s + p.ready, 0);
+                return { totalReady, totalAssembly, totalAll: totalReady + totalAssembly };
+            }
+
+            async updateComponent(field, value) {
+                if (currentRole === 'viewer') return;
+                await db.from('components').update({ [field]: value }).eq('id', 1);
+                this.addHistory('Edycja komponentu', `Zaktualizowano stan zasilaczy/klapek`);
+            }
+
+            async addComponentsShipment(supplier, newComps) {
+                if (currentRole === 'viewer') return;
+                const { data: current } = await db.from('components').select('*').eq('id', 1).single();
+                const updated = {
+                    ps_raw: current.ps_raw + (newComps.ps_raw || 0),
+                    clips_normal: current.clips_normal + (newComps.clips_normal || 0),
+                    clips_pass: current.clips_pass + (newComps.clips_pass || 0)
+                };
+                await db.from('components').update(updated).eq('id', 1);
+                this.addHistory('Dostawa komponentów', `Dostawca: ${supplier}`);
+            }
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        function getStatusClass(productId) {
+            const status = window.inventory.getStatus(productId);
+            return status === 'ok' ? 'status-ok' : status === 'warning' ? 'status-warning' : 'status-error';
+        }
+
+        function getStatusText(productId) {
+            const status = window.inventory.getStatus(productId);
+            return status === 'ok' ? '✓ OK' : status === 'warning' ? '⚠ Mało' : '⛔ Brak';
+        }
+
+        function updateDashboard() {
+            if(!window.inventory || window.inventory.products.length === 0) return;
+            
+            const totals = window.inventory.getTotals();
+            document.querySelector('[data-stat="total"]').textContent = totals.totalAll;
+            document.querySelector('[data-stat="ready"]').textContent = totals.totalReady;
+            document.querySelector('[data-stat="shipments"]').textContent = window.inventory.shipments.filter(s => s.status !== 'completed').length;
+
+            const dashboardTbody = document.getElementById('products-dashboard');
+            dashboardTbody.innerHTML = '';
+            window.inventory.products.forEach(p => {
+                const row = document.createElement('tr');
+                row.innerHTML = `<td>${p.name}</td><td>${p.ready}</td><td><span class="status-badge ${getStatusClass(p.id)}">${getStatusText(p.id)}</span></td>`;
+                dashboardTbody.appendChild(row);
+            });
+
+            updateInventoryTable();
+            updateShipmentsTable();
+            if(currentRole !== 'worker') updateHistoryTable(); 
+            updateComponentsDisplay();
+        }
+
+        function updateInventoryTable() {
+            const tbody = document.getElementById('products-table');
+            tbody.innerHTML = '';
+            const isViewer = currentRole === 'viewer';
+            
+            window.inventory.products.forEach(p => {
+                const total = p.ready + p.assembly;
+                const row = document.createElement('tr');
+                const readyCell = isViewer ? `<td>${p.ready}</td>` : `<td onclick="editCell(this, 'ready', ${p.id})" class="editable">${p.ready}</td>`;
+                const assemblyCell = isViewer ? `<td>${p.assembly}</td>` : `<td onclick="editCell(this, 'assembly', ${p.id})" class="editable">${p.assembly}</td>`;
+
+                row.innerHTML = `
+                    <td>${p.name}</td><td>${p.sku}</td>
+                    ${readyCell}
+                    ${assemblyCell}
+                    <td><strong>${total}</strong></td>
+                    <td><span class="status-badge ${getStatusClass(p.id)}">${getStatusText(p.id)}</span></td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function updateShipmentsTable() {
+            const tbody = document.getElementById('shipments-table');
+            tbody.innerHTML = '';
+            window.inventory.shipments.forEach(s => {
+                let total = 0;
+                if(s.products) { total = Object.values(s.products).reduce((a, b) => a + b, 0); }
+                
+                let statusBadge = '';
+                if (s.status === 'completed') statusBadge = '<span class="status-badge status-ok">✓ Zrealizowana</span>';
+                else if (s.status === 'partial') statusBadge = '<span class="status-badge status-warning">⚠ Niepełna</span>';
+                else statusBadge = '<span class="status-badge status-warning">⏳ Planowana</span>';
+
+                let actionButton = '';
+                
+                if (currentRole !== 'viewer') {
+                    if (s.status === 'completed') {
+                        if (currentRole === 'admin') actionButton = `<button class="btn-small btn-secondary" onclick="deleteShipment(${s.id})">🗑️ Usuń</button>`;
+                    } else if (s.status === 'partial') {
+                        actionButton = `<button class="btn-small btn-primary" onclick="completeRemainingShipmentUI(${s.id})">✓ Dokończ</button> 
+                                        <button class="btn-small btn-secondary" onclick="printMissingPdf(${s.id})">📄 PDF Braki</button>`;
+                        if (currentRole === 'admin') actionButton += ` <button class="btn-small btn-secondary" onclick="deleteShipment(${s.id})">🗑️ Usuń</button>`;
+                    } else {
+                        actionButton = `<button class="btn-small btn-primary" onclick="completeShipmentUI(${s.id})">✓ Zrealizuj</button>`;
+                        if (currentRole === 'admin') actionButton += ` <button class="btn-small btn-secondary" onclick="deleteShipment(${s.id})">🗑️ Usuń</button>`;
+                    }
+                } else {
+                    // Szef może wygenerować PDF z brakami w niepełnej dostawie
+                    if (s.status === 'partial') {
+                        actionButton = `<button class="btn-small btn-secondary" onclick="printMissingPdf(${s.id})">📄 PDF Braki</button>`;
+                    }
+                }
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${s.date}</td><td>${s.location}</td>
+                    <td><strong>${total}</strong></td>
+                    <td>${statusBadge}</td>
+                    <td>${actionButton}</td>
+                `;
+                tbody.appendChild(row);
+            });
+            document.getElementById('shipments-count').textContent = window.inventory.shipments.length + ' dostawy';
+        }
+
+        function updateHistoryTable() {
+            const tbody = document.getElementById('history-table');
+            tbody.innerHTML = '';
+            window.inventory.history.slice(0, 20).forEach(h => {
+                const row = document.createElement('tr');
+                row.innerHTML = `<td>${h.timestamp}</td><td>${h.action}</td><td>${h.details}</td>`;
+                tbody.appendChild(row);
+            });
+        }
+
+        function updateComponentsDisplay() {
+            if(!window.inventory.components) return;
+            const isViewer = currentRole === 'viewer';
+            const rawEl = document.getElementById('ps-raw-cell');
+            const normEl = document.getElementById('clips-normal-cell');
+            const passEl = document.getElementById('clips-pass-cell');
+
+            rawEl.textContent = window.inventory.components.ps_raw;
+            normEl.textContent = window.inventory.components.clips_normal;
+            passEl.textContent = window.inventory.components.clips_pass;
+
+            if (isViewer) {
+                rawEl.classList.remove('editable'); rawEl.onclick = null;
+                normEl.classList.remove('editable'); normEl.onclick = null;
+                passEl.classList.remove('editable'); passEl.onclick = null;
+            }
+        }
+
+        function editCell(cell, field, productId) {
+            if (currentRole === 'viewer') return;
+            if (cell.querySelector('input')) return;
+            const product = window.inventory.products.find(p => p.id === productId);
+            const input = document.createElement('input');
+            input.type = 'number'; input.value = product[field]; input.style.width = '100%';
+            
+            cell.innerHTML = ''; cell.appendChild(input); input.focus(); input.select();
+
+            const save = () => {
+                window.inventory.updateProduct(productId, { [field]: parseInt(input.value) || 0 });
+                cell.innerHTML = '⏳'; 
+            };
+            input.addEventListener('blur', save);
+            input.addEventListener('keypress', (e) => { if (e.key === 'Enter') save(); });
+        }
+
+        function editComponentCell(cell, field) {
+            if (currentRole === 'viewer') return;
+            if (cell.querySelector('input')) return;
+            const input = document.createElement('input');
+            input.type = 'number'; input.value = window.inventory.components[field]; input.style.width = '100%';
+            
+            cell.innerHTML = ''; cell.appendChild(input); input.focus(); input.select();
+
+            const save = () => {
+                window.inventory.updateComponent(field, parseInt(input.value) || 0);
+                cell.innerHTML = '⏳';
+            };
+            input.addEventListener('blur', save);
+            input.addEventListener('keypress', (e) => { if (e.key === 'Enter') save(); });
+        }
+
+        // AKCJE UI DLA DOSTAW
+        function completeShipmentUI(id) {
+            if (confirm('✓ Czy na pewno zrealizować tę dostawę?\n\nOdpowiednie ilości downlightów zostaną odjęte ze stanów magazynowych (z kolumny "Gotowe").')) {
+                window.inventory.completeShipment(id);
+            }
+        }
+
+        function completeRemainingShipmentUI(id) {
+            if (confirm('✓ Czy na pewno dokończyć tę dostawę?\n\nBrakujące ilości zostaną odjęte z Twoich obecnych stanów magazynowych.')) {
+                window.inventory.completeRemainingShipment(id);
+            }
+        }
+
+        function deleteShipment(id) { 
+            if (currentRole === 'admin' && confirm('🗑️ Na pewno usunąć tę dostawę z bazy?')) { 
+                window.inventory.deleteShipment(id); 
+            } 
+        }
+
+        function printMissingPdf(id) {
+            const shipment = window.inventory.shipments.find(s => s.id === id);
+            if (!shipment || !shipment.partial_missing) return;
+            
+            const date = new Date().toLocaleDateString('pl-PL');
+            
+            let html = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <title>Brakujące Produkty - ${shipment.location}</title>
+                <style>
+                    body { font-family: Arial, sans-serif; margin: 40px; color: #3E2723; }
+                    h1 { color: #C4704B; border-bottom: 3px solid #D84C4C; padding-bottom: 10px; }
+                    h2 { color: #A85A3A; margin-top: 30px; }
+                    table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+                    th { background-color: #C4704B; color: white; padding: 10px; text-align: left; }
+                    td { padding: 8px; border-bottom: 1px solid #D7CCC8; }
+                    tr:nth-child(even) { background-color: #FBF7F2; }
+                    .info-box { background-color: #FFF3E0; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #CD853F; }
+                    .warning { color: #CD853F; font-weight: bold; }
+                </style>
+            </head>
+            <body>
+                <h1>⚠️ BRAKUJĄCE PRODUKTY - DOSTAWA NIEPEŁNA</h1>
+                <div class="info-box">
+                    <h3>Informacje o dostawie</h3>
+                    <p><strong>Lokalizacja:</strong> ${shipment.location}</p>
+                    <p><strong>Data planowana:</strong> ${shipment.date}</p>
+                    <p><strong>Data raportu:</strong> ${date}</p>
+                    <p class="warning">⚠️ Dostawa zrealizowana częściowo ze względu na brak produktów na stanie</p>
+                </div>
+                <h2>Lista brakujących produktów do wysłania</h2>
+                <table>
+                    <thead><tr><th>Produkt</th><th>SKU</th><th>Ilość brakująca</th></tr></thead>
+                    <tbody>
+            `;
+            
+            let totalMissing = 0;
+            Object.entries(shipment.partial_missing).forEach(([productId, quantity]) => {
+                const product = window.inventory.products.find(p => p.id === parseInt(productId));
+                if (product) {
+                    html += `<tr><td>${product.name}</td><td>${product.sku}</td><td class="warning">${quantity} szt</td></tr>`;
+                    totalMissing += quantity;
+                }
+            });
+            
+            html += `
+                    </tbody>
+                </table>
+                <div class="info-box">
+                    <h3>Podsumowanie</h3>
+                    <p><strong>Razem brakujących opraw:</strong> <span class="warning">${totalMissing} szt</span></p>
+                </div>
+            </body>
+            </html>
+            `;
+            
+            const printWindow = window.open('', '', 'width=800,height=600');
+            printWindow.document.write(html);
+            printWindow.document.close();
+            printWindow.focus();
+            setTimeout(() => { printWindow.print(); }, 250);
+        }
+
+        // OBSŁUGA FORMULARZY
+        document.getElementById('shipmentForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            if (currentRole === 'viewer') return;
+            const formData = new FormData(this);
+            const products = {
+                1: parseInt(formData.get('p1')) || 0, 2: parseInt(formData.get('p2')) || 0,
+                3: parseInt(formData.get('p3')) || 0, 4: parseInt(formData.get('p4')) || 0,
+                5: parseInt(formData.get('p5')) || 0
+            };
+            window.inventory.addShipment({ date: formData.get('date'), location: formData.get('location'), products });
+            this.reset(); 
+        });
+
+        document.getElementById('incomingForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            if (currentRole === 'viewer') return;
+            const formData = new FormData(this);
+            const products = {
+                1: parseInt(formData.get('p1')) || 0, 
+                2: parseInt(formData.get('p2')) || 0,
+                3: parseInt(formData.get('p3')) || 0
+            };
+            await window.inventory.addIncomingShipment(formData.get('supplier'), products);
+            this.reset();
+        });
+
+        document.getElementById('productionForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            if (currentRole === 'viewer') return;
+            const formData = new FormData(this);
+            const produced = {
+                1: parseInt(formData.get('p1')) || 0, 2: parseInt(formData.get('p2')) || 0,
+                3: parseInt(formData.get('p3')) || 0, 4: parseInt(formData.get('p4')) || 0,
+                5: parseInt(formData.get('p5')) || 0
+            };
+            await window.inventory.registerProduction(produced);
+            this.reset();
+        });
+
+        document.getElementById('componentsIncomingForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            if (currentRole === 'viewer') return;
+            const formData = new FormData(this);
+            window.inventory.addComponentsShipment(formData.get('supplier'), {
+                ps_raw: parseInt(formData.get('ps_raw')) || 0, clips_normal: parseInt(formData.get('clips_normal')) || 0, clips_pass: parseInt(formData.get('clips_pass')) || 0
+            });
+            this.reset();
+        });
+
+    </script>
+</body>
+</html>
