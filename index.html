@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Masterlight - System Magazynowy</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+    
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -33,6 +35,27 @@
             margin: 0; padding: 0;
         }
 
+        /* Ustawienia Ikon */
+        .material-symbols-outlined {
+            vertical-align: middle;
+            font-size: 1.2em;
+        }
+        button .material-symbols-outlined {
+            font-size: 1.1em;
+            margin-right: 6px;
+            vertical-align: -0.15em;
+        }
+        .status-badge .material-symbols-outlined {
+            font-size: 1.1em;
+            margin-right: 4px;
+            vertical-align: -0.15em;
+        }
+        .sidebar-nav a .material-symbols-outlined {
+            font-size: 1.4em;
+            margin-right: 12px;
+            opacity: 0.9;
+        }
+
         /* EKRAN LOGOWANIA */
         #auth-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -43,7 +66,7 @@
             background: white; padding: 3rem; border-radius: 8px;
             box-shadow: 0 10px 40px rgba(0,0,0,0.3); width: 100%; max-width: 400px; text-align: center;
         }
-        .auth-box h2 { color: var(--primary-dark); margin-bottom: 1.5rem; }
+        .auth-box h2 { color: var(--primary-dark); margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: center; gap: 8px; }
         .hidden { display: none !important; }
 
         /* SIDEBAR */
@@ -53,11 +76,11 @@
             overflow-y: auto; box-shadow: 2px 0 15px rgba(0,0,0,0.2);
         }
         .sidebar-logo { padding: 0 1.5rem; margin-bottom: 2rem; border-bottom: 2px solid rgba(255,255,255,0.2); padding-bottom: 1.5rem; }
-        .sidebar-logo h2 { font-size: 1.3rem; letter-spacing: 1px; text-shadow: 1px 1px 3px rgba(0,0,0,0.3); }
+        .sidebar-logo h2 { font-size: 1.3rem; letter-spacing: 1px; text-shadow: 1px 1px 3px rgba(0,0,0,0.3); display: flex; align-items: center; gap: 10px; }
         .sidebar-nav { list-style: none; padding: 0; }
         .sidebar-nav li { margin: 0; }
         .sidebar-nav a {
-            display: flex; align-items: center; gap: 1rem; padding: 1rem 1.5rem;
+            display: flex; align-items: center; padding: 1rem 1.5rem;
             color: rgba(255,255,255,0.85); text-decoration: none; transition: all 0.3s ease;
             border-left: 4px solid transparent; cursor: pointer; font-size: 0.95rem;
         }
@@ -71,10 +94,11 @@
             color: #fff; padding: 1.5rem 2rem; box-shadow: 0 4px 15px rgba(0,0,0,0.2); border-bottom: 4px solid var(--accent-red);
             display: flex; justify-content: space-between; align-items: center;
         }
-        .header-title h1 { font-size: 2rem; margin-bottom: 0.3rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); letter-spacing: 1px; }
+        .header-title h1 { font-size: 2rem; margin-bottom: 0.3rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); letter-spacing: 1px; display: flex; align-items: center; gap: 10px;}
         .header-title p { opacity: 0.9; font-size: 0.95rem; }
-        .user-badge { background: rgba(0,0,0,0.2); padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.9rem; border: 1px solid rgba(255,255,255,0.3); text-align: left; display: flex; align-items: center; gap: 15px; }
-        
+        .user-badge { background: rgba(0,0,0,0.2); padding: 0.8rem 1.2rem; border-radius: 8px; font-size: 0.9rem; border: 1px solid rgba(255,255,255,0.3); text-align: left; display: flex; align-items: center; gap: 20px; }
+        .user-badge-info p { margin: 0; line-height: 1.4; display: flex; align-items: center; gap: 6px; }
+
         .content { flex: 1; padding: 2rem; }
 
         /* TABS */
@@ -106,7 +130,7 @@
         table tbody tr:hover { background-color: var(--warm-beige); }
         table tbody tr:nth-child(even) { background-color: #FAFAF8; }
 
-        .status-badge { display: inline-block; padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; text-align: center; min-width: 70px; }
+        .status-badge { display: inline-flex; align-items: center; padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; text-align: center; min-width: 70px; }
         .status-ok { background-color: #E8F5E9; color: var(--success-status); border: 1px solid var(--success-status); }
         .status-warning { background-color: #FFF3E0; color: var(--warning-status); border: 1px solid var(--warning-status); }
         .status-error { background-color: #FFEBEE; color: var(--error-status); border: 1px solid var(--error-status); }
@@ -121,7 +145,7 @@
         .modal-body p { margin-bottom: 0.8rem; font-size: 1.1rem; }
 
         /* BUTTONS & FORMS */
-        button { padding: 0.6rem 1rem; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem; font-weight: 600; transition: all 0.3s ease; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.2rem; }
+        button { display: inline-flex; align-items: center; padding: 0.6rem 1rem; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem; font-weight: 600; transition: all 0.3s ease; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.2rem; }
         .btn-primary { background-color: var(--primary-terracotta); color: white; border: 2px solid var(--primary-terracotta); }
         .btn-primary:hover { background-color: var(--primary-dark); box-shadow: 0 4px 12px rgba(168, 90, 58, 0.3); }
         .btn-secondary { background-color: var(--accent-red); color: white; border: 2px solid var(--accent-red); }
@@ -130,7 +154,7 @@
 
         .form-group { margin-bottom: 1rem; display: flex; flex-direction: column; gap: 0.3rem; }
         .form-group label { font-weight: 600; color: var(--text-dark); text-transform: uppercase; font-size: 0.8rem; letter-spacing: 0.5px; }
-        input[type="text"], input[type="number"], input[type="date"], input[type="email"], input[type="password"] { padding: 0.6rem; border: 2px solid var(--border-color); border-radius: 4px; font-size: 0.9rem; color: var(--text-dark); width: 100%; }
+        input[type="text"], input[type="number"], input[type="date"], input[type="email"], input[type="password"] { padding: 0.6rem; border: 2px solid var(--border-color); border-radius: 4px; font-size: 0.9rem; color: var(--text-dark); width: 100%; font-family: inherit;}
         input:focus { outline: none; border-color: var(--primary-terracotta); box-shadow: 0 0 0 3px rgba(196, 112, 75, 0.1); }
 
         .editable { cursor: pointer; background-color: rgba(196, 112, 75, 0.05); }
@@ -154,7 +178,7 @@
             .main-content { margin-left: 0; }
             .stats-bar { grid-template-columns: 1fr; }
             .header { flex-direction: column; align-items: flex-start; gap: 1rem; }
-            .user-badge { flex-direction: column; text-align: center; gap: 5px; }
+            .user-badge { flex-direction: column; text-align: center; gap: 15px; }
         }
     </style>
 </head>
@@ -162,7 +186,7 @@
 
     <div id="auth-screen">
         <div class="auth-box">
-            <h2><span style="font-size: 2rem;">Ⓜ️</span> MASTERLIGHT</h2>
+            <h2><span class="material-symbols-outlined" style="font-size: 2.5rem; color: var(--primary-terracotta);">highlight</span> MASTERLIGHT</h2>
             <p style="margin-bottom: 1.5rem; color: var(--text-light);">Zaloguj się do systemu chmurowego</p>
             <form id="login-form">
                 <div class="form-group" style="text-align: left;">
@@ -173,9 +197,11 @@
                     <label>Hasło</label>
                     <input type="password" id="login-password" required>
                 </div>
-                <button type="submit" class="btn-primary" style="width: 100%; margin-top: 1rem; padding: 0.8rem;">Zaloguj się</button>
+                <button type="submit" class="btn-primary" style="width: 100%; margin-top: 1rem; padding: 0.8rem; justify-content: center;">
+                    <span class="material-symbols-outlined">login</span> Zaloguj się
+                </button>
             </form>
-            <p id="login-error" style="color: var(--accent-red); margin-top: 1rem; display: none;"></p>
+            <p id="login-error" style="color: var(--accent-red); margin-top: 1rem; display: none; font-weight: bold;"></p>
         </div>
     </div>
 
@@ -183,17 +209,17 @@
         
         <aside class="sidebar">
             <div class="sidebar-logo">
-                <h2><span style="font-size: 2rem;">Ⓜ️</span> MASTERLIGHT</h2>
+                <h2><span class="material-symbols-outlined" style="font-size: 1.8rem;">highlight</span> MASTERLIGHT</h2>
             </div>
             <nav class="sidebar-nav">
                 <ul id="nav-list">
-                    <li><a href="#" onclick="switchTab('tab-dashboard')" class="nav-item active">📊 Dashboard</a></li>
-                    <li><a href="#" onclick="switchTab('tab-inventory')" class="nav-item">📦 Inwentarz</a></li>
-                    <li><a href="#" onclick="switchTab('tab-shipments')" class="nav-item">🚚 Dostawy</a></li>
-                    <li><a href="#" onclick="switchTab('tab-adjustments')" class="nav-item">🛠️ Regulacja Lamp</a></li>
-                    <li id="nav-history"><a href="#" onclick="switchTab('tab-history')" class="nav-item">📋 Historia</a></li>
-                    <li><a href="#" onclick="switchTab('tab-components')" class="nav-item">⚡ Komponenty</a></li>
-                    <li id="nav-reports"><a href="#" onclick="switchTab('tab-reports')" class="nav-item">🔧 Produkcja</a></li>
+                    <li><a href="#" onclick="switchTab('tab-dashboard')" class="nav-item active"><span class="material-symbols-outlined">space_dashboard</span> Dashboard</a></li>
+                    <li><a href="#" onclick="switchTab('tab-inventory')" class="nav-item"><span class="material-symbols-outlined">inventory_2</span> Inwentarz</a></li>
+                    <li><a href="#" onclick="switchTab('tab-shipments')" class="nav-item"><span class="material-symbols-outlined">local_shipping</span> Dostawy</a></li>
+                    <li><a href="#" onclick="switchTab('tab-adjustments')" class="nav-item"><span class="material-symbols-outlined">handyman</span> Regulacja Lamp</a></li>
+                    <li id="nav-history"><a href="#" onclick="switchTab('tab-history')" class="nav-item"><span class="material-symbols-outlined">receipt_long</span> Historia</a></li>
+                    <li><a href="#" onclick="switchTab('tab-components')" class="nav-item"><span class="material-symbols-outlined">electrical_services</span> Komponenty</a></li>
+                    <li id="nav-reports"><a href="#" onclick="switchTab('tab-reports')" class="nav-item"><span class="material-symbols-outlined">precision_manufacturing</span> Produkcja</a></li>
                 </ul>
             </nav>
         </aside>
@@ -201,15 +227,17 @@
         <div class="main-content">
             <header class="header">
                 <div class="header-title">
-                    <h1><span style="font-size: 2.5rem;">Ⓜ️</span> MASTERLIGHT</h1>
+                    <h1><span class="material-symbols-outlined" style="font-size: 2.2rem;">highlight</span> MASTERLIGHT</h1>
                     <p>System Zarządzania Magazynem - Baza danych w Chmurze</p>
                 </div>
                 <div class="user-badge" id="user-info">
-                    <div>
-                        👤 Zalogowano: <strong id="logged-email">...</strong> <br>
-                        🛡️ Rola: <strong id="logged-role">...</strong>
+                    <div class="user-badge-info">
+                        <p><span class="material-symbols-outlined">person</span> Zalogowano: <strong id="logged-email">...</strong></p>
+                        <p><span class="material-symbols-outlined">verified_user</span> Rola: <strong id="logged-role">...</strong></p>
                     </div>
-                    <button onclick="logoutUser()" class="btn-secondary btn-small" style="margin: 0; height: fit-content;">🚪 Wyloguj</button>
+                    <button onclick="logoutUser()" class="btn-secondary btn-small" style="margin: 0; height: fit-content;">
+                        <span class="material-symbols-outlined">logout</span> Wyloguj
+                    </button>
                 </div>
             </header>
 
@@ -238,7 +266,9 @@
                     <div class="section">
                         <div class="section-header"><h2>Stan Magazynowy Downlightów</h2></div>
                         <div class="section-content">
-                            <button class="btn-primary" onclick="window.print()" style="margin-bottom: 1.5rem;">📥 Eksportuj do PDF / Drukuj</button>
+                            <button class="btn-primary" onclick="window.print()" style="margin-bottom: 1.5rem;">
+                                <span class="material-symbols-outlined">print</span> Eksportuj PDF / Drukuj
+                            </button>
                             <table>
                                 <thead><tr><th>Produkt</th><th>SKU</th><th>Gotowe</th><th>W Montażu</th><th>Razem</th><th>Status</th></tr></thead>
                                 <tbody id="products-table"></tbody>
@@ -261,7 +291,7 @@
                     <h2 style="margin-bottom: 1.5rem; color: var(--text-dark);">Zarządzanie Dostawami</h2>
                     
                     <div id="form-incoming-container" class="section">
-                        <div class="section-header"><h2>📦 Zarejestruj Dostawę Przychodzącą (Dopisz do montażu)</h2></div>
+                        <div class="section-header"><h2 style="display:flex; align-items:center; gap:8px;"><span class="material-symbols-outlined">input</span> Zarejestruj Dostawę Przychodzącą (Dopisz do montażu)</h2></div>
                         <div class="section-content">
                             <form id="incomingForm">
                                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
@@ -271,14 +301,14 @@
                                     <div class="form-group"><label>58°</label><input type="number" name="p3" value="0" min="0"></div>
                                 </div>
                                 <div style="margin-top: 1.5rem; display: flex; gap: 1rem;">
-                                    <button type="submit" class="btn-primary">📥 Zarejestruj Dostawę</button>
+                                    <button type="submit" class="btn-primary"><span class="material-symbols-outlined">add_box</span> Zarejestruj Dostawę</button>
                                 </div>
                             </form>
                         </div>
                     </div>
 
                     <div class="section">
-                        <div class="section-header"><h2 style="color: #CD853F;">⏳ Dostawy Oczekujące (Niepotwierdzona Data)</h2></div>
+                        <div class="section-header"><h2 style="color: #CD853F; display:flex; align-items:center; gap:8px;"><span class="material-symbols-outlined">pending_actions</span> Dostawy Oczekujące (Niepotwierdzona Data)</h2></div>
                         <div class="section-content">
                             <table>
                                 <thead><tr><th>Data Wstępna</th><th>Miejsce</th><th>Firma Odbierająca</th><th>Sztuk</th><th>Kąty</th><th>Status</th><th class="admin-only-col">Akcja</th></tr></thead>
@@ -288,9 +318,11 @@
                     </div>
 
                     <div class="section">
-                        <div class="section-header"><h2>🚚 Dostawy Potwierdzone i Zrealizowane</h2><div class="badge" id="shipments-count">0 dostaw</div></div>
+                        <div class="section-header"><h2 style="display:flex; align-items:center; gap:8px;"><span class="material-symbols-outlined">local_shipping</span> Dostawy Potwierdzone i Zrealizowane</h2><div class="badge" id="shipments-count">0 dostaw</div></div>
                         <div class="section-content">
-                            <button class="btn-primary" onclick="window.print()" style="margin-bottom: 1.5rem;">📥 Wydrukuj listę dostaw</button>
+                            <button class="btn-primary" onclick="window.print()" style="margin-bottom: 1.5rem;">
+                                <span class="material-symbols-outlined">print</span> Wydrukuj listę dostaw
+                            </button>
                             <table>
                                 <thead><tr><th>Data Potwierdzona</th><th>Miejsce</th><th>Firma Odbierająca</th><th>Sztuk</th><th>Kąty</th><th>Status</th><th class="admin-only-col">Akcja</th></tr></thead>
                                 <tbody id="shipments-confirmed-table"></tbody>
@@ -299,7 +331,7 @@
                     </div>
 
                     <div id="form-shipment-container" class="section">
-                        <div class="section-header"><h2>Zaplanuj Nową Dostawę Do Klienta</h2></div>
+                        <div class="section-header"><h2 style="display:flex; align-items:center; gap:8px;"><span class="material-symbols-outlined">schedule_send</span> Zaplanuj Nową Dostawę Do Klienta</h2></div>
                         <div class="section-content">
                             <form id="shipmentForm">
                                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
@@ -313,7 +345,7 @@
                                     <div class="form-group"><label>58°-20W</label><input type="number" name="p5" value="0" min="0"></div>
                                 </div>
                                 <div style="margin-top: 1.5rem; display: flex; gap: 1rem;">
-                                    <button type="submit" class="btn-primary">📤 Dodaj Dostawę</button>
+                                    <button type="submit" class="btn-primary"><span class="material-symbols-outlined">add_task</span> Dodaj Dostawę</button>
                                 </div>
                             </form>
                         </div>
@@ -334,14 +366,14 @@
                     </div>
 
                     <div id="form-adjustments-container" class="section">
-                        <div class="section-header"><h2>➕ Zaplanuj Nową Regulację</h2></div>
+                        <div class="section-header"><h2 style="display:flex; align-items:center; gap:8px;"><span class="material-symbols-outlined">add_circle</span> Zaplanuj Nową Regulację</h2></div>
                         <div class="section-content">
                             <form id="adjustmentForm">
                                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
                                     <div class="form-group"><label>Data Wyjazdu</label><input type="date" name="adj_date" required></div>
                                     <div class="form-group"><label>Miejscowość</label><input type="text" name="adj_location" required placeholder="np. Warszawa"></div>
                                 </div>
-                                <div style="margin-top: 1.5rem;"><button type="submit" class="btn-primary">💾 Dodaj Regulację</button></div>
+                                <div style="margin-top: 1.5rem;"><button type="submit" class="btn-primary"><span class="material-symbols-outlined">save</span> Dodaj Regulację</button></div>
                             </form>
                         </div>
                     </div>
@@ -352,7 +384,9 @@
                     <div class="section">
                         <div class="section-header"><h2>Pełna Historia (Tylko Szefostwo / Admin)</h2></div>
                         <div class="section-content">
-                            <button class="btn-primary" onclick="window.print()" style="margin-bottom: 1.5rem;">📥 Drukuj Logi</button>
+                            <button class="btn-primary" onclick="window.print()" style="margin-bottom: 1.5rem;">
+                                <span class="material-symbols-outlined">print</span> Drukuj Logi
+                            </button>
                             <table>
                                 <thead><tr><th>Czas</th><th>Typ Operacji</th><th>Szczegóły</th></tr></thead>
                                 <tbody id="history-table"></tbody>
@@ -365,7 +399,7 @@
                     <h2 style="margin-bottom: 1.5rem; color: var(--text-dark);">Komponenty</h2>
                     
                     <div id="form-components-container" class="section">
-                        <div class="section-header"><h2>📦 Dodaj Dostawę Komponentów</h2></div>
+                        <div class="section-header"><h2 style="display:flex; align-items:center; gap:8px;"><span class="material-symbols-outlined">inventory</span> Dodaj Dostawę Komponentów</h2></div>
                         <div class="section-content">
                             <form id="componentsIncomingForm">
                                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
@@ -374,13 +408,13 @@
                                     <div class="form-group"><label>Klapki Zwykłe</label><input type="number" name="clips_normal" value="0" min="0"></div>
                                     <div class="form-group"><label>Klapki Przelotowe</label><input type="number" name="clips_pass" value="0" min="0"></div>
                                 </div>
-                                <div style="margin-top: 1.5rem;"><button type="submit" class="btn-primary">📥 Zarejestruj</button></div>
+                                <div style="margin-top: 1.5rem;"><button type="submit" class="btn-primary"><span class="material-symbols-outlined">add_box</span> Zarejestruj</button></div>
                             </form>
                         </div>
                     </div>
 
                     <div class="section">
-                        <div class="section-header"><h2>⚡ Zasilacze i Klapki (Stan)</h2></div>
+                        <div class="section-header"><h2>Zasilacze i Klapki (Stan)</h2></div>
                         <div class="section-content">
                             <table>
                                 <thead><tr><th>Typ</th><th>Ilość</th></tr></thead>
@@ -398,7 +432,7 @@
                     <h2 style="margin-bottom: 1.5rem; color: var(--text-dark);">Raporty - Produkcja</h2>
                     
                     <div id="form-production-container" class="section">
-                        <div class="section-header"><h2>🔧 Rejestracja Produkcji</h2></div>
+                        <div class="section-header"><h2 style="display:flex; align-items:center; gap:8px;"><span class="material-symbols-outlined">factory</span> Rejestracja Produkcji</h2></div>
                         <div class="section-content">
                             <form id="productionForm">
                                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
@@ -408,18 +442,18 @@
                                     <div class="form-group"><label>37°-20W</label><input type="number" name="p4" value="0" min="0"></div>
                                     <div class="form-group"><label>58°-20W</label><input type="number" name="p5" value="0" min="0"></div>
                                 </div>
-                                <div style="margin-top: 1.5rem;"><button type="submit" class="btn-primary">✅ Zarejestruj Produkcję</button></div>
+                                <div style="margin-top: 1.5rem;"><button type="submit" class="btn-primary"><span class="material-symbols-outlined">task_alt</span> Zarejestruj Produkcję</button></div>
                             </form>
-                            <p style="margin-top: 1rem; color: var(--text-light); font-size: 0.9rem;">
-                                ℹ️ Podane ilości zostaną odjęte z kolumny "W Montażu" (jako wspólna pula) i dodane do "Gotowe do Wysyłki".<br>
-                                ⚠️ Na każdy wyprodukowany downlight zużywa się: 1x zasilacz, 1x klapka zwykła, 1x klapka przelotowa.
+                            <p style="margin-top: 1rem; color: var(--text-light); font-size: 0.9rem; display: flex; flex-direction: column; gap: 5px;">
+                                <span><span class="material-symbols-outlined" style="font-size: 1rem;">info</span> Podane ilości zostaną odjęte z kolumny "W Montażu" (jako wspólna pula) i dodane do "Gotowe do Wysyłki".</span>
+                                <span><span class="material-symbols-outlined" style="font-size: 1rem;">warning</span> Na każdy wyprodukowany downlight zużywa się: 1x zasilacz, 1x klapka zwykła, 1x klapka przelotowa.</span>
                             </p>
                         </div>
                     </div>
                 </div>
 
                 <footer class="footer">
-                    <p>© 2026 Masterlight - Wersja Chmurowa ☁️</p>
+                    <p>© 2026 Masterlight - System Chmurowy</p>
                 </footer>
             </div>
         </div>
@@ -465,7 +499,7 @@
             const submitBtn = document.querySelector('#login-form button');
             
             errorElement.style.display = 'none';
-            submitBtn.textContent = 'Logowanie...';
+            submitBtn.innerHTML = '<span class="material-symbols-outlined">hourglass_empty</span> Logowanie...';
 
             const { data, error } = await db.auth.signInWithPassword({ email, password });
 
@@ -473,7 +507,7 @@
                 console.error("Błąd logowania:", error.message);
                 errorElement.textContent = 'Błędny e-mail lub hasło!';
                 errorElement.style.display = 'block';
-                submitBtn.textContent = 'Zaloguj się';
+                submitBtn.innerHTML = '<span class="material-symbols-outlined">login</span> Zaloguj się';
             } else {
                 initApp(data.user); 
             }
@@ -490,7 +524,7 @@
 
             document.getElementById('logged-email').textContent = currentUserEmail;
             
-            let roleText = 'Obserwator (Tylko Podgląd)';
+            let roleText = 'Obserwator';
             if (currentRole === 'admin') roleText = 'Kierownik (Pełen Dostęp)';
             if (currentRole === 'worker') roleText = 'Pracownik (Edycja Magazynu)';
             document.getElementById('logged-role').textContent = roleText;
@@ -555,7 +589,6 @@
             }
 
             async fetchData() {
-                // SZYBKI ODCZYT RÓWNOLEGŁY
                 const [prodsRes, compsRes, shipsRes, adjsRes, histRes] = await Promise.all([
                     db.from('products').select('*').order('id'),
                     db.from('components').select('*').eq('id', 1).single(),
@@ -575,7 +608,6 @@
                     }));
                 }
 
-                // AKTUALIZACJA PRZESZŁYCH DAT NA DZISIEJSZE
                 const todayObj = new Date();
                 const yyyy = todayObj.getFullYear();
                 const mm = String(todayObj.getMonth() + 1).padStart(2, '0');
@@ -607,7 +639,7 @@
             }
 
             async addHistory(action, details) {
-                const detailWithUser = `${details} (User: ${currentUserEmail})`;
+                const detailWithUser = `${details} (Użytkownik: ${currentUserEmail})`;
                 await db.from('history').insert([{ action, details: detailWithUser }]);
             }
 
@@ -620,10 +652,6 @@
                 return 'warning';
             }
 
-            // ==========================================
-            // WYMUSZANIE ODŚWIEŻENIA PO KAŻDEJ AKCJI
-            // ==========================================
-
             async updateProduct(id, updates) {
                 if (currentRole === 'viewer') return; 
                 const product = this.products.find(p => p.id === id);
@@ -633,7 +661,7 @@
                         await db.from('products').update({ assembly: updates.assembly }).eq('assembly_group', product.assembly_group);
                     }
                     await this.addHistory('Edycja produktu', `${product.name}`);
-                    await this.fetchData(); // Wymuszenie
+                    await this.fetchData();
                 }
             }
 
@@ -641,14 +669,14 @@
                 if (currentRole === 'viewer') return;
                 await db.from('adjustments').insert([{ date, location }]);
                 await this.addHistory('Dodano wyjazd serwisowy', `${location} - ${date}`);
-                await this.fetchData(); // Wymuszenie
+                await this.fetchData(); 
             }
 
             async deleteAdjustment(id) {
                 if (currentRole !== 'admin') return;
                 await db.from('adjustments').delete().eq('id', id);
                 await this.addHistory('Usunięto wyjazd serwisowy', `Usunięto z bazy`);
-                await this.fetchData(); // Wymuszenie
+                await this.fetchData(); 
             }
 
             async addShipment(shipment) {
@@ -662,7 +690,7 @@
                     is_confirmed: false
                 }]);
                 await this.addHistory('Nowa zaplanowana dostawa', `${shipment.location} (${shipment.company})`);
-                await this.fetchData(); // Wymuszenie
+                await this.fetchData(); 
             }
 
             async confirmShipment(id) {
@@ -671,7 +699,7 @@
                 if (shipment) {
                     await db.from('shipments').update({ is_confirmed: true }).eq('id', id);
                     await this.addHistory('Potwierdzono datę dostawy', `${shipment.location}`);
-                    await this.fetchData(); // Wymuszenie
+                    await this.fetchData(); 
                 }
             }
 
@@ -679,7 +707,7 @@
                 if (currentRole !== 'admin') return;
                 await db.from('shipments').delete().eq('id', id);
                 await this.addHistory('Usunięto dostawę', `Z systemu usunięto zamówienie`);
-                await this.fetchData(); // Wymuszenie
+                await this.fetchData(); 
             }
 
             async updateShipmentDateInDB(id, newDate) {
@@ -688,7 +716,7 @@
                 if (shipment) {
                     await db.from('shipments').update({ date: newDate }).eq('id', id);
                     await this.addHistory('Zmiana daty dostawy', `${shipment.location}: na ${newDate}`);
-                    await this.fetchData(); // Wymuszenie
+                    await this.fetchData(); 
                 }
             }
 
@@ -731,7 +759,7 @@
 
                 await db.from('shipments').update({ status: newStatus, partial_missing: partialMissing, is_confirmed: true }).eq('id', id);
                 await this.addHistory(newStatus === 'completed' ? 'Dostawa zrealizowana' : 'Dostawa niepełna', historyMsg);
-                await this.fetchData(); // Wymuszenie
+                await this.fetchData(); 
             }
 
             async completeRemainingShipment(id) {
@@ -772,7 +800,7 @@
 
                 await db.from('shipments').update({ status: newStatus, partial_missing: newPartialMissing }).eq('id', id);
                 await this.addHistory('Dokończenie dostawy', historyMsg);
-                await this.fetchData(); // Wymuszenie
+                await this.fetchData(); 
             }
 
             async addIncomingShipment(supplier, newProducts) {
@@ -801,7 +829,7 @@
 
                 if (totalAdded > 0) {
                     await this.addHistory('Dostawa przychodząca', `${supplier} - dodano ${totalAdded} szt obudów`);
-                    await this.fetchData(); // Wymuszenie
+                    await this.fetchData(); 
                 }
             }
 
@@ -815,7 +843,7 @@
                 const componentsAvailable = Math.min(ps_raw, clips_normal, clips_pass);
 
                 if (totalToProduce > componentsAvailable) {
-                    alert(`⚠️ Niewystarczająca liczba komponentów! Masz zestawów tylko dla ${componentsAvailable} szt.`);
+                    alert(`Ostrzeżenie: Niewystarczająca liczba komponentów. Masz zestawów tylko dla ${componentsAvailable} sztuk.`);
                     return; 
                 }
 
@@ -841,7 +869,7 @@
                     }
                     
                     if (qtyReq > available) {
-                        alert(`❌ Zbyt mało opraw "W Montażu" dla puli ${key === '37' || key === '58' ? key + '°' : key}. Wymagane ${qtyReq}, a masz ${available}.`);
+                        alert(`Błąd: Zbyt mało opraw "W Montażu" dla puli ${key === '37' || key === '58' ? key + '°' : key}. Wymagane ${qtyReq}, a na stanie ${available}.`);
                         return; 
                     }
                 }
@@ -883,8 +911,8 @@
 
                     await Promise.all(dbUpdates);
                     await this.addHistory('Rejestracja produkcji', details.join(', '));
-                    alert(`✅ Wyprodukowano: ${totalProduced} szt. Lampy dodane do "Gotowe".`);
-                    await this.fetchData(); // Wymuszenie
+                    alert(`Zarejestrowano produkcję: ${totalProduced} sztuk.`);
+                    await this.fetchData(); 
                 }
             }
 
@@ -905,20 +933,7 @@
                 if (currentRole === 'viewer') return;
                 await db.from('components').update({ [field]: value }).eq('id', 1);
                 await this.addHistory('Edycja komponentu', `Zaktualizowano stan zasilaczy/klapek`);
-                await this.fetchData(); // Wymuszenie
-            }
-
-            async addComponentsShipment(supplier, newComps) {
-                if (currentRole === 'viewer') return;
-                const { data: current } = await db.from('components').select('*').eq('id', 1).single();
-                const updated = {
-                    ps_raw: current.ps_raw + (newComps.ps_raw || 0),
-                    clips_normal: current.clips_normal + (newComps.clips_normal || 0),
-                    clips_pass: current.clips_pass + (newComps.clips_pass || 0)
-                };
-                await db.from('components').update(updated).eq('id', 1);
-                await this.addHistory('Dostawa komponentów', `Dostawca: ${supplier}`);
-                await this.fetchData(); // Wymuszenie
+                await this.fetchData(); 
             }
         }
 
@@ -936,7 +951,7 @@
 
         function getStatusText(productId) {
             const status = window.inventory.getStatus(productId);
-            return status === 'ok' ? '✓ OK' : status === 'warning' ? '⚠ Mało' : '⛔ Brak';
+            return status === 'ok' ? '<span class="material-symbols-outlined">check_circle</span> OK' : status === 'warning' ? '<span class="material-symbols-outlined">warning</span> Mało' : '<span class="material-symbols-outlined">error</span> Brak';
         }
 
         function updateDashboard() {
@@ -997,32 +1012,32 @@
             if(s.products) { total = Object.values(s.products).reduce((a, b) => a + b, 0); }
             
             let statusBadge = '';
-            if (s.status === 'completed') statusBadge = '<span class="status-badge status-ok">✓ Zrealizowana</span>';
-            else if (s.status === 'partial') statusBadge = '<span class="status-badge status-warning">⚠ Niepełna</span>';
-            else if (s.is_confirmed) statusBadge = '<span class="status-badge status-neutral">📅 Potwierdzona</span>';
-            else statusBadge = '<span class="status-badge status-warning">⏳ Oczekująca</span>';
+            if (s.status === 'completed') statusBadge = '<span class="status-badge status-ok"><span class="material-symbols-outlined">check_circle</span> Zrealizowana</span>';
+            else if (s.status === 'partial') statusBadge = '<span class="status-badge status-warning"><span class="material-symbols-outlined">warning</span> Niepełna</span>';
+            else if (s.is_confirmed) statusBadge = '<span class="status-badge status-neutral"><span class="material-symbols-outlined">event_available</span> Potwierdzona</span>';
+            else statusBadge = '<span class="status-badge status-warning"><span class="material-symbols-outlined">pending_actions</span> Oczekująca</span>';
 
             let actionButton = '';
             
             if (currentRole !== 'viewer') {
                 if (!s.is_confirmed && s.status === 'planned') {
-                    actionButton = `<button class="btn-small btn-primary" onclick="confirmShipmentDateUI(${s.id})">✓ Potwierdź Datę</button>
-                                    <button class="btn-small btn-secondary" onclick="editShipmentDate(${s.id})">📅 Zmień Datę</button>`;
-                    if (currentRole === 'admin') actionButton += ` <button class="btn-small btn-secondary" onclick="deleteShipment(${s.id})">🗑️ Usuń</button>`;
+                    actionButton = `<button class="btn-small btn-primary" onclick="confirmShipmentDateUI(${s.id})"><span class="material-symbols-outlined">event_available</span> Potwierdź Datę</button>
+                                    <button class="btn-small btn-secondary" onclick="editShipmentDate(${s.id})"><span class="material-symbols-outlined">edit_calendar</span> Zmień Datę</button>`;
+                    if (currentRole === 'admin') actionButton += ` <button class="btn-small btn-secondary" onclick="deleteShipment(${s.id})"><span class="material-symbols-outlined">delete</span> Usuń</button>`;
                 } else if (s.status === 'completed') {
-                    if (currentRole === 'admin') actionButton = `<button class="btn-small btn-secondary" onclick="deleteShipment(${s.id})">🗑️ Usuń</button>`;
+                    if (currentRole === 'admin') actionButton = `<button class="btn-small btn-secondary" onclick="deleteShipment(${s.id})"><span class="material-symbols-outlined">delete</span> Usuń</button>`;
                 } else if (s.status === 'partial') {
-                    actionButton = `<button class="btn-small btn-primary" onclick="completeRemainingShipmentUI(${s.id})">✓ Dokończ</button> 
-                                    <button class="btn-small btn-secondary" onclick="printMissingPdf(${s.id})">📄 PDF Braki</button>
-                                    <button class="btn-small btn-secondary" onclick="editShipmentDate(${s.id})">📅 Data</button>`;
-                    if (currentRole === 'admin') actionButton += ` <button class="btn-small btn-secondary" onclick="deleteShipment(${s.id})">🗑️ Usuń</button>`;
+                    actionButton = `<button class="btn-small btn-primary" onclick="completeRemainingShipmentUI(${s.id})"><span class="material-symbols-outlined">done_all</span> Dokończ</button> 
+                                    <button class="btn-small btn-secondary" onclick="printMissingPdf(${s.id})"><span class="material-symbols-outlined">picture_as_pdf</span> Braki PDF</button>
+                                    <button class="btn-small btn-secondary" onclick="editShipmentDate(${s.id})"><span class="material-symbols-outlined">edit_calendar</span> Data</button>`;
+                    if (currentRole === 'admin') actionButton += ` <button class="btn-small btn-secondary" onclick="deleteShipment(${s.id})"><span class="material-symbols-outlined">delete</span> Usuń</button>`;
                 } else {
-                    actionButton = `<button class="btn-small btn-primary" onclick="completeShipmentUI(${s.id})">✓ Zrealizuj</button>
-                                    <button class="btn-small btn-secondary" onclick="editShipmentDate(${s.id})">📅 Data</button>`;
-                    if (currentRole === 'admin') actionButton += ` <button class="btn-small btn-secondary" onclick="deleteShipment(${s.id})">🗑️ Usuń</button>`;
+                    actionButton = `<button class="btn-small btn-primary" onclick="completeShipmentUI(${s.id})"><span class="material-symbols-outlined">check_circle</span> Zrealizuj</button>
+                                    <button class="btn-small btn-secondary" onclick="editShipmentDate(${s.id})"><span class="material-symbols-outlined">edit_calendar</span> Data</button>`;
+                    if (currentRole === 'admin') actionButton += ` <button class="btn-small btn-secondary" onclick="deleteShipment(${s.id})"><span class="material-symbols-outlined">delete</span> Usuń</button>`;
                 }
             } else {
-                if (s.status === 'partial') actionButton = `<button class="btn-small btn-secondary" onclick="printMissingPdf(${s.id})">📄 PDF Braki</button>`;
+                if (s.status === 'partial') actionButton = `<button class="btn-small btn-secondary" onclick="printMissingPdf(${s.id})"><span class="material-symbols-outlined">picture_as_pdf</span> Braki PDF</button>`;
             }
 
             const row = document.createElement('tr');
@@ -1031,7 +1046,7 @@
                 <td>${s.location}</td>
                 <td>${s.company || '-'}</td>
                 <td><strong>${total}</strong></td>
-                <td><button class="btn-small btn-secondary" onclick="showAnglesDemand(${s.id})" style="margin:0; background-color:#8B6F47; border-color:#8B6F47;">👁️ Kąty</button></td>
+                <td><button class="btn-small btn-secondary" onclick="showAnglesDemand(${s.id})" style="margin:0; background-color:#8B6F47; border-color:#8B6F47;"><span class="material-symbols-outlined">visibility</span> Kąty</button></td>
                 <td>${statusBadge}</td>
                 ${currentRole !== 'viewer' || s.status === 'partial' ? `<td>${actionButton}</td>` : '<td class="admin-only-col"></td>'}
             `;
@@ -1063,7 +1078,7 @@
             tbody.innerHTML = '';
             window.inventory.adjustments.forEach(a => {
                 const row = document.createElement('tr');
-                const actionCell = currentRole === 'admin' ? `<td><button class="btn-small btn-secondary" onclick="deleteAdjustment(${a.id})">🗑️ Usuń</button></td>` : `<td class="admin-only-col"></td>`;
+                const actionCell = currentRole === 'admin' ? `<td><button class="btn-small btn-secondary" onclick="deleteAdjustment(${a.id})"><span class="material-symbols-outlined">delete</span> Usuń</button></td>` : `<td class="admin-only-col"></td>`;
                 row.innerHTML = `<td><strong>${a.date}</strong></td><td>${a.location}</td>${actionCell}`;
                 tbody.appendChild(row);
             });
@@ -1109,7 +1124,7 @@
 
             const save = () => {
                 window.inventory.updateProduct(productId, { [field]: parseInt(input.value) || 0 });
-                cell.innerHTML = '⏳'; 
+                cell.innerHTML = '<span class="material-symbols-outlined">hourglass_empty</span>'; 
             };
             input.addEventListener('blur', save);
             input.addEventListener('keypress', (e) => { if (e.key === 'Enter') save(); });
@@ -1125,7 +1140,7 @@
 
             const save = () => {
                 window.inventory.updateComponent(field, parseInt(input.value) || 0);
-                cell.innerHTML = '⏳';
+                cell.innerHTML = '<span class="material-symbols-outlined">hourglass_empty</span>';
             };
             input.addEventListener('blur', save);
             input.addEventListener('keypress', (e) => { if (e.key === 'Enter') save(); });
@@ -1133,25 +1148,25 @@
 
         // AKCJE UI DLA DOSTAW
         function confirmShipmentDateUI(id) {
-            if (confirm('✓ Potwierdzić datę dostawy?\nPrzeniesie to dostawę do tabeli potwierdzonych.')) {
+            if (confirm('Potwierdzić datę dostawy?\nPrzeniesie to dostawę do tabeli potwierdzonych.')) {
                 window.inventory.confirmShipment(id);
             }
         }
 
         function completeShipmentUI(id) {
-            if (confirm('✓ Zrealizować tę dostawę?\nOdjęte zostanie wszystko z kolumny "Gotowe do wysyłki".')) {
+            if (confirm('Zrealizować tę dostawę?\nOdjęte zostanie wszystko z kolumny "Gotowe do wysyłki".')) {
                 window.inventory.completeShipment(id);
             }
         }
 
         function completeRemainingShipmentUI(id) {
-            if (confirm('✓ Dokończyć tę dostawę?\nBrakujące ilości zostaną odjęte z Twoich obecnych stanów magazynowych.')) {
+            if (confirm('Dokończyć tę dostawę?\nBrakujące ilości zostaną odjęte z obecnych stanów magazynowych.')) {
                 window.inventory.completeRemainingShipment(id);
             }
         }
 
         function deleteShipment(id) { 
-            if (currentRole === 'admin' && confirm('🗑️ Na pewno usunąć tę dostawę z bazy?')) { 
+            if (currentRole === 'admin' && confirm('Na pewno usunąć tę dostawę z bazy?')) { 
                 window.inventory.deleteShipment(id); 
             } 
         }
@@ -1175,7 +1190,7 @@
                     </div>
                 </div>
             `;
-            showModal('👁️ Zapotrzebowanie Kątów', content);
+            showModal('Zapotrzebowanie Kątów', content);
         }
 
         function editShipmentDate(id) {
@@ -1190,11 +1205,11 @@
                         <input type="date" id="edit_shipment_date" value="${shipment.date}">
                     </div>
                     <div style="display: flex; gap: 1rem;">
-                        <button class="btn-primary" onclick="saveShipmentDate(${id})">💾 Zapisz</button>
+                        <button class="btn-primary" onclick="saveShipmentDate(${id})"><span class="material-symbols-outlined">save</span> Zapisz</button>
                     </div>
                 </div>
             `;
-            showModal(`📅 Zmiana daty dostawy`, form);
+            showModal(`Zmiana daty dostawy`, form);
         }
 
         async function saveShipmentDate(id) {
@@ -1205,7 +1220,7 @@
         }
 
         function deleteAdjustment(id) {
-            if (currentRole === 'admin' && confirm('🗑️ Usunąć ten wpis z regulacji?')) {
+            if (currentRole === 'admin' && confirm('Usunąć ten wpis z regulacji?')) {
                 window.inventory.deleteAdjustment(id);
             }
         }
@@ -1235,7 +1250,7 @@
                 </style>
             </head>
             <body>
-                <h1>⚠️ BRAKUJĄCE PRODUKTY - DOSTAWA NIEPEŁNA</h1>
+                <h1>BRAKUJĄCE PRODUKTY - DOSTAWA NIEPEŁNA</h1>
                 <div class="info-box">
                     <h3>Informacje o dostawie</h3>
                     <p><strong>Lokalizacja:</strong> ${shipment.location}</p>
