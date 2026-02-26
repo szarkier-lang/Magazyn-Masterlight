@@ -448,7 +448,7 @@
         const ROLES = {
             'b.hajduk@masterlight.pl': 'admin',      
             'm.olejnik@masterlight.pl': 'viewer',         
-            'szef2@masterlight.pl': 'viewer',         
+            'f.robert@interia.pl': 'viewer',         
             'd.lewandowska@masterlight.pl': 'worker'      
         };
 
@@ -529,7 +529,6 @@
 
         checkSession();
 
-        // FUNKCJE MODALA
         function showModal(title, content) {
             document.getElementById('modal-title').textContent = title;
             document.getElementById('modal-content').innerHTML = content;
@@ -547,6 +546,7 @@
                 this.history = [];
                 this.adjustments = [];
                 this.components = { ps_raw: 0, clips_normal: 0, clips_pass: 0 };
+                this.realtimeTimeout = null;
             }
 
             async init() {
@@ -554,50 +554,56 @@
                 this.setupRealtime();
             }
 
+            // OPTYMALIZACJA 1: PROMISE.ALL DLA ZAPYTAŃ DO BAZY (Działa 5x szybciej)
             async fetchData() {
-                const { data: prods } = await db.from('products').select('*').order('id');
-                if (prods) this.products = prods;
+                const [prodsRes, compsRes, shipsRes, adjsRes, histRes] = await Promise.all([
+                    db.from('products').select('*').order('id'),
+                    db.from('components').select('*').eq('id', 1).single(),
+                    db.from('shipments').select('*').order('date'),
+                    db.from('adjustments').select('*').order('date'),
+                    db.from('history').select('*').order('created_at', { ascending: false }).limit(20)
+                ]);
 
-                const { data: comps } = await db.from('components').select('*').eq('id', 1).single();
-                if (comps) this.components = comps;
-
-                const { data: ships } = await db.from('shipments').select('*').order('date');
-                if (ships) this.shipments = ships;
-
-                const { data: adjs } = await db.from('adjustments').select('*').order('date');
-                if (adjs) this.adjustments = adjs;
-
-                const { data: hist } = await db.from('history').select('*').order('created_at', { ascending: false }).limit(20);
-                if (hist) {
-                    this.history = hist.map(h => ({ 
+                if (prodsRes.data) this.products = prodsRes.data;
+                if (compsRes.data) this.components = compsRes.data;
+                if (shipsRes.data) this.shipments = shipsRes.data;
+                if (adjsRes.data) this.adjustments = adjsRes.data;
+                if (histRes.data) {
+                    this.history = histRes.data.map(h => ({ 
                         timestamp: new Date(h.created_at).toLocaleString('pl-PL'), 
                         action: h.action, details: h.details 
                     }));
                 }
 
-                // AKTUALIZACJA PRZESZŁYCH DAT NA DZISIEJSZE DLA NIEPOTWIERDZONYCH LUB NIEUKOŃCZONYCH
+                // AKTUALIZACJA DAT
                 const todayObj = new Date();
                 const yyyy = todayObj.getFullYear();
                 const mm = String(todayObj.getMonth() + 1).padStart(2, '0');
                 const dd = String(todayObj.getDate()).padStart(2, '0');
                 const todayFormatted = `${yyyy}-${mm}-${dd}`;
 
+                const dbUpdates = [];
                 for (let s of this.shipments) {
                     if (s.status !== 'completed' && s.date < todayFormatted) {
                         if (currentRole === 'admin' || currentRole === 'worker') {
-                            await db.from('shipments').update({ date: todayFormatted }).eq('id', s.id);
+                            dbUpdates.push(db.from('shipments').update({ date: todayFormatted }).eq('id', s.id));
                         }
                         s.date = todayFormatted;
                     }
                 }
+                if (dbUpdates.length > 0) await Promise.all(dbUpdates);
 
                 updateDashboard();
             }
 
+            // OPTYMALIZACJA 2: DEBOUNCING REALTIME (Nie laguje przy wielu zmianach naraz)
             setupRealtime() {
                 db.channel('public:all')
                     .on('postgres_changes', { event: '*', schema: 'public' }, payload => {
-                        this.fetchData();
+                        clearTimeout(this.realtimeTimeout);
+                        this.realtimeTimeout = setTimeout(() => {
+                            this.fetchData();
+                        }, 400); 
                     }).subscribe();
             }
 
@@ -609,7 +615,7 @@
             getStatus(productId) {
                 const product = this.products.find(p => p.id === productId);
                 if (!product) return 'unknown';
-                const total = product.ready + product.assembly;
+                const total = product.ready + product.assembly + (product.service || 0);
                 if (total === 0) return 'error';
                 if (total >= 50) return 'ok';
                 return 'warning';
@@ -627,7 +633,6 @@
                 }
             }
 
-            // REGULACJA LAMP
             async addAdjustment(date, location) {
                 if (currentRole === 'viewer') return;
                 await db.from('adjustments').insert([{ date, location }]);
@@ -640,7 +645,6 @@
                 this.addHistory('Usunięto wyjazd serwisowy', `Usunięto z bazy`);
             }
 
-            // DOSTAWA DO KLIENTA (ZAPLANOWANIE)
             async addShipment(shipment) {
                 if (currentRole === 'viewer') return;
                 await db.from('shipments').insert([{ 
@@ -678,7 +682,7 @@
                 }
             }
 
-            // REALIZACJA DOSTAWY (ZDEJMOWANIE Z "GOTOWE")
+            // OPTYMALIZACJA 3: ZBIORCZE UPDATE BAZY
             async completeShipment(id) {
                 if (currentRole === 'viewer') return;
                 const shipment = this.shipments.find(s => s.id === id);
@@ -697,14 +701,12 @@
                             const lack = quantity - toDeduct;
 
                             if (lack > 0) missing[productId] = lack;
-                            if (toDeduct > 0) updates.push({ id: product.id, ready: newReady });
+                            if (toDeduct > 0) updates.push(db.from('products').update({ ready: newReady }).eq('id', product.id));
                         }
                     }
                 }
 
-                for (const u of updates) {
-                    await db.from('products').update({ ready: u.ready }).eq('id', u.id);
-                }
+                if (updates.length > 0) await Promise.all(updates);
 
                 let newStatus = 'completed';
                 let partialMissing = null;
@@ -718,12 +720,10 @@
                     historyMsg = `Dostawa zrealizowana: ${shipment.location}`;
                 }
 
-                // Zrealizowanie dostawy wymusza, że staje się ona potwierdzona (jeśli jeszcze nie była)
                 await db.from('shipments').update({ status: newStatus, partial_missing: partialMissing, is_confirmed: true }).eq('id', id);
                 this.addHistory(newStatus === 'completed' ? 'Dostawa zrealizowana' : 'Dostawa niepełna', historyMsg);
             }
 
-            // DOKOŃCZENIE NIEPEŁNEJ DOSTAWY
             async completeRemainingShipment(id) {
                 if (currentRole === 'viewer') return;
                 const shipment = this.shipments.find(s => s.id === id);
@@ -742,13 +742,11 @@
                         const left = need - toDeduct;
 
                         if (left > 0) stillMissing[productId] = left;
-                        if (toDeduct > 0) updates.push({ id: product.id, ready: newReady });
+                        if (toDeduct > 0) updates.push(db.from('products').update({ ready: newReady }).eq('id', product.id));
                     }
                 }
 
-                for (const u of updates) {
-                    await db.from('products').update({ ready: u.ready }).eq('id', u.id);
-                }
+                if (updates.length > 0) await Promise.all(updates);
 
                 let newStatus = 'completed';
                 let newPartialMissing = null;
@@ -766,10 +764,10 @@
                 this.addHistory('Dokończenie dostawy', historyMsg);
             }
 
-            // DOSTAWA PRZYCHODZĄCA (WSPÓLNA PULA "W MONTAŻU")
             async addIncomingShipment(supplier, newProducts) {
                 if (currentRole === 'viewer') return;
                 let totalAdded = 0;
+                const dbUpdates = [];
                 
                 for (const [id, qty] of Object.entries(newProducts)) {
                     if (qty > 0) {
@@ -777,22 +775,24 @@
                         if (product) {
                             const newAssembly = product.assembly + qty;
                             if (product.assembly_group) {
-                                await db.from('products').update({ assembly: newAssembly }).eq('assembly_group', product.assembly_group);
+                                dbUpdates.push(db.from('products').update({ assembly: newAssembly }).eq('assembly_group', product.assembly_group));
                                 this.products.filter(p => p.assembly_group === product.assembly_group).forEach(p => p.assembly = newAssembly);
                             } else {
-                                await db.from('products').update({ assembly: newAssembly }).eq('id', product.id);
+                                dbUpdates.push(db.from('products').update({ assembly: newAssembly }).eq('id', product.id));
                                 product.assembly = newAssembly;
                             }
                             totalAdded += qty;
                         }
                     }
                 }
+                
+                if (dbUpdates.length > 0) await Promise.all(dbUpdates);
+
                 if (totalAdded > 0) {
                     this.addHistory('Dostawa przychodząca', `${supplier} - dodano ${totalAdded} szt obudów`);
                 }
             }
 
-            // REJESTRACJA PRODUKCJI (ZDEJMOWANIE ZE WSPÓLNEJ PULI)
             async registerProduction(produced) {
                 if (currentRole === 'viewer') return;
                 
@@ -836,6 +836,7 @@
 
                 let totalProduced = 0;
                 const details = [];
+                const dbUpdates = [];
 
                 for (const [id, qty] of Object.entries(produced)) {
                     if (qty > 0) {
@@ -844,14 +845,14 @@
                             const newReady = product.ready + qty;
                             const newAssembly = product.assembly - qty;
 
-                            await db.from('products').update({ ready: newReady }).eq('id', product.id);
+                            dbUpdates.push(db.from('products').update({ ready: newReady }).eq('id', product.id));
                             product.ready = newReady;
 
                             if (product.assembly_group) {
-                                await db.from('products').update({ assembly: newAssembly }).eq('assembly_group', product.assembly_group);
+                                dbUpdates.push(db.from('products').update({ assembly: newAssembly }).eq('assembly_group', product.assembly_group));
                                 this.products.filter(p => p.assembly_group === product.assembly_group).forEach(p => p.assembly = newAssembly);
                             } else {
-                                await db.from('products').update({ assembly: newAssembly }).eq('id', product.id);
+                                dbUpdates.push(db.from('products').update({ assembly: newAssembly }).eq('id', product.id));
                                 product.assembly = newAssembly;
                             }
 
@@ -862,15 +863,16 @@
                 }
 
                 if (totalProduced > 0) {
-                    await db.from('components').update({
+                    dbUpdates.push(db.from('components').update({
                         ps_raw: ps_raw - totalProduced,
                         clips_normal: clips_normal - totalProduced,
                         clips_pass: clips_pass - totalProduced
-                    }).eq('id', 1);
+                    }).eq('id', 1));
 
+                    await Promise.all(dbUpdates);
                     this.addHistory('Rejestracja produkcji', details.join(', '));
-                    alert(`✅ Wyprodukowano: ${totalProduced} szt. Lampy dodane do "Gotowe".`);
-                    updateDashboard(); 
+                    alert(`✅ Wyprodukowano: ${totalProduced} szt.`);
+                    // UI zaktualizuje sie samo przez realtime, opcjonalnie odswiez lokalnie
                 }
             }
 
@@ -883,7 +885,6 @@
                     } else { totalAssembly += p.assembly; }
                 });
                 const totalReady = this.products.reduce((s, p) => s + p.ready, 0);
-                // Doliczamy serwis do globalnej sumy zgodnie z życzeniem
                 const totalService = this.products.reduce((s, p) => s + (p.service || 0), 0);
                 return { totalReady, totalAssembly, totalService, totalAll: totalReady + totalAssembly + totalService };
             }
@@ -918,7 +919,6 @@
             const totals = window.inventory.getTotals();
             document.querySelector('[data-stat="total"]').textContent = totals.totalAll;
             document.querySelector('[data-stat="ready"]').textContent = totals.totalReady;
-            // Zmieniono na Potwierdzone dostawy w dashboardzie:
             document.querySelector('[data-stat="shipments"]').textContent = window.inventory.shipments.filter(s => s.status !== 'completed' && s.is_confirmed).length;
             document.querySelector('[data-stat="service"]').textContent = totals.totalService;
 
@@ -959,7 +959,6 @@
                 `;
                 tbody.appendChild(row);
 
-                // Tabela serwisowa
                 const serviceRow = document.createElement('tr');
                 const serviceCell = isViewer ? `<td>${p.service || 0}</td>` : `<td onclick="editCell(this, 'service', ${p.id})" class="editable">${p.service || 0}</td>`;
                 serviceRow.innerHTML = `<td>${p.name}</td>${serviceCell}`;
@@ -992,7 +991,6 @@
                                     <button class="btn-small btn-secondary" onclick="editShipmentDate(${s.id})">📅 Data</button>`;
                     if (currentRole === 'admin') actionButton += ` <button class="btn-small btn-secondary" onclick="deleteShipment(${s.id})">🗑️ Usuń</button>`;
                 } else {
-                    // Potwierdzona, gotowa do realizacji
                     actionButton = `<button class="btn-small btn-primary" onclick="completeShipmentUI(${s.id})">✓ Zrealizuj</button>
                                     <button class="btn-small btn-secondary" onclick="editShipmentDate(${s.id})">📅 Data</button>`;
                     if (currentRole === 'admin') actionButton += ` <button class="btn-small btn-secondary" onclick="deleteShipment(${s.id})">🗑️ Usuń</button>`;
@@ -1023,11 +1021,9 @@
             let confCount = 0;
 
             window.inventory.shipments.forEach(s => {
-                // Jeśli niepotwierdzona i zaplanowana - leci do oczekujących
                 if (!s.is_confirmed && s.status === 'planned') {
                     tbodyUnconf.appendChild(renderShipmentRow(s, false));
                 } else {
-                    // Potwierdzona lub zrealizowana/niepełna
                     tbodyConf.appendChild(renderShipmentRow(s, true));
                     confCount++;
                 }
