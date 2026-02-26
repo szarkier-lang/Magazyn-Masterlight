@@ -554,8 +554,8 @@
                 this.setupRealtime();
             }
 
-            // OPTYMALIZACJA 1: PROMISE.ALL DLA ZAPYTAŃ DO BAZY (Działa 5x szybciej)
             async fetchData() {
+                // SZYBKI ODCZYT RÓWNOLEGŁY
                 const [prodsRes, compsRes, shipsRes, adjsRes, histRes] = await Promise.all([
                     db.from('products').select('*').order('id'),
                     db.from('components').select('*').eq('id', 1).single(),
@@ -575,7 +575,7 @@
                     }));
                 }
 
-                // AKTUALIZACJA DAT
+                // AKTUALIZACJA PRZESZŁYCH DAT NA DZISIEJSZE
                 const todayObj = new Date();
                 const yyyy = todayObj.getFullYear();
                 const mm = String(todayObj.getMonth() + 1).padStart(2, '0');
@@ -596,7 +596,6 @@
                 updateDashboard();
             }
 
-            // OPTYMALIZACJA 2: DEBOUNCING REALTIME (Nie laguje przy wielu zmianach naraz)
             setupRealtime() {
                 db.channel('public:all')
                     .on('postgres_changes', { event: '*', schema: 'public' }, payload => {
@@ -621,6 +620,10 @@
                 return 'warning';
             }
 
+            // ==========================================
+            // WYMUSZANIE ODŚWIEŻENIA PO KAŻDEJ AKCJI
+            // ==========================================
+
             async updateProduct(id, updates) {
                 if (currentRole === 'viewer') return; 
                 const product = this.products.find(p => p.id === id);
@@ -629,20 +632,23 @@
                     if (updates.assembly !== undefined && product.assembly_group) {
                         await db.from('products').update({ assembly: updates.assembly }).eq('assembly_group', product.assembly_group);
                     }
-                    this.addHistory('Edycja produktu', `${product.name}`);
+                    await this.addHistory('Edycja produktu', `${product.name}`);
+                    await this.fetchData(); // Wymuszenie
                 }
             }
 
             async addAdjustment(date, location) {
                 if (currentRole === 'viewer') return;
                 await db.from('adjustments').insert([{ date, location }]);
-                this.addHistory('Dodano wyjazd serwisowy', `${location} - ${date}`);
+                await this.addHistory('Dodano wyjazd serwisowy', `${location} - ${date}`);
+                await this.fetchData(); // Wymuszenie
             }
 
             async deleteAdjustment(id) {
                 if (currentRole !== 'admin') return;
                 await db.from('adjustments').delete().eq('id', id);
-                this.addHistory('Usunięto wyjazd serwisowy', `Usunięto z bazy`);
+                await this.addHistory('Usunięto wyjazd serwisowy', `Usunięto z bazy`);
+                await this.fetchData(); // Wymuszenie
             }
 
             async addShipment(shipment) {
@@ -655,7 +661,8 @@
                     status: 'planned',
                     is_confirmed: false
                 }]);
-                this.addHistory('Nowa zaplanowana dostawa', `${shipment.location} (${shipment.company})`);
+                await this.addHistory('Nowa zaplanowana dostawa', `${shipment.location} (${shipment.company})`);
+                await this.fetchData(); // Wymuszenie
             }
 
             async confirmShipment(id) {
@@ -663,14 +670,16 @@
                 const shipment = this.shipments.find(s => s.id === id);
                 if (shipment) {
                     await db.from('shipments').update({ is_confirmed: true }).eq('id', id);
-                    this.addHistory('Potwierdzono datę dostawy', `${shipment.location}`);
+                    await this.addHistory('Potwierdzono datę dostawy', `${shipment.location}`);
+                    await this.fetchData(); // Wymuszenie
                 }
             }
 
             async deleteShipment(id) {
                 if (currentRole !== 'admin') return;
                 await db.from('shipments').delete().eq('id', id);
-                this.addHistory('Usunięto dostawę', `Z systemu usunięto zamówienie`);
+                await this.addHistory('Usunięto dostawę', `Z systemu usunięto zamówienie`);
+                await this.fetchData(); // Wymuszenie
             }
 
             async updateShipmentDateInDB(id, newDate) {
@@ -678,11 +687,11 @@
                 const shipment = this.shipments.find(s => s.id === id);
                 if (shipment) {
                     await db.from('shipments').update({ date: newDate }).eq('id', id);
-                    this.addHistory('Zmiana daty dostawy', `${shipment.location}: na ${newDate}`);
+                    await this.addHistory('Zmiana daty dostawy', `${shipment.location}: na ${newDate}`);
+                    await this.fetchData(); // Wymuszenie
                 }
             }
 
-            // OPTYMALIZACJA 3: ZBIORCZE UPDATE BAZY
             async completeShipment(id) {
                 if (currentRole === 'viewer') return;
                 const shipment = this.shipments.find(s => s.id === id);
@@ -721,7 +730,8 @@
                 }
 
                 await db.from('shipments').update({ status: newStatus, partial_missing: partialMissing, is_confirmed: true }).eq('id', id);
-                this.addHistory(newStatus === 'completed' ? 'Dostawa zrealizowana' : 'Dostawa niepełna', historyMsg);
+                await this.addHistory(newStatus === 'completed' ? 'Dostawa zrealizowana' : 'Dostawa niepełna', historyMsg);
+                await this.fetchData(); // Wymuszenie
             }
 
             async completeRemainingShipment(id) {
@@ -761,7 +771,8 @@
                 }
 
                 await db.from('shipments').update({ status: newStatus, partial_missing: newPartialMissing }).eq('id', id);
-                this.addHistory('Dokończenie dostawy', historyMsg);
+                await this.addHistory('Dokończenie dostawy', historyMsg);
+                await this.fetchData(); // Wymuszenie
             }
 
             async addIncomingShipment(supplier, newProducts) {
@@ -789,7 +800,8 @@
                 if (dbUpdates.length > 0) await Promise.all(dbUpdates);
 
                 if (totalAdded > 0) {
-                    this.addHistory('Dostawa przychodząca', `${supplier} - dodano ${totalAdded} szt obudów`);
+                    await this.addHistory('Dostawa przychodząca', `${supplier} - dodano ${totalAdded} szt obudów`);
+                    await this.fetchData(); // Wymuszenie
                 }
             }
 
@@ -870,9 +882,9 @@
                     }).eq('id', 1));
 
                     await Promise.all(dbUpdates);
-                    this.addHistory('Rejestracja produkcji', details.join(', '));
-                    alert(`✅ Wyprodukowano: ${totalProduced} szt.`);
-                    // UI zaktualizuje sie samo przez realtime, opcjonalnie odswiez lokalnie
+                    await this.addHistory('Rejestracja produkcji', details.join(', '));
+                    alert(`✅ Wyprodukowano: ${totalProduced} szt. Lampy dodane do "Gotowe".`);
+                    await this.fetchData(); // Wymuszenie
                 }
             }
 
@@ -892,7 +904,21 @@
             async updateComponent(field, value) {
                 if (currentRole === 'viewer') return;
                 await db.from('components').update({ [field]: value }).eq('id', 1);
-                this.addHistory('Edycja komponentu', `Zaktualizowano stan zasilaczy/klapek`);
+                await this.addHistory('Edycja komponentu', `Zaktualizowano stan zasilaczy/klapek`);
+                await this.fetchData(); // Wymuszenie
+            }
+
+            async addComponentsShipment(supplier, newComps) {
+                if (currentRole === 'viewer') return;
+                const { data: current } = await db.from('components').select('*').eq('id', 1).single();
+                const updated = {
+                    ps_raw: current.ps_raw + (newComps.ps_raw || 0),
+                    clips_normal: current.clips_normal + (newComps.clips_normal || 0),
+                    clips_pass: current.clips_pass + (newComps.clips_pass || 0)
+                };
+                await db.from('components').update(updated).eq('id', 1);
+                await this.addHistory('Dostawa komponentów', `Dostawca: ${supplier}`);
+                await this.fetchData(); // Wymuszenie
             }
         }
 
