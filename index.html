@@ -173,13 +173,13 @@
             /* TABELE ZAMIENIANE NA KARTY */
             table, thead, tbody, th, td, tr { display: block; }
             table { border: none; }
-            thead tr { position: absolute; top: -9999px; left: -9999px; } /* Ukryj nagłówki, ale dla czytników wciąż tam są */
+            thead tr { position: absolute; top: -9999px; left: -9999px; }
             tr { border: 2px solid var(--border-color); margin-bottom: 1rem; border-radius: 8px; overflow: hidden; box-shadow: 0 3px 8px rgba(0,0,0,0.05); }
             td { 
                 border: none;
                 border-bottom: 1px solid #eee; 
                 position: relative;
-                padding-left: 45% !important; /* Miejsce na etykietę z lewej */
+                padding-left: 45% !important; 
                 text-align: right;
                 min-height: 45px;
                 display: flex;
@@ -201,10 +201,7 @@
                 letter-spacing: 0.5px;
             }
             
-            /* Naprawa inputów wewnątrz edytowalnych komórek na telefonie */
             .editable input { max-width: 100px; text-align: right; padding: 0.3rem; }
-            
-            /* Komórka akcji (przyciski) */
             td[data-label="Akcja"] { justify-content: flex-end; flex-wrap: wrap; gap: 5px; }
             .btn-small { margin-bottom: 0; }
         }
@@ -218,12 +215,11 @@
             .section { box-shadow: none; border: 1px solid #ccc; margin-bottom: 1rem; page-break-inside: avoid; }
             .tab-content { display: block !important; } 
             #tab-dashboard, #tab-history, #tab-reports { display: none !important; } 
-            /* Przywrócenie normalnych tabel do druku */
             table, thead, tbody, th, td, tr { display: table-cell; }
             table { display: table; }
             thead tr { position: static; }
             tr { border: none; box-shadow: none; margin-bottom: 0; }
-            td { padding-left: 0.8rem !important; text-align: left; display: table-cell; }
+            td { padding-left: 0.8rem !important; text-align: left; display: table-cell; justify-content: flex-start; }
             td::before { display: none; }
         }
     </style>
@@ -365,7 +361,7 @@
                         <div class="section-header"><h2 style="color: #CD853F; display:flex; align-items:center; gap:8px;"><span class="material-symbols-outlined">pending_actions</span> Dostawy Oczekujące</h2></div>
                         <div class="section-content">
                             <table>
-                                <thead><tr><th>Data Wstępna</th><th>Miejsce</th><th>Firma Odbierająca</th><th>Sztuk</th><th>Kąty</th><th>Status</th><th class="admin-only-col">Akcja</th></tr></thead>
+                                <thead><tr><th>Data Wstępna</th><th>Miejsce</th><th>Firma Odbierająca</th><th>Sztuk</th><th>Kąty</th><th>Gotowość</th><th>Status</th><th class="admin-only-col">Akcja</th></tr></thead>
                                 <tbody id="shipments-unconfirmed-table"></tbody>
                             </table>
                         </div>
@@ -378,14 +374,14 @@
                                 <span class="material-symbols-outlined">print</span> Wydrukuj listę dostaw
                             </button>
                             <table>
-                                <thead><tr><th>Data Potwierdzona</th><th>Miejsce</th><th>Firma Odbierająca</th><th>Sztuk</th><th>Kąty</th><th>Status</th><th class="admin-only-col">Akcja</th></tr></thead>
+                                <thead><tr><th>Data Potwierdzona</th><th>Miejsce</th><th>Firma Odbierająca</th><th>Sztuk</th><th>Kąty</th><th>Gotowość</th><th>Status</th><th class="admin-only-col">Akcja</th></tr></thead>
                                 <tbody id="shipments-confirmed-table"></tbody>
                             </table>
                         </div>
                     </div>
 
                     <div id="form-shipment-container" class="section">
-                        <div class="section-header"><h2 style="display:flex; align-items:center; gap:8px;"><span class="material-symbols-outlined">schedule_send</span> Zaplanuj Nową Dostawę</h2></div>
+                        <div class="section-header"><h2 style="display:flex; align-items:center; gap:8px;"><span class="material-symbols-outlined">schedule_send</span> Zaplanuj Nową Dostawę Do Klienta</h2></div>
                         <div class="section-content">
                             <form id="shipmentForm">
                                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
@@ -1108,8 +1104,39 @@
             else if (s.is_confirmed) statusBadge = '<span class="status-badge status-neutral"><span class="material-symbols-outlined">event_available</span> Potwierdzona</span>';
             else statusBadge = '<span class="status-badge status-warning"><span class="material-symbols-outlined">pending_actions</span> Oczekująca</span>';
 
-            let actionButton = '';
+            // LOGIKA GOTOWOŚCI MAGAZYNU
+            let isReady = true;
+            let readinessBadge = '';
             
+            if (s.status === 'completed') {
+                readinessBadge = '<span style="color: var(--text-light); font-size: 0.85em;">-</span>';
+            } else if (s.status === 'partial') {
+                if (s.partial_missing) {
+                    for (const [pId, qty] of Object.entries(s.partial_missing)) {
+                        const prod = window.inventory.products.find(p => p.id == pId);
+                        if (!prod || prod.ready < qty) { isReady = false; break; }
+                    }
+                }
+            } else {
+                if (s.products) {
+                    for (const [pId, qty] of Object.entries(s.products)) {
+                        if (qty > 0) {
+                            const prod = window.inventory.products.find(p => p.id == pId);
+                            if (!prod || prod.ready < qty) { isReady = false; break; }
+                        }
+                    }
+                }
+            }
+
+            if (s.status !== 'completed') {
+                if (isReady) {
+                    readinessBadge = '<span class="status-badge status-ok" style="background:#E8F5E9; color:#2E7D32; border-color:#2E7D32;"><span class="material-symbols-outlined">inventory_2</span> Komplet</span>';
+                } else {
+                    readinessBadge = '<span class="status-badge status-error" style="background:#FFEBEE; color:#C62828; border-color:#C62828;"><span class="material-symbols-outlined">production_quantity_limits</span> Braki</span>';
+                }
+            }
+
+            let actionButton = '';
             if (currentRole !== 'viewer') {
                 if (!s.is_confirmed && s.status === 'planned') {
                     actionButton = `<button class="btn-small btn-primary" onclick="confirmShipmentDateUI(${s.id})"><span class="material-symbols-outlined">event_available</span> Potwierdź Datę</button>
@@ -1138,6 +1165,7 @@
                 <td data-label="Firma">${s.company || '-'}</td>
                 <td data-label="Sztuk"><strong>${total}</strong></td>
                 <td data-label="Kąty"><button class="btn-small btn-secondary" onclick="showAnglesDemand(${s.id})" style="margin:0; background-color:#8B6F47; border-color:#8B6F47;"><span class="material-symbols-outlined">visibility</span> Pokaż</button></td>
+                <td data-label="Gotowość">${readinessBadge}</td>
                 <td data-label="Status">${statusBadge}</td>
                 ${currentRole !== 'viewer' || s.status === 'partial' ? `<td data-label="Akcja">${actionButton}</td>` : '<td class="admin-only-col"></td>'}
             `;
@@ -1406,7 +1434,6 @@
             });
             this.reset(); 
             btn.innerHTML = '<span class="material-symbols-outlined">add_task</span> Dodaj Dostawę';
-            alert('Zaplanowano nową dostawę.');
         });
 
         const adjForm = document.getElementById('adjustmentForm');
@@ -1439,7 +1466,6 @@
             await window.inventory.addIncomingShipment(formData.get('supplier'), products);
             this.reset();
             btn.innerHTML = '<span class="material-symbols-outlined">add_box</span> Zarejestruj Dostawę';
-            alert('Dostawa wprowadzona. Stany "W Montażu" zaktualizowane.');
         });
 
         document.getElementById('productionForm').addEventListener('submit', async function(e) {
@@ -1462,6 +1488,7 @@
         document.getElementById('componentsIncomingForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             if (currentRole === 'viewer') return;
+            
             const btn = this.querySelector('button');
             btn.innerHTML = '<span class="material-symbols-outlined">hourglass_empty</span> Zapisywanie...';
             
@@ -1474,7 +1501,7 @@
             
             this.reset();
             btn.innerHTML = '<span class="material-symbols-outlined">add_box</span> Zarejestruj';
-            alert('✅ Dostawa komponentów została pomyślnie zarejestrowana!');
+            alert('Dostawa komponentów została pomyślnie zarejestrowana!');
         });
 
     </script>
