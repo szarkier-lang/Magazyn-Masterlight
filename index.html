@@ -113,7 +113,7 @@
         .stat-card .value { font-size: 2rem; font-weight: bold; color: var(--accent-red); }
 
         .section { background: #fff; margin-bottom: 2rem; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); overflow: hidden; border-top: 4px solid var(--primary-terracotta); }
-        .section-header { background: linear-gradient(135deg, var(--beige-light) 0%, var(--warm-beige) 100%); padding: 1.2rem 1.5rem; border-bottom: 2px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
+        .section-header { background: linear-gradient(135deg, var(--beige-light) 0%, var(--warm-beige) 100%); padding: 1.2rem 1.5rem; border-bottom: 2px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
         .section-header h2 { color: var(--text-dark); font-size: 1.3rem; margin: 0; display:flex; align-items:center; gap:8px; }
         .section-header .badge { background: var(--accent-red); color: white; padding: 0.3rem 0.7rem; border-radius: 20px; font-size: 0.8rem; font-weight: bold; }
         .section-content { padding: 1.5rem; }
@@ -302,7 +302,14 @@
                     </div>
                     
                     <div class="section">
-                        <div class="section-header"><h2 style="display:flex; align-items:center; gap:8px; color: var(--primary-dark);"><span class="material-symbols-outlined">event_upcoming</span> Nadchodzące dostawy (7 dni roboczych)</h2></div>
+                        <div class="section-header">
+                            <h2 style="display:flex; align-items:center; gap:8px; color: var(--primary-dark);">
+                                <span class="material-symbols-outlined">event_upcoming</span> Nadchodzące dostawy (7 dni)
+                            </h2>
+                            <div class="badge" id="upcoming-total-badge" style="background: var(--primary-terracotta); font-size: 0.95rem; padding: 0.4rem 0.8rem;">
+                                Zapotrzebowanie: 0 szt.
+                            </div>
+                        </div>
                         <div class="section-content">
                             <table>
                                 <thead><tr><th>Data</th><th>Miejsce</th><th>Firma</th><th>Sztuk</th><th>Gotowość</th><th>Status</th></tr></thead>
@@ -1098,7 +1105,7 @@
                 dashboardTbody.appendChild(row);
             });
 
-            // Dashboard: Nadchodzące dostawy (7 dni roboczych)
+            // Dashboard: Nadchodzące dostawy (7 dni roboczych) + Suma zapotrzebowania
             const upcomingTbody = document.getElementById('dashboard-upcoming-shipments');
             upcomingTbody.innerHTML = '';
             
@@ -1125,12 +1132,16 @@
                 s.date <= thresholdFormatted
             ).sort((a, b) => a.date.localeCompare(b.date));
 
+            let upcomingTotalLamps = 0;
+
             if (upcomingShipments.length === 0) {
                 upcomingTbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-light); padding-left: 0 !important;">Brak zaplanowanych dostaw na najbliższe 7 dni roboczych.</td></tr>';
+                document.getElementById('upcoming-total-badge').innerHTML = 'Zapotrzebowanie: <strong>0 szt.</strong>';
             } else {
                 upcomingShipments.forEach(s => {
                     let total = 0;
                     if(s.products) { total = Object.values(s.products).reduce((a, b) => a + b, 0); }
+                    upcomingTotalLamps += total;
                     
                     let statusBadge = '';
                     if (s.status === 'partial') statusBadge = '<span class="status-badge status-warning"><span class="material-symbols-outlined">warning</span> Niepełna</span>';
@@ -1150,6 +1161,7 @@
                     `;
                     upcomingTbody.appendChild(row);
                 });
+                document.getElementById('upcoming-total-badge').innerHTML = `Zapotrzebowanie: <strong>${upcomingTotalLamps} szt.</strong>`;
             }
 
             updateInventoryTable();
