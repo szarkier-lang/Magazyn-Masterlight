@@ -33,6 +33,7 @@
             color: var(--text-dark);
             line-height: 1.6;
             margin: 0; padding: 0;
+            overflow-x: hidden; /* Zapobiega pojawianiu się bocznego paska na całej stronie */
         }
 
         /* Ustawienia Ikon */
@@ -69,11 +70,16 @@
         .auth-box h2 { color: var(--primary-dark); margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: center; gap: 8px; }
         .hidden { display: none !important; }
 
+        /* TŁO DLA MENU MOBILNEGO */
+        .mobile-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9998; }
+        .mobile-overlay.active { display: block; }
+
         /* SIDEBAR */
         .sidebar {
             width: 250px; background: linear-gradient(180deg, var(--sidebar-bg) 0%, #6F5A3A 100%);
             color: #fff; padding: 2rem 0; position: fixed; left: 0; top: 0; height: 100vh;
-            overflow-y: auto; box-shadow: 2px 0 15px rgba(0,0,0,0.2);
+            overflow-y: auto; box-shadow: 2px 0 15px rgba(0,0,0,0.2); z-index: 9999;
+            transition: transform 0.3s ease;
         }
         .sidebar-logo { padding: 0 1.5rem; margin-bottom: 2rem; border-bottom: 2px solid rgba(255,255,255,0.2); padding-bottom: 1.5rem; }
         .sidebar-logo h2 { font-size: 1.3rem; letter-spacing: 1px; text-shadow: 1px 1px 3px rgba(0,0,0,0.3); display: flex; align-items: center; gap: 10px; }
@@ -87,13 +93,17 @@
         .sidebar-nav a:hover { background-color: rgba(255,255,255,0.1); border-left-color: var(--accent-red); color: #fff; }
         .sidebar-nav a.active { background-color: rgba(255,255,255,0.15); border-left-color: var(--accent-red); color: #fff; font-weight: 600; }
 
+        /* PRZYCISK HAMBURGER */
+        .mobile-menu-btn { display: none; background: none; border: none; color: white; cursor: pointer; margin-right: 15px; }
+
         /* MAIN CONTENT */
-        .main-content { margin-left: 250px; flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
+        .main-content { margin-left: 250px; flex: 1; overflow-y: auto; display: flex; flex-direction: column; width: calc(100% - 250px); transition: margin 0.3s ease; }
         .header {
             background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-terracotta) 100%);
             color: #fff; padding: 1.5rem 2rem; box-shadow: 0 4px 15px rgba(0,0,0,0.2); border-bottom: 4px solid var(--accent-red);
             display: flex; justify-content: space-between; align-items: center;
         }
+        .header-left { display: flex; align-items: center; }
         .header-title h1 { font-size: 2rem; margin-bottom: 0.3rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); letter-spacing: 1px; display: flex; align-items: center; gap: 10px;}
         .header-title p { opacity: 0.9; font-size: 0.95rem; }
         .user-badge { background: rgba(0,0,0,0.2); padding: 0.8rem 1.2rem; border-radius: 8px; font-size: 0.9rem; border: 1px solid rgba(255,255,255,0.3); text-align: left; display: flex; align-items: center; gap: 20px; }
@@ -119,12 +129,12 @@
 
         .section { background: #fff; margin-bottom: 2rem; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); overflow: hidden; border-top: 4px solid var(--primary-terracotta); }
         .section-header { background: linear-gradient(135deg, var(--beige-light) 0%, var(--warm-beige) 100%); padding: 1.2rem 1.5rem; border-bottom: 2px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
-        .section-header h2 { color: var(--text-dark); font-size: 1.3rem; margin: 0; }
+        .section-header h2 { color: var(--text-dark); font-size: 1.3rem; margin: 0; display:flex; align-items:center; gap:8px; }
         .section-header .badge { background: var(--accent-red); color: white; padding: 0.3rem 0.7rem; border-radius: 20px; font-size: 0.8rem; font-weight: bold; }
-        .section-content { padding: 1.5rem; }
+        .section-content { padding: 1.5rem; overflow-x: auto; } /* KLUCZOWE NA MOBILE - PRZEWIJANIE TABEL */
 
         /* TABLES */
-        table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.9rem; }
+        table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.9rem; min-width: 600px; } /* Min-width zapobiega ściskaniu kolumn na tel. */
         table th { background-color: var(--primary-terracotta); color: white; padding: 0.8rem; text-align: left; font-weight: 600; border: 1px solid var(--primary-dark); }
         table td { padding: 0.7rem 0.8rem; border-bottom: 1px solid var(--border-color); color: var(--text-dark); }
         table tbody tr:hover { background-color: var(--warm-beige); }
@@ -161,24 +171,30 @@
         .editable:hover { background-color: rgba(196, 112, 75, 0.15); }
         .footer { text-align: center; padding: 1.5rem; color: var(--text-light); font-size: 0.85rem; border-top: 2px solid var(--border-color); margin-top: 2rem; }
 
+        /* --- MOBILE OPTYMALIZACJA --- */
+        @media (max-width: 768px) {
+            .mobile-menu-btn { display: block; }
+            .sidebar { transform: translateX(-100%); } /* Schowaj sidebar */
+            .sidebar.open { transform: translateX(0); } /* Pokaż po kliknięciu */
+            .main-content { margin-left: 0; width: 100%; }
+            .content { padding: 1rem; }
+            .stats-bar { grid-template-columns: 1fr; }
+            .header { flex-direction: column; align-items: flex-start; gap: 1rem; padding: 1rem; }
+            .header-left { width: 100%; display: flex; align-items: center; }
+            .header-title h1 { font-size: 1.6rem; }
+            .user-badge { width: 100%; flex-direction: column; text-align: center; gap: 10px; }
+            .user-badge-info { display: flex; flex-direction: column; align-items: center; }
+        }
+
         /* --- STYLE DO DRUKU --- */
         @media print {
             body { background: white; color: black; }
             .sidebar, .header, .footer, .btn-primary, .btn-secondary, form, #form-shipment-container, #form-components-container, #form-incoming-container, #form-production-container, #form-adjustments-container { display: none !important; }
-            .main-content { margin-left: 0; padding: 0; }
+            .main-content { margin-left: 0; width: 100%; padding: 0; }
             .content { padding: 0; }
             .section { box-shadow: none; border: 1px solid #ccc; margin-bottom: 1rem; page-break-inside: avoid; }
             .tab-content { display: block !important; } 
             #tab-dashboard, #tab-history, #tab-reports { display: none !important; } 
-        }
-
-        @media (max-width: 768px) {
-            #app-container { flex-direction: column; }
-            .sidebar { width: 100%; height: auto; position: static; padding: 1rem 0; }
-            .main-content { margin-left: 0; }
-            .stats-bar { grid-template-columns: 1fr; }
-            .header { flex-direction: column; align-items: flex-start; gap: 1rem; }
-            .user-badge { flex-direction: column; text-align: center; gap: 15px; }
         }
     </style>
 </head>
@@ -205,6 +221,8 @@
         </div>
     </div>
 
+    <div id="mobile-overlay" class="mobile-overlay" onclick="toggleSidebar()"></div>
+
     <div id="app-container" class="hidden" style="display: flex; width: 100%; height: 100vh;">
         
         <aside class="sidebar">
@@ -226,10 +244,16 @@
 
         <div class="main-content">
             <header class="header">
-                <div class="header-title">
-                    <h1><span class="material-symbols-outlined" style="font-size: 2.2rem;">highlight</span> MASTERLIGHT</h1>
-                    <p>System Zarządzania Magazynem - Baza danych w Chmurze</p>
+                <div class="header-left">
+                    <button class="mobile-menu-btn" onclick="toggleSidebar()">
+                        <span class="material-symbols-outlined" style="font-size: 2.2rem;">menu</span>
+                    </button>
+                    <div class="header-title">
+                        <h1><span class="material-symbols-outlined" style="font-size: 2.2rem; display: none;">highlight</span> MASTERLIGHT</h1>
+                        <p>System Zarządzania Magazynem - Chmura</p>
+                    </div>
                 </div>
+                
                 <div class="user-badge" id="user-info">
                     <div class="user-badge-info">
                         <p><span class="material-symbols-outlined">person</span> Zalogowano: <strong id="logged-email">...</strong></p>
@@ -291,7 +315,7 @@
                     <h2 style="margin-bottom: 1.5rem; color: var(--text-dark);">Zarządzanie Dostawami</h2>
                     
                     <div id="form-incoming-container" class="section">
-                        <div class="section-header"><h2 style="display:flex; align-items:center; gap:8px;"><span class="material-symbols-outlined">input</span> Zarejestruj Dostawę Przychodzącą (Dopisz do montażu)</h2></div>
+                        <div class="section-header"><h2 style="display:flex; align-items:center; gap:8px;"><span class="material-symbols-outlined">input</span> Zarejestruj Dostawę Przychodzącą</h2></div>
                         <div class="section-content">
                             <form id="incomingForm">
                                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
@@ -308,7 +332,7 @@
                     </div>
 
                     <div class="section">
-                        <div class="section-header"><h2 style="color: #CD853F; display:flex; align-items:center; gap:8px;"><span class="material-symbols-outlined">pending_actions</span> Dostawy Oczekujące (Niepotwierdzona Data)</h2></div>
+                        <div class="section-header"><h2 style="color: #CD853F; display:flex; align-items:center; gap:8px;"><span class="material-symbols-outlined">pending_actions</span> Dostawy Oczekujące</h2></div>
                         <div class="section-content">
                             <table>
                                 <thead><tr><th>Data Wstępna</th><th>Miejsce</th><th>Firma Odbierająca</th><th>Sztuk</th><th>Kąty</th><th>Status</th><th class="admin-only-col">Akcja</th></tr></thead>
@@ -563,6 +587,27 @@
 
         checkSession();
 
+        // ---------------------------------
+        // FUNKCJE UI (MENU MOBILNE I MODAL)
+        // ---------------------------------
+        function toggleSidebar() {
+            document.querySelector('.sidebar').classList.toggle('open');
+            document.getElementById('mobile-overlay').classList.toggle('active');
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            event.target.classList.add('active');
+            
+            // Schowaj menu na telefonie po kliknięciu
+            if (window.innerWidth <= 768) {
+                document.querySelector('.sidebar').classList.remove('open');
+                document.getElementById('mobile-overlay').classList.remove('active');
+            }
+        }
+
         function showModal(title, content) {
             document.getElementById('modal-title').textContent = title;
             document.getElementById('modal-content').innerHTML = content;
@@ -573,6 +618,9 @@
             document.getElementById('modal').style.display = 'none';
         }
 
+        // ---------------------------------
+        // MENEDŻER CHMURY
+        // ---------------------------------
         class CloudInventoryManager {
             constructor() {
                 this.products = [];
@@ -843,7 +891,7 @@
                 const componentsAvailable = Math.min(ps_raw, clips_normal, clips_pass);
 
                 if (totalToProduce > componentsAvailable) {
-                    alert(`Ostrzeżenie: Niewystarczająca liczba komponentów. Masz zestawów tylko dla ${componentsAvailable} sztuk.`);
+                    alert(`Błąd: Niewystarczająca liczba komponentów! Masz zestawów tylko dla ${componentsAvailable} sztuk.`);
                     return; 
                 }
 
@@ -911,7 +959,7 @@
 
                     await Promise.all(dbUpdates);
                     await this.addHistory('Rejestracja produkcji', details.join(', '));
-                    alert(`Zarejestrowano produkcję: ${totalProduced} sztuk.`);
+                    alert(`✅ Zarejestrowano produkcję: ${totalProduced} sztuk.`);
                     await this.fetchData(); 
                 }
             }
@@ -929,6 +977,24 @@
                 return { totalReady, totalAssembly, totalService, totalAll: totalReady + totalAssembly + totalService };
             }
 
+            // NAPRAWA DODAWANIA KOMPONENTÓW (ASYNC)
+            async addComponentsShipment(supplier, newComps) {
+                if (currentRole === 'viewer') return;
+                const { data: current } = await db.from('components').select('*').eq('id', 1).single();
+                if (!current) {
+                    alert('Błąd odczytu bazy komponentów.');
+                    return;
+                }
+                const updated = {
+                    ps_raw: current.ps_raw + (newComps.ps_raw || 0),
+                    clips_normal: current.clips_normal + (newComps.clips_normal || 0),
+                    clips_pass: current.clips_pass + (newComps.clips_pass || 0)
+                };
+                await db.from('components').update(updated).eq('id', 1);
+                await this.addHistory('Dostawa komponentów', `Dostawca: ${supplier}`);
+                await this.fetchData(); 
+            }
+
             async updateComponent(field, value) {
                 if (currentRole === 'viewer') return;
                 await db.from('components').update({ [field]: value }).eq('id', 1);
@@ -937,13 +1003,9 @@
             }
         }
 
-        function switchTab(tabId) {
-            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
-            document.getElementById(tabId).classList.add('active');
-            event.target.classList.add('active');
-        }
-
+        // ---------------------------------
+        // RENDEROWANIE TABEL
+        // ---------------------------------
         function getStatusClass(productId) {
             const status = window.inventory.getStatus(productId);
             return status === 'ok' ? 'status-ok' : status === 'warning' ? 'status-warning' : 'status-error';
@@ -1290,39 +1352,52 @@
             setTimeout(() => { printWindow.print(); }, 250);
         }
 
-        // OBSŁUGA FORMULARZY
-        document.getElementById('shipmentForm').addEventListener('submit', function(e) {
+        // ---------------------------------
+        // OBSŁUGA FORMULARZY (Z ASYNC/AWAIT DLA KOMPONENTÓW)
+        // ---------------------------------
+        document.getElementById('shipmentForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             if (currentRole === 'viewer') return;
+            const btn = this.querySelector('button');
+            btn.innerHTML = '<span class="material-symbols-outlined">hourglass_empty</span> Przetwarzanie...';
+            
             const formData = new FormData(this);
             const products = {
                 1: parseInt(formData.get('p1')) || 0, 2: parseInt(formData.get('p2')) || 0,
                 3: parseInt(formData.get('p3')) || 0, 4: parseInt(formData.get('p4')) || 0,
                 5: parseInt(formData.get('p5')) || 0
             };
-            window.inventory.addShipment({ 
+            await window.inventory.addShipment({ 
                 date: formData.get('date'), 
                 location: formData.get('location'), 
                 company: formData.get('company'),
                 products: products 
             });
             this.reset(); 
+            btn.innerHTML = '<span class="material-symbols-outlined">add_task</span> Dodaj Dostawę';
         });
 
         const adjForm = document.getElementById('adjustmentForm');
         if(adjForm) {
-            adjForm.addEventListener('submit', function(e) {
+            adjForm.addEventListener('submit', async function(e) {
                 e.preventDefault();
                 if (currentRole === 'viewer') return;
+                const btn = this.querySelector('button');
+                btn.innerHTML = '<span class="material-symbols-outlined">hourglass_empty</span> Przetwarzanie...';
+                
                 const formData = new FormData(this);
-                window.inventory.addAdjustment(formData.get('adj_date'), formData.get('adj_location'));
+                await window.inventory.addAdjustment(formData.get('adj_date'), formData.get('adj_location'));
                 this.reset();
+                btn.innerHTML = '<span class="material-symbols-outlined">save</span> Dodaj Regulację';
             });
         }
 
         document.getElementById('incomingForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             if (currentRole === 'viewer') return;
+            const btn = this.querySelector('button');
+            btn.innerHTML = '<span class="material-symbols-outlined">hourglass_empty</span> Przetwarzanie...';
+            
             const formData = new FormData(this);
             const products = {
                 1: parseInt(formData.get('p1')) || 0, 
@@ -1331,11 +1406,15 @@
             };
             await window.inventory.addIncomingShipment(formData.get('supplier'), products);
             this.reset();
+            btn.innerHTML = '<span class="material-symbols-outlined">add_box</span> Zarejestruj Dostawę';
         });
 
         document.getElementById('productionForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             if (currentRole === 'viewer') return;
+            const btn = this.querySelector('button');
+            btn.innerHTML = '<span class="material-symbols-outlined">hourglass_empty</span> Przetwarzanie...';
+            
             const formData = new FormData(this);
             const produced = {
                 1: parseInt(formData.get('p1')) || 0, 2: parseInt(formData.get('p2')) || 0,
@@ -1344,16 +1423,27 @@
             };
             await window.inventory.registerProduction(produced);
             this.reset();
+            btn.innerHTML = '<span class="material-symbols-outlined">task_alt</span> Zarejestruj Produkcję';
         });
 
-        document.getElementById('componentsIncomingForm').addEventListener('submit', function(e) {
+        // NAPRAWIONY FORMULARZ KOMPONENTÓW
+        document.getElementById('componentsIncomingForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             if (currentRole === 'viewer') return;
+            
+            const btn = this.querySelector('button');
+            btn.innerHTML = '<span class="material-symbols-outlined">hourglass_empty</span> Zapisywanie...';
+            
             const formData = new FormData(this);
-            window.inventory.addComponentsShipment(formData.get('supplier'), {
-                ps_raw: parseInt(formData.get('ps_raw')) || 0, clips_normal: parseInt(formData.get('clips_normal')) || 0, clips_pass: parseInt(formData.get('clips_pass')) || 0
+            await window.inventory.addComponentsShipment(formData.get('supplier'), {
+                ps_raw: parseInt(formData.get('ps_raw')) || 0, 
+                clips_normal: parseInt(formData.get('clips_normal')) || 0, 
+                clips_pass: parseInt(formData.get('clips_pass')) || 0
             });
+            
             this.reset();
+            btn.innerHTML = '<span class="material-symbols-outlined">add_box</span> Zarejestruj';
+            alert('✅ Dostawa komponentów została pomyślnie zarejestrowana!');
         });
 
     </script>
