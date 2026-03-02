@@ -33,29 +33,14 @@
             color: var(--text-dark);
             line-height: 1.6;
             margin: 0; padding: 0;
-            overflow-x: hidden; /* Zapobiega pojawianiu się bocznego paska na całej stronie */
+            overflow-x: hidden;
         }
 
         /* Ustawienia Ikon */
-        .material-symbols-outlined {
-            vertical-align: middle;
-            font-size: 1.2em;
-        }
-        button .material-symbols-outlined {
-            font-size: 1.1em;
-            margin-right: 6px;
-            vertical-align: -0.15em;
-        }
-        .status-badge .material-symbols-outlined {
-            font-size: 1.1em;
-            margin-right: 4px;
-            vertical-align: -0.15em;
-        }
-        .sidebar-nav a .material-symbols-outlined {
-            font-size: 1.4em;
-            margin-right: 12px;
-            opacity: 0.9;
-        }
+        .material-symbols-outlined { vertical-align: middle; font-size: 1.2em; }
+        button .material-symbols-outlined { font-size: 1.1em; margin-right: 6px; vertical-align: -0.15em; }
+        .status-badge .material-symbols-outlined { font-size: 1.1em; margin-right: 4px; vertical-align: -0.15em; }
+        .sidebar-nav a .material-symbols-outlined { font-size: 1.4em; margin-right: 12px; opacity: 0.9; }
 
         /* EKRAN LOGOWANIA */
         #auth-screen {
@@ -131,10 +116,10 @@
         .section-header { background: linear-gradient(135deg, var(--beige-light) 0%, var(--warm-beige) 100%); padding: 1.2rem 1.5rem; border-bottom: 2px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
         .section-header h2 { color: var(--text-dark); font-size: 1.3rem; margin: 0; display:flex; align-items:center; gap:8px; }
         .section-header .badge { background: var(--accent-red); color: white; padding: 0.3rem 0.7rem; border-radius: 20px; font-size: 0.8rem; font-weight: bold; }
-        .section-content { padding: 1.5rem; overflow-x: auto; } /* KLUCZOWE NA MOBILE - PRZEWIJANIE TABEL */
+        .section-content { padding: 1.5rem; }
 
         /* TABLES */
-        table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.9rem; min-width: 600px; } /* Min-width zapobiega ściskaniu kolumn na tel. */
+        table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.9rem; }
         table th { background-color: var(--primary-terracotta); color: white; padding: 0.8rem; text-align: left; font-weight: 600; border: 1px solid var(--primary-dark); }
         table td { padding: 0.7rem 0.8rem; border-bottom: 1px solid var(--border-color); color: var(--text-dark); }
         table tbody tr:hover { background-color: var(--warm-beige); }
@@ -155,7 +140,7 @@
         .modal-body p { margin-bottom: 0.8rem; font-size: 1.1rem; }
 
         /* BUTTONS & FORMS */
-        button { display: inline-flex; align-items: center; padding: 0.6rem 1rem; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem; font-weight: 600; transition: all 0.3s ease; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.2rem; }
+        button { display: inline-flex; align-items: center; justify-content: center; padding: 0.6rem 1rem; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem; font-weight: 600; transition: all 0.3s ease; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.2rem; }
         .btn-primary { background-color: var(--primary-terracotta); color: white; border: 2px solid var(--primary-terracotta); }
         .btn-primary:hover { background-color: var(--primary-dark); box-shadow: 0 4px 12px rgba(168, 90, 58, 0.3); }
         .btn-secondary { background-color: var(--accent-red); color: white; border: 2px solid var(--accent-red); }
@@ -171,19 +156,57 @@
         .editable:hover { background-color: rgba(196, 112, 75, 0.15); }
         .footer { text-align: center; padding: 1.5rem; color: var(--text-light); font-size: 0.85rem; border-top: 2px solid var(--border-color); margin-top: 2rem; }
 
-        /* --- MOBILE OPTYMALIZACJA --- */
+        /* --- MOBILE OPTYMALIZACJA (UKŁAD KART DLA TABEL) --- */
         @media (max-width: 768px) {
             .mobile-menu-btn { display: block; }
-            .sidebar { transform: translateX(-100%); } /* Schowaj sidebar */
-            .sidebar.open { transform: translateX(0); } /* Pokaż po kliknięciu */
+            .sidebar { transform: translateX(-100%); } 
+            .sidebar.open { transform: translateX(0); } 
             .main-content { margin-left: 0; width: 100%; }
-            .content { padding: 1rem; }
+            .content { padding: 0.5rem; }
             .stats-bar { grid-template-columns: 1fr; }
             .header { flex-direction: column; align-items: flex-start; gap: 1rem; padding: 1rem; }
             .header-left { width: 100%; display: flex; align-items: center; }
             .header-title h1 { font-size: 1.6rem; }
             .user-badge { width: 100%; flex-direction: column; text-align: center; gap: 10px; }
             .user-badge-info { display: flex; flex-direction: column; align-items: center; }
+
+            /* TABELE ZAMIENIANE NA KARTY */
+            table, thead, tbody, th, td, tr { display: block; }
+            table { border: none; }
+            thead tr { position: absolute; top: -9999px; left: -9999px; } /* Ukryj nagłówki, ale dla czytników wciąż tam są */
+            tr { border: 2px solid var(--border-color); margin-bottom: 1rem; border-radius: 8px; overflow: hidden; box-shadow: 0 3px 8px rgba(0,0,0,0.05); }
+            td { 
+                border: none;
+                border-bottom: 1px solid #eee; 
+                position: relative;
+                padding-left: 45% !important; /* Miejsce na etykietę z lewej */
+                text-align: right;
+                min-height: 45px;
+                display: flex;
+                align-items: center;
+                justify-content: flex-end;
+            }
+            td:last-child { border-bottom: none; }
+            td::before { 
+                content: attr(data-label); 
+                position: absolute;
+                left: 1rem;
+                width: 40%; 
+                white-space: nowrap;
+                text-align: left;
+                font-weight: 600;
+                color: var(--text-light);
+                font-size: 0.85rem;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+            
+            /* Naprawa inputów wewnątrz edytowalnych komórek na telefonie */
+            .editable input { max-width: 100px; text-align: right; padding: 0.3rem; }
+            
+            /* Komórka akcji (przyciski) */
+            td[data-label="Akcja"] { justify-content: flex-end; flex-wrap: wrap; gap: 5px; }
+            .btn-small { margin-bottom: 0; }
         }
 
         /* --- STYLE DO DRUKU --- */
@@ -195,6 +218,13 @@
             .section { box-shadow: none; border: 1px solid #ccc; margin-bottom: 1rem; page-break-inside: avoid; }
             .tab-content { display: block !important; } 
             #tab-dashboard, #tab-history, #tab-reports { display: none !important; } 
+            /* Przywrócenie normalnych tabel do druku */
+            table, thead, tbody, th, td, tr { display: table-cell; }
+            table { display: table; }
+            thead tr { position: static; }
+            tr { border: none; box-shadow: none; margin-bottom: 0; }
+            td { padding-left: 0.8rem !important; text-align: left; display: table-cell; }
+            td::before { display: none; }
         }
     </style>
 </head>
@@ -355,7 +385,7 @@
                     </div>
 
                     <div id="form-shipment-container" class="section">
-                        <div class="section-header"><h2 style="display:flex; align-items:center; gap:8px;"><span class="material-symbols-outlined">schedule_send</span> Zaplanuj Nową Dostawę Do Klienta</h2></div>
+                        <div class="section-header"><h2 style="display:flex; align-items:center; gap:8px;"><span class="material-symbols-outlined">schedule_send</span> Zaplanuj Nową Dostawę</h2></div>
                         <div class="section-content">
                             <form id="shipmentForm">
                                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
@@ -443,9 +473,9 @@
                             <table>
                                 <thead><tr><th>Typ</th><th>Ilość</th></tr></thead>
                                 <tbody>
-                                    <tr><td><strong>Zasilacze</strong></td><td onclick="editComponentCell(this, 'ps_raw')" class="editable" id="ps-raw-cell">0</td></tr>
-                                    <tr><td><strong>Klapki Zwykłe</strong></td><td onclick="editComponentCell(this, 'clips_normal')" class="editable" id="clips-normal-cell">0</td></tr>
-                                    <tr><td><strong>Klapki Przelotowe</strong></td><td onclick="editComponentCell(this, 'clips_pass')" class="editable" id="clips-pass-cell">0</td></tr>
+                                    <tr><td data-label="Typ"><strong>Zasilacze</strong></td><td data-label="Ilość" onclick="editComponentCell(this, 'ps_raw')" class="editable" id="ps-raw-cell">0</td></tr>
+                                    <tr><td data-label="Typ"><strong>Klapki Zwykłe</strong></td><td data-label="Ilość" onclick="editComponentCell(this, 'clips_normal')" class="editable" id="clips-normal-cell">0</td></tr>
+                                    <tr><td data-label="Typ"><strong>Klapki Przelotowe</strong></td><td data-label="Ilość" onclick="editComponentCell(this, 'clips_pass')" class="editable" id="clips-pass-cell">0</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -469,8 +499,8 @@
                                 <div style="margin-top: 1.5rem;"><button type="submit" class="btn-primary"><span class="material-symbols-outlined">task_alt</span> Zarejestruj Produkcję</button></div>
                             </form>
                             <p style="margin-top: 1rem; color: var(--text-light); font-size: 0.9rem; display: flex; flex-direction: column; gap: 5px;">
-                                <span><span class="material-symbols-outlined" style="font-size: 1rem;">info</span> Podane ilości zostaną odjęte z kolumny "W Montażu" (jako wspólna pula) i dodane do "Gotowe do Wysyłki".</span>
-                                <span><span class="material-symbols-outlined" style="font-size: 1rem;">warning</span> Na każdy wyprodukowany downlight zużywa się: 1x zasilacz, 1x klapka zwykła, 1x klapka przelotowa.</span>
+                                <span><span class="material-symbols-outlined" style="font-size: 1rem;">info</span> Podane ilości zostaną odjęte z "W Montażu" i dodane do "Gotowe do Wysyłki".</span>
+                                <span><span class="material-symbols-outlined" style="font-size: 1rem;">warning</span> Na 1 szt zużywa się: 1x zasilacz, 1x klapka zwykła, 1x klapka przelotowa.</span>
                             </p>
                         </div>
                     </div>
@@ -601,7 +631,6 @@
             document.getElementById(tabId).classList.add('active');
             event.target.classList.add('active');
             
-            // Schowaj menu na telefonie po kliknięciu
             if (window.innerWidth <= 768) {
                 document.querySelector('.sidebar').classList.remove('open');
                 document.getElementById('mobile-overlay').classList.remove('active');
@@ -977,7 +1006,6 @@
                 return { totalReady, totalAssembly, totalService, totalAll: totalReady + totalAssembly + totalService };
             }
 
-            // NAPRAWA DODAWANIA KOMPONENTÓW (ASYNC)
             async addComponentsShipment(supplier, newComps) {
                 if (currentRole === 'viewer') return;
                 const { data: current } = await db.from('components').select('*').eq('id', 1).single();
@@ -1029,7 +1057,7 @@
             dashboardTbody.innerHTML = '';
             window.inventory.products.forEach(p => {
                 const row = document.createElement('tr');
-                row.innerHTML = `<td>${p.name}</td><td>${p.ready}</td><td><span class="status-badge ${getStatusClass(p.id)}">${getStatusText(p.id)}</span></td>`;
+                row.innerHTML = `<td data-label="Produkt">${p.name}</td><td data-label="Ilość Gotowych">${p.ready}</td><td data-label="Status"><span class="status-badge ${getStatusClass(p.id)}">${getStatusText(p.id)}</span></td>`;
                 dashboardTbody.appendChild(row);
             });
 
@@ -1050,21 +1078,22 @@
             window.inventory.products.forEach(p => {
                 const total = p.ready + p.assembly + (p.service || 0);
                 const row = document.createElement('tr');
-                const readyCell = isViewer ? `<td>${p.ready}</td>` : `<td onclick="editCell(this, 'ready', ${p.id})" class="editable">${p.ready}</td>`;
-                const assemblyCell = isViewer ? `<td>${p.assembly}</td>` : `<td onclick="editCell(this, 'assembly', ${p.id})" class="editable">${p.assembly}</td>`;
+                const readyCell = isViewer ? `<td data-label="Gotowe">${p.ready}</td>` : `<td data-label="Gotowe" onclick="editCell(this, 'ready', ${p.id})" class="editable">${p.ready}</td>`;
+                const assemblyCell = isViewer ? `<td data-label="W Montażu">${p.assembly}</td>` : `<td data-label="W Montażu" onclick="editCell(this, 'assembly', ${p.id})" class="editable">${p.assembly}</td>`;
 
                 row.innerHTML = `
-                    <td>${p.name}</td><td>${p.sku}</td>
+                    <td data-label="Produkt">${p.name}</td>
+                    <td data-label="SKU">${p.sku}</td>
                     ${readyCell}
                     ${assemblyCell}
-                    <td><strong>${total}</strong></td>
-                    <td><span class="status-badge ${getStatusClass(p.id)}">${getStatusText(p.id)}</span></td>
+                    <td data-label="Razem"><strong>${total}</strong></td>
+                    <td data-label="Status"><span class="status-badge ${getStatusClass(p.id)}">${getStatusText(p.id)}</span></td>
                 `;
                 tbody.appendChild(row);
 
                 const serviceRow = document.createElement('tr');
-                const serviceCell = isViewer ? `<td>${p.service || 0}</td>` : `<td onclick="editCell(this, 'service', ${p.id})" class="editable">${p.service || 0}</td>`;
-                serviceRow.innerHTML = `<td>${p.name}</td>${serviceCell}`;
+                const serviceCell = isViewer ? `<td data-label="W serwisie">${p.service || 0}</td>` : `<td data-label="W serwisie" onclick="editCell(this, 'service', ${p.id})" class="editable">${p.service || 0}</td>`;
+                serviceRow.innerHTML = `<td data-label="Produkt">${p.name}</td>${serviceCell}`;
                 tbodyService.appendChild(serviceRow);
             });
         }
@@ -1104,13 +1133,13 @@
 
             const row = document.createElement('tr');
             row.innerHTML = `
-                <td><strong>${s.date}</strong></td>
-                <td>${s.location}</td>
-                <td>${s.company || '-'}</td>
-                <td><strong>${total}</strong></td>
-                <td><button class="btn-small btn-secondary" onclick="showAnglesDemand(${s.id})" style="margin:0; background-color:#8B6F47; border-color:#8B6F47;"><span class="material-symbols-outlined">visibility</span> Kąty</button></td>
-                <td>${statusBadge}</td>
-                ${currentRole !== 'viewer' || s.status === 'partial' ? `<td>${actionButton}</td>` : '<td class="admin-only-col"></td>'}
+                <td data-label="Data"><strong>${s.date}</strong></td>
+                <td data-label="Miejsce">${s.location}</td>
+                <td data-label="Firma">${s.company || '-'}</td>
+                <td data-label="Sztuk"><strong>${total}</strong></td>
+                <td data-label="Kąty"><button class="btn-small btn-secondary" onclick="showAnglesDemand(${s.id})" style="margin:0; background-color:#8B6F47; border-color:#8B6F47;"><span class="material-symbols-outlined">visibility</span> Pokaż</button></td>
+                <td data-label="Status">${statusBadge}</td>
+                ${currentRole !== 'viewer' || s.status === 'partial' ? `<td data-label="Akcja">${actionButton}</td>` : '<td class="admin-only-col"></td>'}
             `;
             return row;
         }
@@ -1140,8 +1169,8 @@
             tbody.innerHTML = '';
             window.inventory.adjustments.forEach(a => {
                 const row = document.createElement('tr');
-                const actionCell = currentRole === 'admin' ? `<td><button class="btn-small btn-secondary" onclick="deleteAdjustment(${a.id})"><span class="material-symbols-outlined">delete</span> Usuń</button></td>` : `<td class="admin-only-col"></td>`;
-                row.innerHTML = `<td><strong>${a.date}</strong></td><td>${a.location}</td>${actionCell}`;
+                const actionCell = currentRole === 'admin' ? `<td data-label="Akcja"><button class="btn-small btn-secondary" onclick="deleteAdjustment(${a.id})"><span class="material-symbols-outlined">delete</span> Usuń</button></td>` : `<td class="admin-only-col"></td>`;
+                row.innerHTML = `<td data-label="Data Regulacji"><strong>${a.date}</strong></td><td data-label="Miejscowość">${a.location}</td>${actionCell}`;
                 tbody.appendChild(row);
             });
         }
@@ -1152,7 +1181,7 @@
             tbody.innerHTML = '';
             window.inventory.history.slice(0, 20).forEach(h => {
                 const row = document.createElement('tr');
-                row.innerHTML = `<td>${h.timestamp}</td><td>${h.action}</td><td>${h.details}</td>`;
+                row.innerHTML = `<td data-label="Czas">${h.timestamp}</td><td data-label="Typ Operacji">${h.action}</td><td data-label="Szczegóły">${h.details}</td>`;
                 tbody.appendChild(row);
             });
         }
@@ -1180,7 +1209,8 @@
             if (cell.querySelector('input')) return;
             const product = window.inventory.products.find(p => p.id === productId);
             const input = document.createElement('input');
-            input.type = 'number'; input.value = product[field] || 0; input.style.width = '100%';
+            input.type = 'number'; input.value = product[field] || 0; 
+            input.style.width = window.innerWidth <= 768 ? '100px' : '100%';
             
             cell.innerHTML = ''; cell.appendChild(input); input.focus(); input.select();
 
@@ -1196,7 +1226,8 @@
             if (currentRole === 'viewer') return;
             if (cell.querySelector('input')) return;
             const input = document.createElement('input');
-            input.type = 'number'; input.value = window.inventory.components[field]; input.style.width = '100%';
+            input.type = 'number'; input.value = window.inventory.components[field]; 
+            input.style.width = window.innerWidth <= 768 ? '100px' : '100%';
             
             cell.innerHTML = ''; cell.appendChild(input); input.focus(); input.select();
 
@@ -1353,7 +1384,7 @@
         }
 
         // ---------------------------------
-        // OBSŁUGA FORMULARZY (Z ASYNC/AWAIT DLA KOMPONENTÓW)
+        // OBSŁUGA FORMULARZY 
         // ---------------------------------
         document.getElementById('shipmentForm').addEventListener('submit', async function(e) {
             e.preventDefault();
@@ -1375,6 +1406,7 @@
             });
             this.reset(); 
             btn.innerHTML = '<span class="material-symbols-outlined">add_task</span> Dodaj Dostawę';
+            alert('Zaplanowano nową dostawę.');
         });
 
         const adjForm = document.getElementById('adjustmentForm');
@@ -1407,6 +1439,7 @@
             await window.inventory.addIncomingShipment(formData.get('supplier'), products);
             this.reset();
             btn.innerHTML = '<span class="material-symbols-outlined">add_box</span> Zarejestruj Dostawę';
+            alert('Dostawa wprowadzona. Stany "W Montażu" zaktualizowane.');
         });
 
         document.getElementById('productionForm').addEventListener('submit', async function(e) {
@@ -1426,11 +1459,9 @@
             btn.innerHTML = '<span class="material-symbols-outlined">task_alt</span> Zarejestruj Produkcję';
         });
 
-        // NAPRAWIONY FORMULARZ KOMPONENTÓW
         document.getElementById('componentsIncomingForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             if (currentRole === 'viewer') return;
-            
             const btn = this.querySelector('button');
             btn.innerHTML = '<span class="material-symbols-outlined">hourglass_empty</span> Zapisywanie...';
             
