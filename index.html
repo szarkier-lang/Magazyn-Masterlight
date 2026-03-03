@@ -42,6 +42,42 @@
         .status-badge .material-symbols-outlined { font-size: 1.1em; margin-right: 4px; vertical-align: -0.15em; }
         .sidebar-nav a .material-symbols-outlined { font-size: 1.4em; margin-right: 12px; opacity: 0.9; }
 
+        /* --- NOWOŚĆ: EKRAN ŁADOWANIA --- */
+        #loading-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(251, 247, 242, 0.9); z-index: 99999;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            transition: opacity 0.3s ease;
+        }
+        .spinner {
+            width: 60px; height: 60px; border: 6px solid var(--border-color);
+            border-top: 6px solid var(--primary-terracotta); border-radius: 50%;
+            animation: spin 1s linear infinite; margin-bottom: 1.5rem;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* --- NOWOŚĆ: SYSTEM POWIADOMIEŃ TOAST --- */
+        #toast-container { position: fixed; top: 20px; right: 20px; z-index: 100000; display: flex; flex-direction: column; gap: 10px; }
+        .toast {
+            background: white; padding: 1rem 1.5rem; border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2); display: flex; align-items: center; gap: 12px;
+            animation: slideInRight 0.3s ease forwards; max-width: 400px; font-weight: 600; border-left: 6px solid #ccc;
+        }
+        .toast.success { border-left-color: #2E7D32; color: #2E7D32; }
+        .toast.error { border-left-color: var(--accent-red); color: var(--accent-red); }
+        .toast.warning { border-left-color: var(--warning-status); color: var(--warning-status); }
+        .toast-fadeOut { animation: fadeOutRight 0.4s ease forwards; }
+        @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes fadeOutRight { from { transform: translateX(0); opacity: 1; } to { transform: translateX(120%); opacity: 0; } }
+
+        /* --- NOWOŚĆ: ALERTY DASHBOARDU --- */
+        .alert-banner {
+            background: #FFF3E0; border-left: 5px solid var(--warning-status); padding: 1rem 1.5rem; border-radius: 8px;
+            margin-bottom: 1.5rem; display: flex; align-items: center; gap: 15px; color: #E65100; font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .alert-banner.critical { background: #FFEBEE; border-left-color: var(--accent-red); color: #C62828; }
+        .alert-banner .material-symbols-outlined { font-size: 1.8rem; }
+
         /* EKRAN LOGOWANIA */
         #auth-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -169,37 +205,23 @@
             .header-title h1 { font-size: 1.6rem; }
             .user-badge { width: 100%; flex-direction: column; text-align: center; gap: 10px; }
             .user-badge-info { display: flex; flex-direction: column; align-items: center; }
+            #toast-container { right: 10px; top: 10px; max-width: calc(100vw - 20px); }
 
             table, thead, tbody, th, td, tr { display: block; }
             table { border: none; }
             thead tr { position: absolute; top: -9999px; left: -9999px; }
             tr { border: 2px solid var(--border-color); margin-bottom: 1rem; border-radius: 8px; overflow: hidden; box-shadow: 0 3px 8px rgba(0,0,0,0.05); }
             td { 
-                border: none;
-                border-bottom: 1px solid #eee; 
-                position: relative;
-                padding-left: 45% !important; 
-                text-align: right;
-                min-height: 45px;
-                display: flex;
-                align-items: center;
-                justify-content: flex-end;
+                border: none; border-bottom: 1px solid #eee; position: relative;
+                padding-left: 45% !important; text-align: right; min-height: 45px;
+                display: flex; align-items: center; justify-content: flex-end;
             }
             td:last-child { border-bottom: none; }
             td::before { 
-                content: attr(data-label); 
-                position: absolute;
-                left: 1rem;
-                width: 40%; 
-                white-space: nowrap;
-                text-align: left;
-                font-weight: 600;
-                color: var(--text-light);
-                font-size: 0.85rem;
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
+                content: attr(data-label); position: absolute; left: 1rem; width: 40%; 
+                white-space: nowrap; text-align: left; font-weight: 600; color: var(--text-light);
+                font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px;
             }
-            
             .editable input { max-width: 100px; text-align: right; padding: 0.3rem; }
             td[data-label="Akcja"] { justify-content: flex-end; flex-wrap: wrap; gap: 5px; }
             .btn-small { margin-bottom: 0; }
@@ -208,7 +230,7 @@
         /* --- STYLE DO DRUKU --- */
         @media print {
             body { background: white; color: black; }
-            .sidebar, .header, .footer, .btn-primary, .btn-secondary, form, #form-shipment-container, #form-components-container, #form-incoming-container, #form-production-container, #form-adjustments-container { display: none !important; }
+            .sidebar, .header, .footer, .btn-primary, .btn-secondary, form, #form-shipment-container, #form-components-container, #form-incoming-container, #form-production-container, #form-adjustments-container, #dashboard-alerts { display: none !important; }
             .main-content { margin-left: 0; width: 100%; padding: 0; }
             .content { padding: 0; }
             .section { box-shadow: none; border: 1px solid #ccc; margin-bottom: 1rem; page-break-inside: avoid; }
@@ -224,6 +246,13 @@
     </style>
 </head>
 <body>
+
+    <div id="toast-container"></div>
+
+    <div id="loading-screen" class="hidden">
+        <div class="spinner"></div>
+        <h2 style="color: var(--primary-dark); font-weight: 600;">Pobieranie danych z bazy...</h2>
+    </div>
 
     <div id="auth-screen">
         <div class="auth-box">
@@ -292,7 +321,7 @@
 
             <div class="content">
                 <div id="tab-dashboard" class="tab-content active">
-                    <h2 style="margin-bottom: 1.5rem; color: var(--text-dark);">Dashboard</h2>
+                    <div id="dashboard-alerts"></div> <h2 style="margin-bottom: 1.5rem; color: var(--text-dark);">Dashboard</h2>
                     <div class="stats-bar">
                         <div class="stat-card"><h3>Razem Downlighty</h3><div class="value" data-stat="total">0</div></div>
                         <div class="stat-card"><h3>Gotowe do Wysyłki</h3><div class="value" data-stat="ready">0</div></div>
@@ -558,6 +587,33 @@
 
         const db = window.supabase.createClient(supabaseUrl, supabaseKey);
 
+        // --- FUNKCJE POMOCNICZE (TOASTY I LOADER) ---
+        function showLoading() {
+            document.getElementById('loading-screen').classList.remove('hidden');
+        }
+        function hideLoading() {
+            document.getElementById('loading-screen').classList.add('hidden');
+        }
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            
+            let icon = 'check_circle';
+            if (type === 'error') icon = 'error';
+            if (type === 'warning') icon = 'warning';
+
+            toast.innerHTML = `<span class="material-symbols-outlined">${icon}</span> <span>${message}</span>`;
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.classList.add('toast-fadeOut');
+                toast.addEventListener('animationend', () => toast.remove());
+            }, 3000);
+        }
+
+        // LOGOWANIE
         document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const email = document.getElementById('login-email').value;
@@ -657,6 +713,9 @@
             document.getElementById('modal').style.display = 'none';
         }
 
+        // ---------------------------------
+        // MENEDŻER CHMURY
+        // ---------------------------------
         class CloudInventoryManager {
             constructor() {
                 this.products = [];
@@ -668,8 +727,10 @@
             }
 
             async init() {
+                showLoading(); // Włącza ekran ładowania na starcie
                 await this.fetchData();
                 this.setupRealtime();
+                hideLoading(); // Wyłącza po pobraniu danych
             }
 
             async fetchData() {
@@ -927,7 +988,7 @@
                 const componentsAvailable = Math.min(ps_raw, clips_normal, clips_pass);
 
                 if (totalToProduce > componentsAvailable) {
-                    alert(`Błąd: Niewystarczająca liczba komponentów! Masz zestawów tylko dla ${componentsAvailable} sztuk.`);
+                    showToast(`Niewystarczająca liczba komponentów! Masz zestawów na ${componentsAvailable} szt.`, 'error');
                     return; 
                 }
 
@@ -953,7 +1014,7 @@
                     }
                     
                     if (qtyReq > available) {
-                        alert(`Błąd: Zbyt mało opraw "W Montażu" dla puli ${key === '37' || key === '58' ? key + '°' : key}. Wymagane ${qtyReq}, a na stanie ${available}.`);
+                        showToast(`Zbyt mało opraw "W Montażu" dla ${key === '37' || key === '58' ? key + '°' : key}. Brakuje towaru!`, 'error');
                         return; 
                     }
                 }
@@ -995,7 +1056,7 @@
 
                     await Promise.all(dbUpdates);
                     await this.addHistory('Rejestracja produkcji', details.join(', '));
-                    alert(`✅ Zarejestrowano produkcję: ${totalProduced} sztuk.`);
+                    showToast(`Zarejestrowano produkcję: ${totalProduced} sztuk.`, 'success');
                     await this.fetchData(); 
                 }
             }
@@ -1017,7 +1078,7 @@
                 if (currentRole === 'viewer') return;
                 const { data: current } = await db.from('components').select('*').eq('id', 1).single();
                 if (!current) {
-                    alert('Błąd odczytu bazy komponentów.');
+                    showToast('Błąd odczytu bazy komponentów.', 'error');
                     return;
                 }
                 const updated = {
@@ -1045,7 +1106,6 @@
             const readinessMap = {};
             if (!window.inventory) return readinessMap;
 
-            // 1. Zbudowanie stanu wirtualnego z "Gotowe" oraz "W Montażu" (z obsługą wspólnych pul)
             let vReady = {};
             let vAssembly = {};
             
@@ -1057,17 +1117,14 @@
                 }
             });
 
-            // 2. Pobranie wszystkich niezrealizowanych dostaw do sprawdzenia
             let pending = window.inventory.shipments.filter(s => s.status !== 'completed');
             
-            // 3. Sortowanie: Najpierw Potwierdzone, potem data rosnąco
             pending.sort((a, b) => {
                 if (a.is_confirmed && !b.is_confirmed) return -1;
                 if (!a.is_confirmed && b.is_confirmed) return 1;
                 return a.date.localeCompare(b.date);
             });
 
-            // 4. Sukcesywne obciążanie magazynu po kolei
             pending.forEach(s => {
                 let isReady = true;
                 let reqs = s.status === 'partial' ? s.partial_missing : s.products;
@@ -1080,7 +1137,6 @@
                             
                             let needed = qty;
                             
-                            // Najpierw pobieramy z gotowych
                             if (vReady[pId] >= needed) {
                                 vReady[pId] -= needed;
                                 needed = 0;
@@ -1089,13 +1145,11 @@
                                 vReady[pId] = 0;
                             }
                             
-                            // Jeśli wciąż brakuje, pobieramy ze wspólnej puli "W montażu"
                             if (needed > 0) {
                                 const poolKey = prod.assembly_group || `single_${prod.id}`;
                                 if (vAssembly[poolKey] >= needed) {
                                     vAssembly[poolKey] -= needed;
                                 } else {
-                                    // Baza wirtualna wchodzi na minus - brakuje towaru!
                                     vAssembly[poolKey] -= needed; 
                                     isReady = false;
                                 }
@@ -1130,6 +1184,26 @@
             document.querySelector('[data-stat="ready"]').textContent = totals.totalReady;
             document.querySelector('[data-stat="shipments"]').textContent = window.inventory.shipments.filter(s => s.status !== 'completed' && s.is_confirmed).length;
             document.querySelector('[data-stat="service"]').textContent = totals.totalService;
+
+            // --- NOWOŚĆ: ALERTY O KOMPONENTACH ---
+            const alertsContainer = document.getElementById('dashboard-alerts');
+            alertsContainer.innerHTML = '';
+            const comps = window.inventory.components;
+            let compAlertText = [];
+            if (comps) {
+                if (comps.ps_raw < 50) compAlertText.push('Zasilacze');
+                if (comps.clips_normal < 50) compAlertText.push('Klapki Zwykłe');
+                if (comps.clips_pass < 50) compAlertText.push('Klapki Przelotowe');
+                
+                if (compAlertText.length > 0) {
+                    alertsContainer.innerHTML = `
+                        <div class="alert-banner critical">
+                            <span class="material-symbols-outlined">error</span>
+                            <div><strong>Uwaga: Niski stan komponentów!</strong> Poniżej 50 sztuk: ${compAlertText.join(', ')}.</div>
+                        </div>
+                    `;
+                }
+            }
 
             const readinessMap = getShipmentsReadinessMap();
 
@@ -1398,24 +1472,28 @@
         function confirmShipmentDateUI(id) {
             if (confirm('Potwierdzić datę dostawy?\nPrzeniesie to dostawę do tabeli potwierdzonych.')) {
                 window.inventory.confirmShipment(id);
+                showToast('Dostawa została potwierdzona.', 'success');
             }
         }
 
         function completeShipmentUI(id) {
             if (confirm('Zrealizować tę dostawę?\nOdjęte zostanie wszystko z kolumny "Gotowe do wysyłki".')) {
                 window.inventory.completeShipment(id);
+                showToast('Zrealizowano dostawę.', 'success');
             }
         }
 
         function completeRemainingShipmentUI(id) {
             if (confirm('Dokończyć tę dostawę?\nBrakujące ilości zostaną odjęte z obecnych stanów magazynowych.')) {
                 window.inventory.completeRemainingShipment(id);
+                showToast('Dokończono dostawę.', 'success');
             }
         }
 
         function deleteShipment(id) { 
             if (currentRole === 'admin' && confirm('Na pewno usunąć tę dostawę z bazy?')) { 
                 window.inventory.deleteShipment(id); 
+                showToast('Usunięto dostawę.', 'success');
             } 
         }
 
@@ -1513,11 +1591,13 @@
 
             await window.inventory.updateShipmentInDB(id, data);
             closeModal();
+            showToast('Dostawa została zaktualizowana.', 'success');
         }
 
         function deleteAdjustment(id) {
             if (currentRole === 'admin' && confirm('Usunąć ten wpis z regulacji?')) {
                 window.inventory.deleteAdjustment(id);
+                showToast('Usunięto regulację.', 'success');
             }
         }
 
@@ -1609,6 +1689,7 @@
             });
             this.reset(); 
             btn.innerHTML = '<span class="material-symbols-outlined">add_task</span> Dodaj Dostawę';
+            showToast('Zaplanowano nową dostawę.', 'success');
         });
 
         const adjForm = document.getElementById('adjustmentForm');
@@ -1623,6 +1704,7 @@
                 await window.inventory.addAdjustment(formData.get('adj_date'), formData.get('adj_location'));
                 this.reset();
                 btn.innerHTML = '<span class="material-symbols-outlined">save</span> Dodaj Regulację';
+                showToast('Dodano nową regulację lamp.', 'success');
             });
         }
 
@@ -1641,6 +1723,7 @@
             await window.inventory.addIncomingShipment(formData.get('supplier'), products);
             this.reset();
             btn.innerHTML = '<span class="material-symbols-outlined">add_box</span> Zarejestruj Dostawę';
+            showToast('Zarejestrowano dostawę przychodzącą.', 'success');
         });
 
         document.getElementById('productionForm').addEventListener('submit', async function(e) {
@@ -1676,7 +1759,7 @@
             
             this.reset();
             btn.innerHTML = '<span class="material-symbols-outlined">add_box</span> Zarejestruj';
-            alert('Dostawa komponentów została pomyślnie zarejestrowana!');
+            showToast('Dostawa komponentów została pomyślnie zarejestrowana!', 'success');
         });
 
     </script>
