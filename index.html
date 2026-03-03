@@ -170,7 +170,6 @@
             .user-badge { width: 100%; flex-direction: column; text-align: center; gap: 10px; }
             .user-badge-info { display: flex; flex-direction: column; align-items: center; }
 
-            /* TABELE ZAMIENIANE NA KARTY */
             table, thead, tbody, th, td, tr { display: block; }
             table { border: none; }
             thead tr { position: absolute; top: -9999px; left: -9999px; }
@@ -631,9 +630,6 @@
 
         checkSession();
 
-        // ---------------------------------
-        // FUNKCJE UI (MENU MOBILNE I MODAL)
-        // ---------------------------------
         function toggleSidebar() {
             document.querySelector('.sidebar').classList.toggle('open');
             document.getElementById('mobile-overlay').classList.toggle('active');
@@ -661,9 +657,6 @@
             document.getElementById('modal').style.display = 'none';
         }
 
-        // ---------------------------------
-        // MENEDŻER CHMURY
-        // ---------------------------------
         class CloudInventoryManager {
             constructor() {
                 this.products = [];
@@ -1046,6 +1039,77 @@
         }
 
         // ---------------------------------
+        // SYMULACJA WIRTUALNEGO MAGAZYNU
+        // ---------------------------------
+        function getShipmentsReadinessMap() {
+            const readinessMap = {};
+            if (!window.inventory) return readinessMap;
+
+            // 1. Zbudowanie stanu wirtualnego z "Gotowe" oraz "W Montażu" (z obsługą wspólnych pul)
+            let vReady = {};
+            let vAssembly = {};
+            
+            window.inventory.products.forEach(p => {
+                vReady[p.id] = p.ready;
+                const groupKey = p.assembly_group || `single_${p.id}`;
+                if (vAssembly[groupKey] === undefined) {
+                    vAssembly[groupKey] = p.assembly;
+                }
+            });
+
+            // 2. Pobranie wszystkich niezrealizowanych dostaw do sprawdzenia
+            let pending = window.inventory.shipments.filter(s => s.status !== 'completed');
+            
+            // 3. Sortowanie: Najpierw Potwierdzone, potem data rosnąco
+            pending.sort((a, b) => {
+                if (a.is_confirmed && !b.is_confirmed) return -1;
+                if (!a.is_confirmed && b.is_confirmed) return 1;
+                return a.date.localeCompare(b.date);
+            });
+
+            // 4. Sukcesywne obciążanie magazynu po kolei
+            pending.forEach(s => {
+                let isReady = true;
+                let reqs = s.status === 'partial' ? s.partial_missing : s.products;
+                
+                if (reqs) {
+                    for (const [pId, qty] of Object.entries(reqs)) {
+                        if (qty > 0) {
+                            const prod = window.inventory.products.find(p => p.id == pId);
+                            if (!prod) { isReady = false; continue; }
+                            
+                            let needed = qty;
+                            
+                            // Najpierw pobieramy z gotowych
+                            if (vReady[pId] >= needed) {
+                                vReady[pId] -= needed;
+                                needed = 0;
+                            } else {
+                                needed -= vReady[pId];
+                                vReady[pId] = 0;
+                            }
+                            
+                            // Jeśli wciąż brakuje, pobieramy ze wspólnej puli "W montażu"
+                            if (needed > 0) {
+                                const poolKey = prod.assembly_group || `single_${prod.id}`;
+                                if (vAssembly[poolKey] >= needed) {
+                                    vAssembly[poolKey] -= needed;
+                                } else {
+                                    // Baza wirtualna wchodzi na minus - brakuje towaru!
+                                    vAssembly[poolKey] -= needed; 
+                                    isReady = false;
+                                }
+                            }
+                        }
+                    }
+                }
+                readinessMap[s.id] = isReady;
+            });
+
+            return readinessMap;
+        }
+
+        // ---------------------------------
         // RENDEROWANIE TABEL
         // ---------------------------------
         function getStatusClass(productId) {
@@ -1058,57 +1122,6 @@
             return status === 'ok' ? '<span class="material-symbols-outlined">check_circle</span> OK' : status === 'warning' ? '<span class="material-symbols-outlined">warning</span> Mało' : '<span class="material-symbols-outlined">error</span> Brak';
         }
 
-        function getReadinessBadge(shipment) {
-            let isReady = true;
-            if (shipment.status === 'completed') {
-                return '<span style="color: var(--text-light); font-size: 0.85em;">-</span>';
-            }
-
-            let requiredItems = shipment.status === 'partial' ? shipment.partial_missing : shipment.products;
-
-            if (requiredItems) {
-                let neededFromAssembly = {};
-
-                for (const [pId, qty] of Object.entries(requiredItems)) {
-                    if (qty > 0) {
-                        const prod = window.inventory.products.find(p => p.id == pId);
-                        if (!prod) { isReady = false; break; }
-
-                        const lackInReady = Math.max(0, qty - prod.ready);
-                        if (lackInReady > 0) {
-                            const poolKey = prod.assembly_group || `single_${prod.id}`;
-                            neededFromAssembly[poolKey] = (neededFromAssembly[poolKey] || 0) + lackInReady;
-                        }
-                    }
-                }
-
-                if (isReady) {
-                    for (const [poolKey, neededQty] of Object.entries(neededFromAssembly)) {
-                        let available = 0;
-                        if (poolKey.startsWith('single_')) {
-                            const pid = parseInt(poolKey.replace('single_', ''));
-                            const p = window.inventory.products.find(p => p.id === pid);
-                            available = p ? p.assembly : 0;
-                        } else {
-                            const p = window.inventory.products.find(p => p.assembly_group === poolKey);
-                            available = p ? p.assembly : 0;
-                        }
-
-                        if (available < neededQty) {
-                            isReady = false;
-                            break;
-                        }
-                    }
-                }
-            }
-
-            if (isReady) {
-                return '<span class="status-badge status-ok" style="background:#E8F5E9; color:#2E7D32; border-color:#2E7D32;"><span class="material-symbols-outlined">inventory_2</span> Komplet</span>';
-            } else {
-                return '<span class="status-badge status-error" style="background:#FFEBEE; color:#C62828; border-color:#C62828;"><span class="material-symbols-outlined">production_quantity_limits</span> Braki</span>';
-            }
-        }
-
         function updateDashboard() {
             if(!window.inventory || window.inventory.products.length === 0) return;
             
@@ -1117,6 +1130,8 @@
             document.querySelector('[data-stat="ready"]').textContent = totals.totalReady;
             document.querySelector('[data-stat="shipments"]').textContent = window.inventory.shipments.filter(s => s.status !== 'completed' && s.is_confirmed).length;
             document.querySelector('[data-stat="service"]').textContent = totals.totalService;
+
+            const readinessMap = getShipmentsReadinessMap();
 
             // Dashboard: Produkty
             const dashboardTbody = document.getElementById('products-dashboard');
@@ -1170,7 +1185,12 @@
                     else if (s.is_confirmed) statusBadge = '<span class="status-badge status-neutral"><span class="material-symbols-outlined">event_available</span> Potw.</span>';
                     else statusBadge = '<span class="status-badge status-warning"><span class="material-symbols-outlined">pending_actions</span> Oczek.</span>';
 
-                    const readinessBadge = getReadinessBadge(s);
+                    let readinessBadge = '';
+                    if (readinessMap[s.id]) {
+                        readinessBadge = '<span class="status-badge status-ok" style="background:#E8F5E9; color:#2E7D32; border-color:#2E7D32;"><span class="material-symbols-outlined">inventory_2</span> Komplet</span>';
+                    } else {
+                        readinessBadge = '<span class="status-badge status-error" style="background:#FFEBEE; color:#C62828; border-color:#C62828;"><span class="material-symbols-outlined">production_quantity_limits</span> Braki</span>';
+                    }
 
                     const row = document.createElement('tr');
                     row.innerHTML = `
@@ -1187,7 +1207,7 @@
             }
 
             updateInventoryTable();
-            updateShipmentsTables();
+            updateShipmentsTables(readinessMap);
             updateAdjustmentsTable();
             if(currentRole !== 'worker') updateHistoryTable(); 
             updateComponentsDisplay();
@@ -1223,7 +1243,7 @@
             });
         }
 
-        function renderShipmentRow(s, isConfirmedTable) {
+        function renderShipmentRow(s, isReady) {
             let total = 0;
             if(s.products) { total = Object.values(s.products).reduce((a, b) => a + b, 0); }
             
@@ -1233,12 +1253,19 @@
             else if (s.is_confirmed) statusBadge = '<span class="status-badge status-neutral"><span class="material-symbols-outlined">event_available</span> Potwierdzona</span>';
             else statusBadge = '<span class="status-badge status-warning"><span class="material-symbols-outlined">pending_actions</span> Oczekująca</span>';
 
-            const readinessBadge = getReadinessBadge(s);
+            let readinessBadge = '';
+            if (s.status === 'completed') {
+                readinessBadge = '<span style="color: var(--text-light); font-size: 0.85em;">-</span>';
+            } else if (isReady) {
+                readinessBadge = '<span class="status-badge status-ok" style="background:#E8F5E9; color:#2E7D32; border-color:#2E7D32;"><span class="material-symbols-outlined">inventory_2</span> Komplet</span>';
+            } else {
+                readinessBadge = '<span class="status-badge status-error" style="background:#FFEBEE; color:#C62828; border-color:#C62828;"><span class="material-symbols-outlined">production_quantity_limits</span> Braki</span>';
+            }
 
             let actionButton = '';
             if (currentRole !== 'viewer') {
                 if (!s.is_confirmed && s.status === 'planned') {
-                    actionButton = `<button class="btn-small btn-primary" onclick="confirmShipmentDateUI(${s.id})"><span class="material-symbols-outlined">event_available</span> Potwierdź Datę</button>
+                    actionButton = `<button class="btn-small btn-primary" onclick="confirmShipmentDateUI(${s.id})"><span class="material-symbols-outlined">event_available</span> Potwierdź</button>
                                     <button class="btn-small btn-secondary" onclick="editShipment(${s.id})"><span class="material-symbols-outlined">edit</span> Edytuj</button>`;
                     if (currentRole === 'admin') actionButton += ` <button class="btn-small btn-secondary" onclick="deleteShipment(${s.id})"><span class="material-symbols-outlined">delete</span> Usuń</button>`;
                 } else if (s.status === 'completed') {
@@ -1271,7 +1298,7 @@
             return row;
         }
 
-        function updateShipmentsTables() {
+        function updateShipmentsTables(readinessMap) {
             const tbodyUnconf = document.getElementById('shipments-unconfirmed-table');
             const tbodyConf = document.getElementById('shipments-confirmed-table');
             tbodyUnconf.innerHTML = '';
@@ -1280,10 +1307,11 @@
             let confCount = 0;
 
             window.inventory.shipments.forEach(s => {
+                const isReady = readinessMap[s.id];
                 if (!s.is_confirmed && s.status === 'planned') {
-                    tbodyUnconf.appendChild(renderShipmentRow(s, false));
+                    tbodyUnconf.appendChild(renderShipmentRow(s, isReady));
                 } else {
-                    tbodyConf.appendChild(renderShipmentRow(s, true));
+                    tbodyConf.appendChild(renderShipmentRow(s, isReady));
                     confCount++;
                 }
             });
@@ -1424,7 +1452,6 @@
             const p4 = shipment.products[4] || 0;
             const p5 = shipment.products[5] || 0;
 
-            // Zabezpieczenie przed zmianą ilości towaru po jego (nawet częściowym) wysłaniu
             const disableProducts = (shipment.status === 'partial') ? 'disabled' : '';
             const prodWarning = (shipment.status === 'partial') ? '<p style="color: var(--accent-red); font-size:0.8rem; margin-top:-5px;">Zablokowano edycję ilości dla dostawy częściowo zrealizowanej.</p>' : '';
 
@@ -1442,7 +1469,7 @@
                         <label>Firma Odbierająca</label>
                         <input type="text" id="edit_shipment_company" value="${shipment.company || ''}">
                     </div>
-                    <h3 style="margin-top: 10px; font-size: 1rem; color: var(--primary-dark);">Produkty</h3>
+                    <h3 style="margin-top: 10px; font-size: 1rem; color: var(--primary-dark);">Produkty (Sztuki)</h3>
                     ${prodWarning}
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 0.5rem;">
                         <div class="form-group"><label>22°-15W</label><input type="number" id="edit_p1" value="${p1}" min="0" ${disableProducts}></div>
