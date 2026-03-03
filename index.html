@@ -801,12 +801,12 @@
                 await this.fetchData(); 
             }
 
-            async updateShipmentDateInDB(id, newDate) {
+            async updateShipmentInDB(id, data) {
                 if (currentRole === 'viewer') return;
                 const shipment = this.shipments.find(s => s.id === id);
                 if (shipment) {
-                    await db.from('shipments').update({ date: newDate }).eq('id', id);
-                    await this.addHistory('Zmiana daty dostawy', `${shipment.location}: na ${newDate}`);
+                    await db.from('shipments').update(data).eq('id', id);
+                    await this.addHistory('Edycja dostawy', `${data.location || shipment.location}`);
                     await this.fetchData(); 
                 }
             }
@@ -1062,19 +1062,41 @@
             let isReady = true;
             if (shipment.status === 'completed') {
                 return '<span style="color: var(--text-light); font-size: 0.85em;">-</span>';
-            } else if (shipment.status === 'partial') {
-                if (shipment.partial_missing) {
-                    for (const [pId, qty] of Object.entries(shipment.partial_missing)) {
+            }
+
+            let requiredItems = shipment.status === 'partial' ? shipment.partial_missing : shipment.products;
+
+            if (requiredItems) {
+                let neededFromAssembly = {};
+
+                for (const [pId, qty] of Object.entries(requiredItems)) {
+                    if (qty > 0) {
                         const prod = window.inventory.products.find(p => p.id == pId);
-                        if (!prod || prod.ready < qty) { isReady = false; break; }
+                        if (!prod) { isReady = false; break; }
+
+                        const lackInReady = Math.max(0, qty - prod.ready);
+                        if (lackInReady > 0) {
+                            const poolKey = prod.assembly_group || `single_${prod.id}`;
+                            neededFromAssembly[poolKey] = (neededFromAssembly[poolKey] || 0) + lackInReady;
+                        }
                     }
                 }
-            } else {
-                if (shipment.products) {
-                    for (const [pId, qty] of Object.entries(shipment.products)) {
-                        if (qty > 0) {
-                            const prod = window.inventory.products.find(p => p.id == pId);
-                            if (!prod || prod.ready < qty) { isReady = false; break; }
+
+                if (isReady) {
+                    for (const [poolKey, neededQty] of Object.entries(neededFromAssembly)) {
+                        let available = 0;
+                        if (poolKey.startsWith('single_')) {
+                            const pid = parseInt(poolKey.replace('single_', ''));
+                            const p = window.inventory.products.find(p => p.id === pid);
+                            available = p ? p.assembly : 0;
+                        } else {
+                            const p = window.inventory.products.find(p => p.assembly_group === poolKey);
+                            available = p ? p.assembly : 0;
+                        }
+
+                        if (available < neededQty) {
+                            isReady = false;
+                            break;
                         }
                     }
                 }
@@ -1105,7 +1127,7 @@
                 dashboardTbody.appendChild(row);
             });
 
-            // Dashboard: Nadchodzące dostawy (7 dni roboczych) + Suma zapotrzebowania
+            // Dashboard: Nadchodzące dostawy
             const upcomingTbody = document.getElementById('dashboard-upcoming-shipments');
             upcomingTbody.innerHTML = '';
             
@@ -1217,18 +1239,18 @@
             if (currentRole !== 'viewer') {
                 if (!s.is_confirmed && s.status === 'planned') {
                     actionButton = `<button class="btn-small btn-primary" onclick="confirmShipmentDateUI(${s.id})"><span class="material-symbols-outlined">event_available</span> Potwierdź Datę</button>
-                                    <button class="btn-small btn-secondary" onclick="editShipmentDate(${s.id})"><span class="material-symbols-outlined">edit_calendar</span> Zmień Datę</button>`;
+                                    <button class="btn-small btn-secondary" onclick="editShipment(${s.id})"><span class="material-symbols-outlined">edit</span> Edytuj</button>`;
                     if (currentRole === 'admin') actionButton += ` <button class="btn-small btn-secondary" onclick="deleteShipment(${s.id})"><span class="material-symbols-outlined">delete</span> Usuń</button>`;
                 } else if (s.status === 'completed') {
                     if (currentRole === 'admin') actionButton = `<button class="btn-small btn-secondary" onclick="deleteShipment(${s.id})"><span class="material-symbols-outlined">delete</span> Usuń</button>`;
                 } else if (s.status === 'partial') {
                     actionButton = `<button class="btn-small btn-primary" onclick="completeRemainingShipmentUI(${s.id})"><span class="material-symbols-outlined">done_all</span> Dokończ</button> 
                                     <button class="btn-small btn-secondary" onclick="printMissingPdf(${s.id})"><span class="material-symbols-outlined">picture_as_pdf</span> Braki PDF</button>
-                                    <button class="btn-small btn-secondary" onclick="editShipmentDate(${s.id})"><span class="material-symbols-outlined">edit_calendar</span> Data</button>`;
+                                    <button class="btn-small btn-secondary" onclick="editShipment(${s.id})"><span class="material-symbols-outlined">edit</span> Edytuj</button>`;
                     if (currentRole === 'admin') actionButton += ` <button class="btn-small btn-secondary" onclick="deleteShipment(${s.id})"><span class="material-symbols-outlined">delete</span> Usuń</button>`;
                 } else {
                     actionButton = `<button class="btn-small btn-primary" onclick="completeShipmentUI(${s.id})"><span class="material-symbols-outlined">check_circle</span> Zrealizuj</button>
-                                    <button class="btn-small btn-secondary" onclick="editShipmentDate(${s.id})"><span class="material-symbols-outlined">edit_calendar</span> Data</button>`;
+                                    <button class="btn-small btn-secondary" onclick="editShipment(${s.id})"><span class="material-symbols-outlined">edit</span> Edytuj</button>`;
                     if (currentRole === 'admin') actionButton += ` <button class="btn-small btn-secondary" onclick="deleteShipment(${s.id})"><span class="material-symbols-outlined">delete</span> Usuń</button>`;
                 }
             } else {
@@ -1391,29 +1413,78 @@
             showModal('Zapotrzebowanie Kątów', content);
         }
 
-        function editShipmentDate(id) {
+        function editShipment(id) {
             if (currentRole === 'viewer') return;
             const shipment = window.inventory.shipments.find(s => s.id === id);
             if (!shipment) return;
-            
+
+            const p1 = shipment.products[1] || 0;
+            const p2 = shipment.products[2] || 0;
+            const p3 = shipment.products[3] || 0;
+            const p4 = shipment.products[4] || 0;
+            const p5 = shipment.products[5] || 0;
+
+            // Zabezpieczenie przed zmianą ilości towaru po jego (nawet częściowym) wysłaniu
+            const disableProducts = (shipment.status === 'partial') ? 'disabled' : '';
+            const prodWarning = (shipment.status === 'partial') ? '<p style="color: var(--accent-red); font-size:0.8rem; margin-top:-5px;">Zablokowano edycję ilości dla dostawy częściowo zrealizowanej.</p>' : '';
+
             const form = `
                 <div style="display: grid; gap: 1rem;">
                     <div class="form-group">
-                        <label>Nowa data dla: <strong>${shipment.location}</strong></label>
+                        <label>Data</label>
                         <input type="date" id="edit_shipment_date" value="${shipment.date}">
                     </div>
-                    <div style="display: flex; gap: 1rem;">
-                        <button class="btn-primary" onclick="saveShipmentDate(${id})"><span class="material-symbols-outlined">save</span> Zapisz</button>
+                    <div class="form-group">
+                        <label>Miejsce</label>
+                        <input type="text" id="edit_shipment_location" value="${shipment.location}">
+                    </div>
+                    <div class="form-group">
+                        <label>Firma Odbierająca</label>
+                        <input type="text" id="edit_shipment_company" value="${shipment.company || ''}">
+                    </div>
+                    <h3 style="margin-top: 10px; font-size: 1rem; color: var(--primary-dark);">Produkty</h3>
+                    ${prodWarning}
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 0.5rem;">
+                        <div class="form-group"><label>22°-15W</label><input type="number" id="edit_p1" value="${p1}" min="0" ${disableProducts}></div>
+                        <div class="form-group"><label>37°-15W</label><input type="number" id="edit_p2" value="${p2}" min="0" ${disableProducts}></div>
+                        <div class="form-group"><label>58°-15W</label><input type="number" id="edit_p3" value="${p3}" min="0" ${disableProducts}></div>
+                        <div class="form-group"><label>37°-20W</label><input type="number" id="edit_p4" value="${p4}" min="0" ${disableProducts}></div>
+                        <div class="form-group"><label>58°-20W</label><input type="number" id="edit_p5" value="${p5}" min="0" ${disableProducts}></div>
+                    </div>
+                    <div style="display: flex; gap: 1rem; margin-top: 10px;">
+                        <button class="btn-primary" onclick="saveShipment(${id})"><span class="material-symbols-outlined">save</span> Zapisz Zmiany</button>
                     </div>
                 </div>
             `;
-            showModal(`Zmiana daty dostawy`, form);
+            showModal('Edycja Dostawy', form);
         }
 
-        async function saveShipmentDate(id) {
+        async function saveShipment(id) {
             const newDate = document.getElementById('edit_shipment_date').value;
-            if (!newDate) return;
-            await window.inventory.updateShipmentDateInDB(id, newDate);
+            const newLocation = document.getElementById('edit_shipment_location').value;
+            const newCompany = document.getElementById('edit_shipment_company').value;
+            
+            if (!newDate || !newLocation) return;
+
+            const data = {
+                date: newDate,
+                location: newLocation,
+                company: newCompany
+            };
+
+            const shipment = window.inventory.shipments.find(s => s.id === id);
+            
+            if (shipment.status !== 'partial') {
+                data.products = {
+                    1: parseInt(document.getElementById('edit_p1').value) || 0,
+                    2: parseInt(document.getElementById('edit_p2').value) || 0,
+                    3: parseInt(document.getElementById('edit_p3').value) || 0,
+                    4: parseInt(document.getElementById('edit_p4').value) || 0,
+                    5: parseInt(document.getElementById('edit_p5').value) || 0,
+                };
+            }
+
+            await window.inventory.updateShipmentInDB(id, data);
             closeModal();
         }
 
