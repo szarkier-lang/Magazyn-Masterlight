@@ -292,7 +292,6 @@
             .btn-small { margin-bottom: 0; margin-right: 0; }
             
             .map-container { height: 400px !important; border-radius: 0 0 12px 12px !important; } 
-            .leaflet-popup-content { font-size: 0.8rem !important; }
         }
 
         /* --- DRUKOWANIE --- */
@@ -390,9 +389,9 @@
                     <li><a href="#" onclick="switchTab('tab-inventory')" class="nav-item"><span class="material-symbols-outlined">inventory_2</span> Stan Inwentarza</a></li>
                     <li><a href="#" onclick="switchTab('tab-shipments')" class="nav-item"><span class="material-symbols-outlined">local_shipping</span> Wysyłki i Dostawy</a></li>
                     <li><a href="#" onclick="switchTab('tab-adjustments')" class="nav-item"><span class="material-symbols-outlined">handyman</span> Serwis / Regulacja</a></li>
-                    <li><a href="#" onclick="switchTab('tab-history')" class="nav-item"><span class="material-symbols-outlined">receipt_long</span> Historia Zmian</a></li>
+                    <li id="nav-history"><a href="#" onclick="switchTab('tab-history')" class="nav-item"><span class="material-symbols-outlined">receipt_long</span> Historia Zmian</a></li>
                     <li><a href="#" onclick="switchTab('tab-components')" class="nav-item"><span class="material-symbols-outlined">electrical_services</span> Komponenty</a></li>
-                    <li><a href="#" onclick="switchTab('tab-reports')" class="nav-item"><span class="material-symbols-outlined">precision_manufacturing</span> Panel Produkcji</a></li>
+                    <li id="nav-reports"><a href="#" onclick="switchTab('tab-reports')" class="nav-item"><span class="material-symbols-outlined">precision_manufacturing</span> Panel Produkcji</a></li>
                     
                     <li class="mobile-only-logout" style="margin-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1rem;">
                         <a href="#" onclick="logoutUser()" class="nav-item" style="color: #FECACA;"><span class="material-symbols-outlined">logout</span> Wyloguj się</a>
@@ -740,7 +739,7 @@
 
         function resetInactivityTimer() {
             clearTimeout(inactivityTimer);
-            if (currentUserEmail) { // Timer działa tylko po zalogowaniu
+            if (currentUserEmail) { 
                 inactivityTimer = setTimeout(async () => {
                     showToast('Sesja wygasła z powodu braku aktywności (5 min).', 'warning');
                     await db.auth.signOut();
@@ -749,7 +748,6 @@
             }
         }
 
-        // Nasłuchiwanie jakiejkolwiek akcji użytkownika na ekranie (komputer i telefon)
         ['click', 'mousemove', 'keypress', 'scroll', 'touchstart'].forEach(event => {
             document.addEventListener(event, resetInactivityTimer, true);
         });
@@ -1063,7 +1061,7 @@
             document.getElementById('app-container').classList.remove('hidden');
             document.getElementById('app-container').style.display = 'flex'; 
             
-            resetInactivityTimer(); // Start timera
+            resetInactivityTimer(); 
             applyPermissions();
 
             window.inventory = new CloudInventoryManager();
@@ -1072,23 +1070,26 @@
 
         function applyPermissions() {
             if (currentRole === 'viewer') {
-                document.getElementById('form-shipment-container').style.display = 'none';
-                document.getElementById('form-incoming-container').style.display = 'none';
-                document.getElementById('form-components-container').style.display = 'none';
-                document.getElementById('form-production-container').style.display = 'none';
-                document.getElementById('form-adjustments-container').style.display = 'none';
-                document.getElementById('nav-history').style.display = 'none';
-                document.getElementById('nav-reports').style.display = 'none';
+                const elsToHide = [
+                    'form-shipment-container', 'form-incoming-container', 
+                    'form-components-container', 'form-production-container', 
+                    'form-adjustments-container', 'nav-history', 'nav-reports'
+                ];
+                elsToHide.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.style.display = 'none';
+                });
                 document.querySelectorAll('.editable').forEach(el => el.classList.remove('editable'));
                 document.querySelectorAll('.admin-only-col').forEach(el => el.style.display = 'none');
             }
             if (currentRole === 'worker') {
-                document.getElementById('nav-history').style.display = 'none';
+                const navHistory = document.getElementById('nav-history');
+                if (navHistory) navHistory.style.display = 'none';
             }
         }
 
         async function logoutUser() {
-            clearTimeout(inactivityTimer); // Zatrzymanie timera przy ręcznym wylogowaniu
+            clearTimeout(inactivityTimer); 
             showLoading();
             await db.auth.signOut();
             window.location.reload(); 
@@ -1788,26 +1789,22 @@
                 const upcomingTbody = document.getElementById('dashboard-upcoming-shipments');
                 upcomingTbody.innerHTML = '';
                 
-                const todayFormatted = new Date().toISOString().split('T')[0];
-                const targetDateObj = new Date();
-                let addedDays = 0;
-                while (addedDays < 7) {
-                    targetDateObj.setDate(targetDateObj.getDate() + 1);
-                    if (targetDateObj.getDay() !== 0 && targetDateObj.getDay() !== 6) addedDays++;
-                }
-                const thresholdFormatted = targetDateObj.toISOString().split('T')[0];
-
-                const upcomingShipments = window.inventory.shipments.filter(s => 
-                    s.status !== 'completed' && (s.date || '') >= todayFormatted && (s.date || '') <= thresholdFormatted
-                ).sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+                const activeShipments = window.inventory.shipments.filter(s => s.status !== 'completed');
+                
+                // PRIORYTET: 1. Potwierdzone, 2. Data (Do tabeli na Dashboardzie też!)
+                activeShipments.sort((a, b) => {
+                    if (a.is_confirmed && !b.is_confirmed) return -1;
+                    if (!a.is_confirmed && b.is_confirmed) return 1;
+                    return (a.date || '').localeCompare(b.date || '');
+                });
 
                 let upcomingTotalLamps = 0;
 
-                if (upcomingShipments.length === 0) {
-                    upcomingTbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 2rem !important; color:var(--text-light); border:none;">Brak zaplanowanych wysyłek w najbliższym tygodniu. Można odpocząć! ☕</td></tr>';
+                if (activeShipments.length === 0) {
+                    upcomingTbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 2rem !important; color:var(--text-light); border:none;">Brak zaplanowanych wysyłek. Można odpocząć! ☕</td></tr>';
                     document.getElementById('upcoming-total-badge').textContent = 'Zapotrzebowanie: 0 szt.';
                 } else {
-                    upcomingShipments.forEach(s => {
+                    activeShipments.forEach((s, index) => {
                         let total = s.products ? Object.values(s.products).reduce((a, b) => a + b, 0) : 0;
                         upcomingTotalLamps += total;
                         
@@ -1816,10 +1813,11 @@
                                           '<span class="status-badge status-warning"><span class="material-symbols-outlined">pending_actions</span> Oczek.</span>';
 
                         const readinessBadge = getReadinessBadge(s, readinessMap);
+                        const priorityNum = index + 1;
 
                         upcomingTbody.innerHTML += `
                             <tr>
-                                <td data-label="Data"><strong>${escapeHTML(s.date || '-')}</strong></td>
+                                <td data-label="Priorytet / Data"><span style="display:inline-block; width:22px; height:22px; background:${s.is_confirmed ? 'var(--success-status)' : 'var(--primary-terracotta)'}; color:white; border-radius:50%; text-align:center; line-height:22px; font-size:0.75rem; margin-right:8px; font-weight:bold;">${priorityNum}</span> <strong>${escapeHTML(s.date || '-')}</strong></td>
                                 <td data-label="Cel / Klient">${escapeHTML(s.location)}</td>
                                 <td data-label="Spedytor" style="color:var(--text-light);">${escapeHTML(s.company || '-')}</td>
                                 <td data-label="Sztuk"><strong>${total}</strong></td>
