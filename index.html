@@ -348,7 +348,7 @@
                     <li><a href="#" onclick="switchTab('tab-inventory')" class="nav-item"><span class="material-symbols-outlined">inventory_2</span> Stan Inwentarza</a></li>
                     <li><a href="#" onclick="switchTab('tab-shipments')" class="nav-item"><span class="material-symbols-outlined">local_shipping</span> Wysyłki i Dostawy</a></li>
                     <li><a href="#" onclick="switchTab('tab-adjustments')" class="nav-item"><span class="material-symbols-outlined">handyman</span> Serwis / Regulacja</a></li>
-                    <li id="nav-history"><a href="#" onclick="switchTab('tab-history')" class="nav-item"><span class="material-symbols-outlined">receipt_long</span> Historia Zmian</a></li>
+                    <li><a href="#" onclick="switchTab('tab-history')" class="nav-item"><span class="material-symbols-outlined">receipt_long</span> Historia Zmian</a></li>
                     <li><a href="#" onclick="switchTab('tab-components')" class="nav-item"><span class="material-symbols-outlined">electrical_services</span> Komponenty</a></li>
                     <li><a href="#" onclick="switchTab('tab-reports')" class="nav-item"><span class="material-symbols-outlined">precision_manufacturing</span> Panel Produkcji</a></li>
                 </ul>
@@ -668,6 +668,7 @@
         let map = null;
         let mapMarkers = [];
         const geocodeCache = {}; 
+        let isUpdatingMap = false; // Mechanizm zapobiegający nakładaniu się zapytań
 
         const boundsPoland = L.latLngBounds(
             L.latLng(48.9, 14.1), 
@@ -725,56 +726,59 @@
         }
 
         async function updateMapMarkers(shipments) {
-            if (document.getElementById('tab-dashboard').style.display === 'none' && !document.getElementById('tab-dashboard').classList.contains('active')) {
-                return;
-            }
-
-            if (!map) initMap();
-            const statusEl = document.getElementById('map-status');
-            if(statusEl) statusEl.innerHTML = '<span class="material-symbols-outlined" style="font-size:1em; animation: spin 1s linear infinite;">autorenew</span> Wyszukiwanie lokalizacji...';
+            if (isUpdatingMap) return; // Jeśli już się ładuje, zignoruj kolejne zapytanie
             
-            mapMarkers.forEach(m => map.removeLayer(m));
-            mapMarkers = [];
+            isUpdatingMap = true;
+            try {
+                if (!map) initMap();
+                const statusEl = document.getElementById('map-status');
+                if(statusEl) statusEl.innerHTML = '<span class="material-symbols-outlined" style="font-size:1em; animation: spin 1s linear infinite;">autorenew</span> Wyszukiwanie lokalizacji...';
+                
+                mapMarkers.forEach(m => map.removeLayer(m));
+                mapMarkers = [];
 
-            const markerRadius = window.innerWidth <= 768 ? 8 : 6;
+                const markerRadius = window.innerWidth <= 768 ? 8 : 6;
 
-            const homeMarker = L.circleMarker([51.7592, 19.4560], {
-                radius: markerRadius + 2, color: '#1F2937', fillColor: '#1F2937', fillOpacity: 1, weight: 2
-            }).addTo(map).bindPopup('<b>Salon Masterlight</b><br>Łódź');
-            
-            const activeShipments = shipments.filter(s => s.status !== 'completed');
-            const allPointsForBounds = [homeMarker];
-            
-            for (const s of activeShipments) {
-                if(!s.location) continue;
-                const coords = await geocodeLocation(s.location);
-                if (coords) {
-                    const total = s.products ? Object.values(s.products).reduce((a, b) => a + b, 0) : 0;
-                    
-                    // ZMIANA: Inny kolor dla dostaw potwierdzonych (Zielony) vs oczekujących (Terakotowy)
-                    const mColor = s.is_confirmed ? '#10B981' : '#C4704B';
-                    const statusText = s.is_confirmed ? 'Potwierdzona' : 'Oczekująca';
-                    
-                    const marker = L.circleMarker(coords, {
-                        radius: markerRadius, color: mColor, fillColor: mColor, fillOpacity: 0.8, weight: 1
-                    }).addTo(map).bindPopup(`<b>${s.location}</b><br>Status: <span style="color:${mColor}; font-weight:bold;">${statusText}</span><br>Dostawa: ${s.date || '-'}<br>Sztuk: <strong>${total}</strong><br>Odbiór: ${s.company || '-'}`);
-                    
-                    mapMarkers.push(marker);
-                    allPointsForBounds.push(marker);
+                const homeMarker = L.circleMarker([51.7592, 19.4560], {
+                    radius: markerRadius + 2, color: '#1F2937', fillColor: '#1F2937', fillOpacity: 1, weight: 2
+                }).addTo(map).bindPopup('<b>Salon Masterlight</b><br>Łódź');
+                
+                const activeShipments = shipments.filter(s => s.status !== 'completed');
+                const allPointsForBounds = [homeMarker];
+                
+                for (const s of activeShipments) {
+                    if(!s.location) continue;
+                    const coords = await geocodeLocation(s.location);
+                    if (coords) {
+                        const total = s.products ? Object.values(s.products).reduce((a, b) => a + b, 0) : 0;
+                        
+                        const mColor = s.is_confirmed ? '#10B981' : '#C4704B';
+                        const statusText = s.is_confirmed ? 'Potwierdzona' : 'Oczekująca';
+                        
+                        const marker = L.circleMarker(coords, {
+                            radius: markerRadius, color: mColor, fillColor: mColor, fillOpacity: 0.8, weight: 1
+                        }).addTo(map).bindPopup(`<b>${s.location}</b><br>Status: <span style="color:${mColor}; font-weight:bold;">${statusText}</span><br>Dostawa: ${s.date || '-'}<br>Sztuk: <strong>${total}</strong><br>Odbiór: ${s.company || '-'}`);
+                        
+                        mapMarkers.push(marker);
+                        allPointsForBounds.push(marker);
+                    }
+                    await new Promise(r => setTimeout(r, 400)); 
                 }
-                await new Promise(r => setTimeout(r, 400)); 
-            }
-            
-            if (allPointsForBounds.length > 1) {
-                const group = new L.featureGroup(allPointsForBounds);
-                const dynamicPadding = window.innerWidth <= 768 ? [20, 20] : [40, 40];
-                map.fitBounds(group.getBounds(), { padding: dynamicPadding, maxZoom: 9 });
-            } else {
-                map.setView([51.7592, 19.4560], 6);
-            }
+                
+                if (allPointsForBounds.length > 1) {
+                    const group = new L.featureGroup(allPointsForBounds);
+                    const dynamicPadding = window.innerWidth <= 768 ? [20, 20] : [40, 40];
+                    map.fitBounds(group.getBounds(), { padding: dynamicPadding, maxZoom: 9 });
+                } else {
+                    map.setView([51.7592, 19.4560], 6);
+                }
 
-            if(statusEl) statusEl.innerHTML = '<span class="material-symbols-outlined" style="font-size:1em; color: var(--success-status);">check_circle</span> Mapa gotowa';
-            setTimeout(() => { map.invalidateSize(); }, 300);
+                if(statusEl) statusEl.innerHTML = '<span class="material-symbols-outlined" style="font-size:1em; color: var(--success-status);">check_circle</span> Mapa gotowa';
+            } catch(e) {
+                console.error("Błąd aktualizacji mapy:", e);
+            } finally {
+                isUpdatingMap = false; // Zwolnienie blokady
+            }
         }
 
         // --- UI ---
@@ -884,12 +888,11 @@
             }
 
             if (tabId === 'tab-dashboard') {
-                if (!map) {
-                    initMap();
+                setTimeout(() => { 
+                    if (!map) initMap();
+                    if (map) map.invalidateSize(); 
                     if(window.inventory) updateMapMarkers(window.inventory.shipments);
-                } else {
-                    setTimeout(() => { map.invalidateSize(); }, 200);
-                }
+                }, 150);
             }
         }
 
@@ -901,7 +904,7 @@
 
         function closeModal() { document.getElementById('modal').style.display = 'none'; }
 
-        // --- ZMIANA: NOWA FUNKCJA GENERUJĄCA CZYSTY PDF DLA INWENTARZA ---
+        // --- FUNKCJA GENERUJĄCA CZYSTY PDF DLA INWENTARZA ---
         function printInventoryPdf() {
             if(!window.inventory || window.inventory.products.length === 0) return;
             
@@ -1002,7 +1005,7 @@
                 this.setupRealtime();
                 hideLoading();
                 if (this.isFirstLoad) {
-                    showToast(`Zalogowano jako ${currentUserEmail.split('@')[0]}`, 'success');
+                    showToast(`Zalogowano pomyślnie.`, 'success');
                     this.isFirstLoad = false;
                 }
             }
@@ -1042,9 +1045,8 @@
 
                     updateDashboard();
                     
-                    if (document.getElementById('tab-dashboard').classList.contains('active')) {
-                        updateMapMarkers(this.shipments);
-                    }
+                    // Bezwarunkowe wymuszenie renderu mapy, jeśli jesteśmy na Dashboardzie (lub w tle)
+                    updateMapMarkers(this.shipments);
 
                 } catch (err) {
                     console.error("Błąd pobierania danych:", err);
@@ -1424,7 +1426,7 @@
             }
         }
 
-        // --- ZMIANA: CZYSTO CHRONOLOGICZNA SYMULACJA MAGAZYNU (BEZ FORÓW DLA POTWIERDZONYCH) ---
+        // --- SYMULACJA WIRTUALNEGO MAGAZYNU ---
         function getShipmentsReadinessMap() {
             const readinessMap = {};
             if (!window.inventory) return readinessMap;
@@ -1442,8 +1444,7 @@
 
             let pending = window.inventory.shipments.filter(s => s.status !== 'completed');
             
-            // ZMIANA: Sortowanie wyłącznie po dacie, ignorujemy status potwierdzenia. 
-            // Kto pierwszy (datą), ten rezerwuje towar.
+            // Rezerwacja "Kto pierwszy ten lepszy" (Tylko Data, niezależnie od statusu potwierdzenia)
             pending.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
 
             pending.forEach(s => {
@@ -1929,69 +1930,6 @@
             await window.inventory.updateShipmentInDB(id, data);
             hideLoading();
             showToast('Zmiany zostały zapisane.', 'success');
-        }
-
-        function printMissingPdf(id) {
-            const shipment = window.inventory.shipments.find(s => s.id === id);
-            if (!shipment || !shipment.partial_missing) return;
-            
-            const dateStr = new Date().toLocaleDateString('pl-PL');
-            
-            let html = `
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <meta charset="UTF-8">
-                <title>Lista Braków - ${shipment.location}</title>
-                <style>
-                    body { font-family: 'Inter', sans-serif; margin: 40px; color: #1F2937; }
-                    h1 { color: #C4704B; border-bottom: 3px solid #C4704B; padding-bottom: 10px; font-size: 20pt; }
-                    .info-box { background-color: #F3F4F6; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #E5E7EB; line-height: 1.7; }
-                    table { width: 100%; border-collapse: collapse; margin: 30px 0; font-size: 11pt; }
-                    th { background-color: #C4704B; color: white; padding: 12px; text-align: left; text-transform: uppercase; font-size: 9pt; letter-spacing: 1px; }
-                    td { padding: 12px; border-bottom: 1px solid #E5E7EB; }
-                    .missing-qty { color: #DC2626; font-weight: bold; font-size: 1.2em; }
-                    @media print { body { margin: 0; } }
-                </style>
-            </head>
-            <body>
-                <h1>LISTA BRAKÓW DO DOSTARCZENIA (Dokończenie)</h1>
-                <div class="info-box">
-                    <strong>Miejsce docelowe:</strong> ${shipment.location}<br>
-                    <strong>Spedytor:</strong> ${shipment.company || '-'}<br>
-                    <strong>Data pierwszej wysyłki:</strong> ${shipment.date}<br>
-                    <strong>Wygenerowano:</strong> ${dateStr}
-                </div>
-                <table>
-                    <thead><tr><th>Model Oprawy (Downlight)</th><th>Kod SKU</th><th>Ilość do dosłania</th></tr></thead>
-                    <tbody>
-            `;
-            
-            let total = 0;
-            Object.entries(shipment.partial_missing).forEach(([pid, qty]) => {
-                const prod = window.inventory.products.find(p => p.id === parseInt(pid));
-                if (prod) {
-                    html += `<tr><td>${prod.name}</td><td>${prod.sku}</td><td class="missing-qty">${qty} szt.</td></tr>`;
-                    total += qty;
-                }
-            });
-            
-            html += `
-                    </tbody>
-                </table>
-                <p style="text-align: right; font-size: 1.2em;"><strong>Łącznie do dosłania: <span class="missing-qty">${total} szt.</span></strong></p>
-                <div style="margin-top: 50px; border-top: 1px solid #ccc; padding-top: 10px; color: #6B7280; font-size: 0.9em;">
-                    Podpis magazyniera: .......................................................
-                </div>
-            </body>
-            </html>
-            `;
-            
-            const printWin = window.open('', '', 'width=800,height=600');
-            printWin.document.write(html);
-            printWin.document.close();
-            printWin.focus();
-            setTimeout(() => { printWin.print(); printWin.close(); }, 300);
         }
 
         document.getElementById('shipmentForm').addEventListener('submit', async function(e) {
