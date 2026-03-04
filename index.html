@@ -41,6 +41,7 @@
             --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
             --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
             --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --shadow-hover: 0 20px 25px -5px rgba(196, 112, 75, 0.15), 0 10px 10px -5px rgba(196, 112, 75, 0.04);
         }
 
         body {
@@ -171,17 +172,20 @@
 
         .table-responsive { width: 100%; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm); overflow: hidden; }
         table { width: 100%; border-collapse: separate; border-spacing: 0; margin: 0; font-size: 0.9rem; table-layout: auto; }
+        
         th { 
             background-color: var(--primary-terracotta); color: #fff; padding: 1rem 0.75rem; text-align: left; 
             font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px;
             border-bottom: 1px solid var(--primary-dark);
             position: sticky; top: 0; z-index: 10;
         }
+        
         td { 
             padding: 0.8rem 0.75rem; border-bottom: 1px solid var(--border-color); 
             color: var(--text-dark); vertical-align: middle; 
             word-break: break-word; 
         }
+        
         tbody tr { transition: background-color 0.2s, opacity 0.2s; }
         tbody tr:last-child td { border-bottom: none; }
         tbody tr:hover { background-color: #FEF6F3; }
@@ -204,10 +208,9 @@
 
         button { display: inline-flex; align-items: center; justify-content: center; padding: 0.75rem 1.5rem; border: none; border-radius: 10px; cursor: pointer; font-size: 0.9rem; font-weight: 600; transition: all 0.2s ease; font-family: 'Inter', sans-serif; box-shadow: var(--shadow-sm); letter-spacing: 0.3px; }
         .btn-primary { background-color: var(--primary-terracotta); color: white; }
-        .btn-primary:hover:not(:disabled) { background-color: var(--primary-dark); transform: translateY(-1px); box-shadow: 0 7px 14px rgba(196, 112, 75, 0.2); }
-        .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+        .btn-primary:hover { background-color: var(--primary-dark); transform: translateY(-1px); box-shadow: 0 7px 14px rgba(196, 112, 75, 0.2); }
         .btn-secondary { background-color: white; color: var(--text-dark); border: 1px solid var(--border-color); }
-        .btn-secondary:hover:not(:disabled) { background-color: #F9FAFB; border-color: #D1D5DB; transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+        .btn-secondary:hover { background-color: #F9FAFB; border-color: #D1D5DB; transform: translateY(-1px); box-shadow: var(--shadow-sm); }
         .btn-small { padding: 0.5rem 0.8rem; font-size: 0.75rem; margin-right: 0.3rem; margin-bottom: 0.3rem; border-radius: 6px; }
 
         .form-group { margin-bottom: 1.25rem; display: flex; flex-direction: column; gap: 0.5rem; }
@@ -224,7 +227,7 @@
         .editable:hover { background-color: #FEF6F3; border-color: var(--beige-light); }
         .editable input { max-width: 90px; text-align: center; padding: 0.4rem; margin: 0 auto; display: block; }
         
-        /* STYLE MAP */
+        /* STYLE MAPY */
         .map-container {
             height: 450px; width: 100%; 
             border-bottom-left-radius: 16px; border-bottom-right-radius: 16px; 
@@ -241,9 +244,9 @@
             box-shadow: 0 3px 8px rgba(0,0,0,0.4); border: 2px solid #fff;
         }
         .marker-home { background-color: #1F2937; }
-        .marker-confirmed { background-color: #10B981; }
-        .marker-planned { background-color: #C4704B; }
-        .marker-adjustment { background-color: #3B82F6; }
+        .marker-confirmed { background-color: #10B981; } /* Zielony dla potwierdzonych */
+        .marker-planned { background-color: #C4704B; }   /* Terakota dla oczekujących */
+        .marker-adjustment { background-color: #3B82F6; } 
 
         .footer { text-align: center; padding: 3rem 2rem; color: var(--text-light); font-size: 0.85rem; margin-top: 2rem; border-top: 1px solid var(--border-color); background: #fff; }
 
@@ -731,7 +734,7 @@
         }
 
         async function geocodeLocation(locationStr) {
-            let searchStr = locationStr.split(',')[0].trim();
+            let searchStr = locationStr.split('(')[0].trim();
             let queryUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchStr)}&countrycodes=pl&limit=1`;
             
             if (geocodeCache[searchStr]) return geocodeCache[searchStr];
@@ -740,17 +743,20 @@
                 let res = await fetch(queryUrl);
                 let data = await res.json();
                 if (data && data.length > 0) {
-                    geocodeCache[searchStr] = [data[0].lat, data[0].lon]; return geocodeCache[searchStr];
+                    geocodeCache[searchStr] = [data[0].lat, data[0].lon];
+                    return geocodeCache[searchStr];
                 } else if (searchStr.includes(',')) {
                     let cityStr = searchStr.split(',')[0].trim();
                     let queryUrl2 = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(cityStr)}&countrycodes=pl&limit=1`;
                     res = await fetch(queryUrl2);
                     data = await res.json();
                     if (data && data.length > 0) {
-                        geocodeCache[searchStr] = [data[0].lat, data[0].lon]; return geocodeCache[searchStr];
+                        geocodeCache[searchStr] = [data[0].lat, data[0].lon];
+                        return geocodeCache[searchStr];
                     }
                 }
             } catch (e) { }
+            
             geocodeCache[searchStr] = null; 
             return null;
         }
@@ -774,7 +780,13 @@
                 const homeMarker = L.marker([51.7592, 19.4560], {icon: homeIcon}).addTo(map).bindPopup('<b>Salon Masterlight</b><br>Główny Magazyn w Łodzi');
                 
                 const activeShipments = shipments.filter(s => s.status !== 'completed');
-                activeShipments.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+                
+                // ZMIANA - PRIORYTET: 1. Potwierdzone, 2. Data
+                activeShipments.sort((a, b) => {
+                    if (a.is_confirmed && !b.is_confirmed) return -1;
+                    if (!a.is_confirmed && b.is_confirmed) return 1;
+                    return (a.date || '').localeCompare(b.date || '');
+                });
 
                 const allPointsForBounds = [homeMarker];
                 const size = window.innerWidth <= 768 ? 28 : 24;
@@ -790,7 +802,7 @@
                         const mClass = s.is_confirmed ? 'marker-confirmed' : 'marker-planned';
                         const mColorText = s.is_confirmed ? '#10B981' : '#C4704B';
                         const statusText = s.is_confirmed ? 'Potwierdzona' : 'Oczekująca';
-                        const priority = i + 1;
+                        const priority = i + 1; // 1 to najwyższy priorytet
                         
                         const icon = L.divIcon({
                             html: `<div class="custom-map-marker ${mClass}" style="width:${size}px; height:${size}px; font-size:${fontSize}px;">${priority}</div>`,
@@ -798,7 +810,7 @@
                         });
 
                         const marker = L.marker(coords, { icon: icon }).addTo(map)
-                            .bindPopup(`<b>${escapeHTML(s.location)}</b><br>Kolejka (Priorytet): <strong>Nr ${priority}</strong><br>Status: <span style="color:${mColorText}; font-weight:bold;">${statusText}</span><br>Dostawa: ${escapeHTML(s.date)}<br>Sztuk: <strong>${total}</strong><br>Odbiór: ${escapeHTML(s.company)}`);
+                            .bindPopup(`<b>${escapeHTML(s.location)}</b><br>Priorytet: <strong>Nr ${priority}</strong><br>Status: <span style="color:${mColorText}; font-weight:bold;">${statusText}</span><br>Dostawa: ${escapeHTML(s.date)}<br>Sztuk: <strong>${total}</strong><br>Odbiór: ${escapeHTML(s.company)}`);
                         
                         mapMarkers.push(marker);
                         allPointsForBounds.push(marker);
@@ -896,6 +908,7 @@
             const { data, error } = await db.auth.signInWithPassword({ email, password });
 
             if (error) {
+                console.error("Błąd logowania:", error.message);
                 errorElement.textContent = 'Błąd autoryzacji. Sprawdź e-mail i hasło.';
                 errorElement.style.display = 'block';
                 submitBtn.disabled = false;
@@ -979,7 +992,7 @@
                 setTimeout(() => { 
                     if (!map) initMap();
                     if (map) map.invalidateSize(); 
-                    if(window.inventory) updateMapMarkers(window.inventory.shipments);
+                    if(window.inventory && !isUpdatingMap) updateMapMarkers(window.inventory.shipments);
                 }, 150);
             }
             if (tabId === 'tab-adjustments') {
@@ -1337,6 +1350,8 @@
                     }
                 }
 
+                if (updates.length > 0) await Promise.all(updates);
+
                 let newStatus = 'completed';
                 let newPartialMissing = null;
                 let historyMsg = '';
@@ -1458,9 +1473,9 @@
                 }
 
                 if (totalProduced > 0) {
-                    this.components.ps_raw = (this.components.ps_raw || 0) - totalProduced;
-                    this.components.clips_normal = (this.components.clips_normal || 0) - totalProduced;
-                    this.components.clips_pass = (this.components.clips_pass || 0) - totalProduced;
+                    this.components.ps_raw -= totalProduced;
+                    this.components.clips_normal -= totalProduced;
+                    this.components.clips_pass -= totalProduced;
 
                     updateDashboard();
 
@@ -1522,7 +1537,7 @@
             }
         }
 
-        // --- SYMULACJA WIRTUALNEGO MAGAZYNU ---
+        // --- ZMIANA: CZYSTO CHRONOLOGICZNA SYMULACJA MAGAZYNU (POTWIERDZONE -> OCZEKUJĄCE) ---
         function getShipmentsReadinessMap() {
             const readinessMap = {};
             if (!window.inventory) return readinessMap;
@@ -1540,8 +1555,12 @@
 
             let pending = window.inventory.shipments.filter(s => s.status !== 'completed');
             
-            // PRIORYTET: czysto wg daty zamówienia
-            pending.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+            // PRIORYTET 1: Potwierdzone, PRIORYTET 2: Data
+            pending.sort((a, b) => {
+                if (a.is_confirmed && !b.is_confirmed) return -1;
+                if (!a.is_confirmed && b.is_confirmed) return 1;
+                return (a.date || '').localeCompare(b.date || '');
+            });
 
             pending.forEach(s => {
                 let isReady = true;
@@ -1800,6 +1819,7 @@
             tbody.innerHTML = '';
             window.inventory.history.forEach(h => {
                 const tr = document.createElement('tr');
+                
                 const detailsStr = h.details || '';
                 const match = detailsStr.match(/\(przez: (.*?)\)/);
                 const worker = match ? match[1] : 'System';
