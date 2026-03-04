@@ -16,7 +16,7 @@
         :root {
             --primary-terracotta: #C4704B;
             --primary-dark: #A85A3A;
-            --primary-light: #FDF2EE; /* Bardzo jasny odcień pod nagłówki sekcji */
+            --primary-light: #FDF2EE;
             --accent-red: #D84C4C;
             --accent-red-dark: #C23E3E;
             --warm-beige: #F5E6D3;
@@ -28,7 +28,7 @@
             --warning-status: #F59E0B;
             --error-status: #EF4444;
             --background: #F3F4F6;
-            --sidebar-bg: #8B6F47; /* Powrót do ciepłego brązu bazy */
+            --sidebar-bg: #8B6F47;
             
             --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
             --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
@@ -105,7 +105,6 @@
         .mobile-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9998; backdrop-filter: blur(2px); }
         .mobile-overlay.active { display: block; }
 
-        /* SIDEBAR (Teraz w kolorze terakota/brąz) */
         .sidebar {
             width: 260px; background: linear-gradient(180deg, var(--sidebar-bg) 0%, #6F5A3A 100%);
             color: #fff; padding: 2rem 0; position: fixed; left: 0; top: 0; height: 100vh;
@@ -127,12 +126,11 @@
 
         .mobile-menu-btn { display: none; background: none; border: none; color: var(--text-dark); cursor: pointer; margin-right: 15px; }
 
-        /* MAIN CONTENT */
         .main-content { margin-left: 260px; flex: 1; overflow-y: auto; display: flex; flex-direction: column; width: calc(100% - 260px); transition: margin 0.3s ease; }
         
         .header {
             background: #fff; color: var(--text-dark); padding: 1.2rem 2.5rem; 
-            box-shadow: var(--shadow-sm); border-bottom: 3px solid var(--primary-terracotta); /* Mocniejszy akcent terakoty */
+            box-shadow: var(--shadow-sm); border-bottom: 3px solid var(--primary-terracotta);
             display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 50;
         }
         .header-left { display: flex; align-items: center; }
@@ -147,7 +145,6 @@
         .tab-content.active { display: block; }
         @keyframes slideUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* STATS CARDS */
         .stats-bar { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem; margin-bottom: 2.5rem; }
         .stat-card {
             background: #fff; padding: 1.5rem; border-radius: 16px; border: 1px solid var(--border-color);
@@ -159,7 +156,6 @@
         .stat-card h3 { color: var(--text-light); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem; font-weight: 600; }
         .stat-card .value { font-size: 2.4rem; font-weight: 700; color: var(--text-dark); line-height: 1; }
 
-        /* SECTIONS (Z akcentem terakoty w nagłówku) */
         .section { background: #fff; margin-bottom: 2.5rem; border-radius: 16px; box-shadow: var(--shadow-md); overflow: hidden; border: 1px solid var(--border-color); }
         .section-header { background-color: var(--primary-light); padding: 1.2rem 2rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
         .section-header h2 { color: var(--primary-dark); font-size: 1.25rem; margin: 0; display:flex; align-items:center; gap:10px; font-weight: 600; }
@@ -167,7 +163,6 @@
         .section-header .badge { background: #fff; color: var(--text-dark); padding: 0.4rem 0.9rem; border-radius: 20px; font-size: 0.8rem; font-weight: 600; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm); }
         .section-content { padding: 1.5rem 2rem; }
 
-        /* TABLES (Terakota w nagłówku) */
         .table-responsive { width: 100%; overflow-x: auto; max-height: 65vh; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm); }
         table { width: 100%; border-collapse: separate; border-spacing: 0; margin: 0; font-size: 0.9rem; min-width: 700px; }
         th { 
@@ -187,16 +182,12 @@
         .row-completed { opacity: 0.6; background-color: #F9FAFB; }
         .row-completed:hover { opacity: 1; background-color: #F3F4F6 !important; }
 
-        /* Usunięte style pasków progresu */
-
-        /* BADGES */
         .status-badge { display: inline-flex; align-items: center; padding: 0.4rem 0.8rem; border-radius: 8px; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.3px;}
         .status-ok { background-color: #ECFDF5; color: #059669; border: 1px solid #A7F3D0; }
         .status-warning { background-color: #FFFBEB; color: #D97706; border: 1px solid #FDE68A; }
         .status-error { background-color: #FEF2F2; color: #DC2626; border: 1px solid #FECACA; }
         .status-neutral { background-color: #EFF6FF; color: #2563EB; border: 1px solid #BFDBFE; }
 
-        /* MODAL */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; backdrop-filter: blur(4px); }
         .modal-dialog { background: white; padding: 2.5rem; border-radius: 20px; max-width: 550px; margin: 8vh auto; box-shadow: var(--shadow-lg); animation: slideUp 0.3s ease; border: 1px solid var(--border-color); }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-color); }
@@ -204,7 +195,6 @@
         .close { font-size: 2rem; cursor: pointer; color: var(--text-light); transition: color 0.2s ease; line-height: 1; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; }
         .close:hover { color: var(--accent-red); background-color: #FEF2F2; }
 
-        /* BUTTONS & FORMS */
         button { display: inline-flex; align-items: center; justify-content: center; padding: 0.75rem 1.5rem; border: none; border-radius: 10px; cursor: pointer; font-size: 0.9rem; font-weight: 600; transition: all 0.2s ease; font-family: 'Inter', sans-serif; box-shadow: var(--shadow-sm); letter-spacing: 0.3px; }
         .btn-primary { background-color: var(--primary-terracotta); color: white; }
         .btn-primary:hover { background-color: var(--primary-dark); transform: translateY(-1px); box-shadow: 0 7px 14px rgba(196, 112, 75, 0.2); }
@@ -294,7 +284,7 @@
 
     <div id="loading-screen" class="hidden">
         <div class="spinner"></div>
-        <h2 style="color: var(--primary-dark); font-weight: 600; font-size: 1.2rem;">Pobieranie danych Masterlight...</h2>
+        <h2 style="color: var(--primary-dark); font-weight: 600; font-size: 1.2rem;">Synchronizacja z chmurą...</h2>
     </div>
 
     <div id="auth-screen">
@@ -405,7 +395,7 @@
                         <div class="section-header">
                             <h2><span class="material-symbols-outlined">inventory_2</span> Pełny Stan Magazynowy Downlightów</h2>
                             <button class="btn-secondary btn-small" onclick="window.print()" style="margin: 0;">
-                                <span class="material-symbols-outlined">print</span> Generuj PDF / Drukuj
+                                <span class="material-symbols-outlined">print</span> Generuj PDF
                             </button>
                         </div>
                         <div class="section-content">
@@ -623,15 +613,9 @@
     </div>
 
     <script>
-        // ==========================================
-        // ===== KONFIGURACJA SUPABASE =====
-        // ==========================================
         const supabaseUrl = 'https://ghdswvjhqpxupzcrixlu.supabase.co';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdoZHN3dmpocXB4dXB6Y3JpeGx1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4NTEwMDAsImV4cCI6MjA4NzQyNzAwMH0._sk7mCv27tC153DTvqp_7O3CUyYsk3iuYuf0f93GCfo';
         
-        // ==========================================
-        // ===== KONFIGURACJA UPRAWNIEŃ (RÓL) =====
-        // ==========================================
         const ROLES = {
             'b.hajduk@masterlight.pl': 'admin',      
             'm.olejnik@masterlight.pl': 'viewer',         
@@ -644,7 +628,6 @@
 
         const db = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-        // --- FUNKCJE POMOCNICZE (TOASTY I LOADER) ---
         function showLoading() {
             document.getElementById('loading-screen').classList.remove('hidden');
         }
@@ -670,7 +653,6 @@
             }, 3500);
         }
 
-        // LOGOWANIE
         document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const email = document.getElementById('login-email').value;
@@ -679,7 +661,7 @@
             const submitBtn = document.querySelector('#login-form button');
             
             errorElement.style.display = 'none';
-            submitBtn.innerHTML = '<span class="material-symbols-outlined">hourglass_empty</span> Autoryzacja...';
+            submitBtn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">autorenew</span> Autoryzacja...';
 
             const { data, error } = await db.auth.signInWithPassword({ email, password });
 
@@ -712,7 +694,7 @@
 
             document.getElementById('auth-screen').classList.add('hidden');
             document.getElementById('app-container').classList.remove('hidden');
-            document.getElementById('app-container').style.display = 'flex'; // Wymuszenie flex
+            document.getElementById('app-container').style.display = 'flex'; 
             
             applyPermissions();
 
@@ -734,7 +716,6 @@
             }
             if (currentRole === 'worker') {
                 document.getElementById('nav-history').style.display = 'none';
-                // Pracownik może edytować inwentarz ręcznie w tabach, ale nie widzi logów
             }
         }
 
@@ -756,7 +737,6 @@
             document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
             document.getElementById(tabId).classList.add('active');
             
-            // Znajdź kliknięty element menu
             const clickedNav = Array.from(document.querySelectorAll('.nav-item')).find(item => item.getAttribute('onclick').includes(tabId));
             if (clickedNav) clickedNav.classList.add('active');
             
@@ -776,9 +756,6 @@
             document.getElementById('modal').style.display = 'none';
         }
 
-        // ---------------------------------
-        // MENEDŻER CHMURY
-        // ---------------------------------
         class CloudInventoryManager {
             constructor() {
                 this.products = [];
@@ -796,7 +773,7 @@
                 this.setupRealtime();
                 hideLoading();
                 if (this.isFirstLoad) {
-                    showToast(`Witaj, sesja aktywna dla ${currentUserEmail.split('@')[0]}.`, 'success');
+                    showToast(`Witaj, sesja aktywna.`, 'success');
                     this.isFirstLoad = false;
                 }
             }
@@ -822,13 +799,10 @@
                         }));
                     }
 
-                    // Auto-korekta dat dla starych dostaw (przeniesienie na dziś)
-                    const todayObj = new Date();
-                    const todayFormatted = todayObj.toISOString().split('T')[0];
-
+                    const todayFormatted = new Date().toISOString().split('T')[0];
                     const dbUpdates = [];
                     for (let s of this.shipments) {
-                        if (s.status !== 'completed' && s.date < todayFormatted) {
+                        if (s.status !== 'completed' && (s.date || '') < todayFormatted) {
                             if (currentRole === 'admin' || currentRole === 'worker') {
                                 dbUpdates.push(db.from('shipments').update({ date: todayFormatted }).eq('id', s.id));
                             }
@@ -840,7 +814,7 @@
                     updateDashboard();
                 } catch (err) {
                     console.error("Błąd pobierania danych:", err);
-                    showToast('Błąd krytyczny połączenia z bazą danych.', 'error');
+                    showToast('Błąd odczytu z bazy danych.', 'error');
                 }
             }
 
@@ -850,7 +824,7 @@
                         clearTimeout(this.realtimeTimeout);
                         this.realtimeTimeout = setTimeout(() => {
                             this.fetchData();
-                        }, 500); // Debouncing dla realtime
+                        }, 500); 
                     }).subscribe();
             }
 
@@ -874,12 +848,10 @@
                 const product = this.products.find(p => p.id === id);
                 if (product) {
                     await db.from('products').update(updates).eq('id', id);
-                    // Jeśli edytujemy montaż w grupie, zaktualizuj całą grupę w bazie
                     if (updates.assembly !== undefined && product.assembly_group) {
                         await db.from('products').update({ assembly: updates.assembly }).eq('assembly_group', product.assembly_group);
                     }
                     await this.addHistory('Ręczna edycja stanu', `${product.name} (SKU: ${product.sku})`);
-                    // Realtime sam wywoła fetchData
                 }
             }
 
@@ -940,7 +912,7 @@
                 const missing = {};
                 const updates = []; 
 
-                for (const productId of Object.keys(shipment.products)) {
+                for (const productId of Object.keys(shipment.products || {})) {
                     const quantity = shipment.products[productId];
                     if (quantity > 0) {
                         const product = this.products.find(p => p.id === parseInt(productId));
@@ -1025,7 +997,6 @@
                             const newAssembly = product.assembly + qty;
                             if (product.assembly_group) {
                                 dbUpdates.push(db.from('products').update({ assembly: newAssembly }).eq('assembly_group', product.assembly_group));
-                                // Lokalna aktualizacja dla szybkości (realtime nadpisze)
                                 this.products.filter(p => p.assembly_group === product.assembly_group).forEach(p => p.assembly = newAssembly);
                             } else {
                                 dbUpdates.push(db.from('products').update({ assembly: newAssembly }).eq('id', product.id));
@@ -1057,7 +1028,6 @@
                     return; 
                 }
 
-                // Walidacja dostępności obudów w montażu (wg grup)
                 const groupReq = {};
                 for (const [id, qty] of Object.entries(produced)) {
                     if (qty > 0) {
@@ -1109,7 +1079,6 @@
                 }
 
                 if (totalProduced > 0) {
-                    // Aktualizacja komponentów
                     dbUpdates.push(db.from('components').update({
                         ps_raw: ps_raw - totalProduced,
                         clips_normal: clips_normal - totalProduced,
@@ -1118,7 +1087,7 @@
 
                     await Promise.all(dbUpdates);
                     await this.addHistory('Rejestracja produkcji', `Zmontowano łącznie: ${totalProduced} szt.`);
-                    showToast(`✅ Zarejestrowano produkcję ${totalProduced} sztuk.`, 'success');
+                    showToast(`Zarejestrowano produkcję ${totalProduced} szt.`, 'success');
                 }
             }
 
@@ -1130,7 +1099,7 @@
                         if (!processedGroups.has(p.assembly_group)) { totalAssembly += p.assembly; processedGroups.add(p.assembly_group); }
                     } else { totalAssembly += p.assembly; }
                 });
-                const totalReady = this.products.reduce((s, p) => s + p.ready, 0);
+                const totalReady = this.products.reduce((s, p) => s + (p.ready || 0), 0);
                 const totalService = this.products.reduce((s, p) => s + (p.service || 0), 0);
                 return { totalReady, totalAssembly, totalService, totalAll: totalReady + totalAssembly + totalService };
             }
@@ -1169,10 +1138,10 @@
             let vAssembly = {};
             
             window.inventory.products.forEach(p => {
-                vReady[p.id] = p.ready;
+                vReady[p.id] = p.ready || 0;
                 const groupKey = p.assembly_group || `single_${p.id}`;
                 if (vAssembly[groupKey] === undefined) {
-                    vAssembly[groupKey] = p.assembly;
+                    vAssembly[groupKey] = p.assembly || 0;
                 }
             });
 
@@ -1181,14 +1150,14 @@
             pending.sort((a, b) => {
                 if (a.is_confirmed && !b.is_confirmed) return -1;
                 if (!a.is_confirmed && b.is_confirmed) return 1;
-                return a.date.localeCompare(b.date);
+                return (a.date || '').localeCompare(b.date || '');
             });
 
             pending.forEach(s => {
                 let isReady = true;
                 let reqs = s.status === 'partial' ? s.partial_missing : s.products;
                 
-                if (reqs) {
+                if (reqs && typeof reqs === 'object') {
                     for (const [pId, qty] of Object.entries(reqs)) {
                         if (qty > 0) {
                             const prod = window.inventory.products.find(p => p.id == pId);
@@ -1209,7 +1178,7 @@
                                 if (vAssembly[poolKey] >= needed) {
                                     vAssembly[poolKey] -= needed;
                                 } else {
-                                    vAssembly[poolKey] -= needed; // Wchodzi na minus
+                                    vAssembly[poolKey] -= needed; 
                                     isReady = false;
                                 }
                             }
@@ -1223,109 +1192,123 @@
         }
 
         // ---------------------------------
-        // RENDEROWANIE INTERFEJSU
+        // RENDEROWANIE TABEL
         // ---------------------------------
+        function getStatusClass(productId) {
+            const status = window.inventory.getStatus(productId);
+            return status === 'ok' ? 'status-ok' : status === 'warning' ? 'status-warning' : 'status-error';
+        }
+
+        function getStatusText(productId) {
+            const status = window.inventory.getStatus(productId);
+            return status === 'ok' ? '<span class="material-symbols-outlined">check_circle</span> OK' : status === 'warning' ? '<span class="material-symbols-outlined">warning</span> Mało' : '<span class="material-symbols-outlined">error</span> Brak';
+        }
+
         function getReadinessBadge(shipment, readinessMap) {
-            if (shipment.status === 'completed') return '-';
+            if (shipment.status === 'completed') return '<span style="color: var(--text-light); font-size: 0.85em;">-</span>';
             if (readinessMap[shipment.id]) {
-                return '<span class="status-badge status-ok"><span class="material-symbols-outlined">inventory_2</span> Komplet</span>';
+                return '<span class="status-badge status-ok" style="background:#ECFDF5; color:#059669; border: 1px solid #10B981;"><span class="material-symbols-outlined">inventory_2</span> Komplet</span>';
             } else {
-                return '<span class="status-badge status-error"><span class="material-symbols-outlined">production_quantity_limits</span> Braki</span>';
+                return '<span class="status-badge status-error" style="background:#FEF2F2; color:#DC2626; border: 1px solid #EF4444;"><span class="material-symbols-outlined">production_quantity_limits</span> Braki</span>';
             }
         }
 
         function updateDashboard() {
-            if(!window.inventory || window.inventory.products.length === 0) return;
-            
-            const totals = window.inventory.getTotals();
-            document.querySelector('[data-stat="total"]').textContent = totals.totalAll;
-            document.querySelector('[data-stat="ready"]').textContent = totals.totalReady;
-            document.querySelector('[data-stat="shipments"]').textContent = window.inventory.shipments.filter(s => s.status !== 'completed' && s.is_confirmed).length;
-            document.querySelector('[data-stat="service"]').textContent = totals.totalService;
-
-            // Alerty komponentów
-            const alertsContainer = document.getElementById('dashboard-alerts');
-            alertsContainer.innerHTML = '';
-            const comps = window.inventory.components;
-            let lowComps = [];
-            if (comps) {
-                if (comps.ps_raw < 50) lowComps.push('Zasilacze');
-                if (comps.clips_normal < 50) lowComps.push('Klapki Zwykłe');
-                if (comps.clips_pass < 50) lowComps.push('Klapki Przelotowe');
+            try {
+                if(!window.inventory || window.inventory.products.length === 0) return;
                 
-                if (lowComps.length > 0) {
-                    alertsContainer.innerHTML = `
-                        <div class="alert-banner critical">
-                            <span class="material-symbols-outlined">warning_amber</span>
-                            <div><strong>Krytyczny stan komponentów!</strong> Należy domówić: ${lowComps.join(', ')}. Produkcja może zostać zablokowana.</div>
-                        </div>
-                    `;
-                }
-            }
+                const totals = window.inventory.getTotals();
+                document.querySelector('[data-stat="total"]').textContent = totals.totalAll;
+                document.querySelector('[data-stat="ready"]').textContent = totals.totalReady;
+                document.querySelector('[data-stat="shipments"]').textContent = window.inventory.shipments.filter(s => s.status !== 'completed' && s.is_confirmed).length;
+                document.querySelector('[data-stat="service"]').textContent = totals.totalService;
 
-            const readinessMap = getShipmentsReadinessMap();
-
-            // Dashboard: Produkty
-            const dashboardTbody = document.getElementById('products-dashboard');
-            dashboardTbody.innerHTML = '';
-            window.inventory.products.forEach(p => {
-                const row = document.createElement('tr');
-                row.innerHTML = `<td data-label="Model Oprawy">${p.name}</td><td data-label="Ilość Gotowych"><strong>${p.ready} szt</strong></td><td data-label="Dostępność"><span class="status-badge ${getStatusClass(p.id)}">${getStatusText(p.id)}</span></td>`;
-                dashboardTbody.appendChild(row);
-            });
-
-            // Dashboard: Nadchodzące dostawy
-            const upcomingTbody = document.getElementById('dashboard-upcoming-shipments');
-            upcomingTbody.innerHTML = '';
-            
-            const todayFormatted = new Date().toISOString().split('T')[0];
-            const targetDateObj = new Date();
-            let addedDays = 0;
-            while (addedDays < 7) {
-                targetDateObj.setDate(targetDateObj.getDate() + 1);
-                if (targetDateObj.getDay() !== 0 && targetDateObj.getDay() !== 6) addedDays++;
-            }
-            const thresholdFormatted = targetDateObj.toISOString().split('T')[0];
-
-            const upcomingShipments = window.inventory.shipments.filter(s => 
-                s.status !== 'completed' && s.date >= todayFormatted && s.date <= thresholdFormatted
-            ).sort((a, b) => a.date.localeCompare(b.date));
-
-            if (upcomingShipments.length === 0) {
-                upcomingTbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 2rem !important; color:var(--text-light);">Brak zaplanowanych wysyłek w najbliższym tygodniu.</td></tr>';
-                document.getElementById('upcoming-total-badge').textContent = 'Zapotrzebowanie: 0 szt.';
-            } else {
-                let upcomingTotalLamps = 0;
-                upcomingShipments.forEach(s => {
-                    let total = s.products ? Object.values(s.products).reduce((a, b) => a + b, 0) : 0;
-                    upcomingTotalLamps += total;
+                // Alerty komponentów
+                const alertsContainer = document.getElementById('dashboard-alerts');
+                alertsContainer.innerHTML = '';
+                const comps = window.inventory.components;
+                let lowComps = [];
+                if (comps) {
+                    if (comps.ps_raw < 50) lowComps.push('Zasilacze');
+                    if (comps.clips_normal < 50) lowComps.push('Klapki Zwykłe');
+                    if (comps.clips_pass < 50) lowComps.push('Klapki Przelotowe');
                     
-                    let statusBadge = s.status === 'partial' ? '<span class="status-badge status-warning"><span class="material-symbols-outlined">warning</span> Niepełna</span>' :
-                                      s.is_confirmed ? '<span class="status-badge status-neutral"><span class="material-symbols-outlined">event_available</span> Potw.</span>' :
-                                      '<span class="status-badge status-warning"><span class="material-symbols-outlined">pending_actions</span> Oczek.</span>';
+                    if (lowComps.length > 0) {
+                        alertsContainer.innerHTML = `
+                            <div class="alert-banner critical">
+                                <span class="material-symbols-outlined">warning_amber</span>
+                                <div><strong>Krytyczny stan komponentów!</strong> Należy domówić: ${lowComps.join(', ')}. Produkcja może zostać zablokowana.</div>
+                            </div>
+                        `;
+                    }
+                }
 
-                    upcomingTbody.innerHTML += `
-                        <tr>
-                            <td data-label="Data"><strong>${s.date}</strong></td>
-                            <td data-label="Cel / Klient">${s.location}</td>
-                            <td data-label="Spedytor" style="color:var(--text-light);">${s.company || '-'}</td>
-                            <td data-label="Sztuk"><strong>${total}</strong></td>
-                            <td data-label="Wirtualny Magazyn">${getReadinessBadge(s, readinessMap)}</td>
-                            <td data-label="Status">${statusBadge}</td>
-                        </tr>
-                    `;
+                const readinessMap = getShipmentsReadinessMap();
+
+                // Dashboard: Produkty
+                const dashboardTbody = document.getElementById('products-dashboard');
+                dashboardTbody.innerHTML = '';
+                window.inventory.products.forEach(p => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `<td data-label="Model Oprawy">${p.name}</td><td data-label="Ilość Gotowych"><strong>${p.ready || 0} szt</strong></td><td data-label="Dostępność"><span class="status-badge ${getStatusClass(p.id)}">${getStatusText(p.id)}</span></td>`;
+                    dashboardTbody.appendChild(row);
                 });
-                document.getElementById('upcoming-total-badge').textContent = `Zapotrzebowanie: ${upcomingTotalLamps} szt.`;
+
+                // Dashboard: Nadchodzące dostawy
+                const upcomingTbody = document.getElementById('dashboard-upcoming-shipments');
+                upcomingTbody.innerHTML = '';
+                
+                const todayFormatted = new Date().toISOString().split('T')[0];
+                const targetDateObj = new Date();
+                let addedDays = 0;
+                while (addedDays < 7) {
+                    targetDateObj.setDate(targetDateObj.getDate() + 1);
+                    if (targetDateObj.getDay() !== 0 && targetDateObj.getDay() !== 6) addedDays++;
+                }
+                const thresholdFormatted = targetDateObj.toISOString().split('T')[0];
+
+                const upcomingShipments = window.inventory.shipments.filter(s => 
+                    s.status !== 'completed' && (s.date || '') >= todayFormatted && (s.date || '') <= thresholdFormatted
+                ).sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+
+                if (upcomingShipments.length === 0) {
+                    upcomingTbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 2rem !important; color:var(--text-light); border:none;">Brak zaplanowanych wysyłek w najbliższym tygodniu. Można odpocząć! ☕</td></tr>';
+                    document.getElementById('upcoming-total-badge').textContent = 'Zapotrzebowanie: 0 szt.';
+                } else {
+                    let upcomingTotalLamps = 0;
+                    upcomingShipments.forEach(s => {
+                        let total = s.products ? Object.values(s.products).reduce((a, b) => a + b, 0) : 0;
+                        upcomingTotalLamps += total;
+                        
+                        let statusBadge = s.status === 'partial' ? '<span class="status-badge status-warning"><span class="material-symbols-outlined">warning</span> Niepełna</span>' :
+                                          s.is_confirmed ? '<span class="status-badge status-neutral"><span class="material-symbols-outlined">event_available</span> Potw.</span>' :
+                                          '<span class="status-badge status-warning"><span class="material-symbols-outlined">pending_actions</span> Oczek.</span>';
+
+                        const readinessBadge = getReadinessBadge(s, readinessMap);
+
+                        upcomingTbody.innerHTML += `
+                            <tr>
+                                <td data-label="Data"><strong>${s.date || '-'}</strong></td>
+                                <td data-label="Cel / Klient">${s.location}</td>
+                                <td data-label="Spedytor" style="color:var(--text-light);">${s.company || '-'}</td>
+                                <td data-label="Sztuk"><strong>${total}</strong></td>
+                                <td data-label="Wirtualny Magazyn">${readinessBadge}</td>
+                                <td data-label="Status">${statusBadge}</td>
+                            </tr>
+                        `;
+                    });
+                    document.getElementById('upcoming-total-badge').textContent = `Zapotrzebowanie: ${upcomingTotalLamps} szt.`;
+                }
+
+                updateInventoryTable();
+                updateShipmentsTables(readinessMap);
+                updateAdjustmentsTable();
+                if(currentRole !== 'worker') updateHistoryTable(); 
+                updateComponentsDisplay();
+            } catch (error) {
+                console.error("Błąd podczas renderowania Dashboardu:", error);
             }
-
-            updateInventoryTable();
-            updateShipmentsTables(readinessMap);
-            updateAdjustmentsTable();
-            if(currentRole !== 'worker') updateHistoryTable(); 
-            updateComponentsDisplay();
         }
-
-        // USUNIĘTA FUNKCJA generowania pasków progresu
 
         function updateInventoryTable() {
             const tbody = document.getElementById('products-table');
@@ -1334,25 +1317,23 @@
             const isViewer = currentRole === 'viewer';
             
             window.inventory.products.forEach(p => {
-                const total = p.ready + p.assembly + (p.service || 0);
+                const total = (p.ready || 0) + (p.assembly || 0) + (p.service || 0);
                 
-                const readyCell = isViewer ? `<strong>${p.ready}</strong>` : `<td data-label="Gotowe" onclick="editCell(this, 'ready', ${p.id})" class="editable"><strong>${p.ready}</strong></td>`;
-                const assemblyCell = isViewer ? p.assembly : `<td data-label="W Montażu" onclick="editCell(this, 'assembly', ${p.id})" class="editable">${p.assembly}</td>`;
+                const readyCell = isViewer ? `<strong>${p.ready || 0}</strong>` : `<td data-label="Gotowe" onclick="editCell(this, 'ready', ${p.id})" class="editable"><strong>${p.ready || 0}</strong></td>`;
+                const assemblyCell = isViewer ? (p.assembly || 0) : `<td data-label="W Montażu" onclick="editCell(this, 'assembly', ${p.id})" class="editable">${p.assembly || 0}</td>`;
 
-                // Renderowanie wiersza inwentarza BEZ paska progresu
                 const rowHTML = `
                     <td data-label="Model Oprawy">${p.name}</td>
                     <td data-label="Kod SKU" style="color:var(--text-light); font-size:0.85em;">${p.sku}</td>
-                    ${isViewer ? `<td>${readyCell}</td>` : readyCell}
-                    ${isViewer ? `<td>${assemblyCell}</td>` : assemblyCell}
+                    ${isViewer ? `<td data-label="Gotowe">${readyCell}</td>` : readyCell}
+                    ${isViewer ? `<td data-label="W Montażu">${assemblyCell}</td>` : assemblyCell}
                     <td data-label="Łącznie"><strong>${total}</strong></td>
                     <td data-label="Dostępność"><span class="status-badge ${getStatusClass(p.id)}">${getStatusText(p.id)}</span></td>
                 `;
                 const tr = document.createElement('tr'); tr.innerHTML = rowHTML; tbody.appendChild(tr);
 
-                // Tabela serwisu
                 const serviceCell = isViewer ? (p.service || 0) : `<td data-label="Ilość" onclick="editCell(this, 'service', ${p.id})" class="editable">${p.service || 0}</td>`;
-                const serviceRowHTML = `<td data-label="Model Oprawy">${p.name}</td>${isViewer ? `<td>${serviceCell}</td>` : serviceCell}`;
+                const serviceRowHTML = `<td data-label="Model Oprawy">${p.name}</td>${isViewer ? `<td data-label="Ilość">${serviceCell}</td>` : serviceCell}`;
                 const trS = document.createElement('tr'); trS.innerHTML = serviceRowHTML; tbodyService.appendChild(trS);
             });
         }
@@ -1364,6 +1345,8 @@
                               s.is_confirmed ? '<span class="status-badge status-neutral"><span class="material-symbols-outlined">event_available</span> Potwierdzona</span>' :
                               '<span class="status-badge status-warning"><span class="material-symbols-outlined">pending_actions</span> Oczekująca</span>';
 
+            const readinessBadge = getReadinessBadge(s, readinessMap);
+
             let actionButtons = '';
             if (currentRole !== 'viewer') {
                 actionButtons += `<button class="btn-small btn-secondary" onclick="editShipment(${s.id})" title="Edytuj dane"><span class="material-symbols-outlined">edit</span></button>`;
@@ -1372,7 +1355,7 @@
                 if (s.status === 'planned' && !s.is_confirmed) {
                     actionButtons = `<button class="btn-small btn-primary" onclick="confirmShipmentDateUI(${s.id})"><span class="material-symbols-outlined">event_available</span> Zatwierdź</button>` + actionButtons;
                 } else if (s.status === 'planned' && s.is_confirmed) {
-                    actionButtons = `<button class="btn-small btn-primary" onclick="completeShipmentUI(${s.id})"><span class="material-symbols-outlined">local_shipping</span> Wydaj towar</button>` + actionButtons;
+                    actionButtons = `<button class="btn-small btn-primary" onclick="completeShipmentUI(${s.id})"><span class="material-symbols-outlined">local_shipping</span> Wydaj</button>` + actionButtons;
                 } else if (s.status === 'partial') {
                     actionButtons = `<button class="btn-small btn-primary" onclick="completeRemainingShipmentUI(${s.id})"><span class="material-symbols-outlined">done_all</span> Wydaj braki</button>` + actionButtons;
                 }
@@ -1383,12 +1366,12 @@
 
             return `
                 <tr class="${s.status === 'completed' ? 'row-completed' : ''}">
-                    <td data-label="Data Potw."><strong>${s.date}</strong></td>
+                    <td data-label="Data"><strong>${s.date || '-'}</strong></td>
                     <td data-label="Cel">${s.location}</td>
                     <td data-label="Spedytor" style="color:var(--text-light);">${s.company || '-'}</td>
                     <td data-label="Sztuk"><strong>${total}</strong></td>
                     <td data-label="Kąty"><button class="btn-small btn-secondary" onclick="showAnglesDemand(${s.id})" style="margin:0;"><span class="material-symbols-outlined">visibility</span> Pokaż</button></td>
-                    <td data-label="Wirtualny Magazyn">${getReadinessBadge(s, readinessMap)}</td>
+                    <td data-label="Wirtualny Magazyn">${readinessBadge}</td>
                     <td data-label="Status">${statusBadge}</td>
                     ${currentRole !== 'viewer' || s.status === 'partial' ? `<td data-label="Akcja">${actionButtons}</td>` : '<td class="admin-only-col"></td>'}
                 </tr>
@@ -1415,24 +1398,28 @@
 
         function updateAdjustmentsTable() {
             const tbody = document.getElementById('adjustments-table');
+            if(!tbody) return;
             tbody.innerHTML = '';
             window.inventory.adjustments.forEach(a => {
                 const tr = document.createElement('tr');
                 let action = currentRole === 'admin' ? `<td data-label="Akcja"><button class="btn-small btn-secondary" onclick="deleteAdjustment(${a.id})" style="margin:0;"><span class="material-symbols-outlined" style="color:var(--accent-red);">delete</span></button></td>` : `<td class="admin-only-col"></td>`;
-                tr.innerHTML = `<td data-label="Data Wyjazdu"><strong>${a.date}</strong></td><td data-label="Miejscowość / Obiekt">${a.location}</td>${action}`;
+                tr.innerHTML = `<td data-label="Data Wyjazdu"><strong>${a.date || '-'}</strong></td><td data-label="Miejscowość / Obiekt">${a.location}</td>${action}`;
                 tbody.appendChild(tr);
             });
         }
 
         function updateHistoryTable() {
             const tbody = document.getElementById('history-table');
+            if(!tbody) return;
             tbody.innerHTML = '';
             window.inventory.history.forEach(h => {
                 const tr = document.createElement('tr');
-                // Wyciąganie pracownika z detali
-                const match = h.details.match(/\(przez: (.*?)\)/);
+                
+                // Bezpieczne sprawdzanie starych wpisów
+                const detailsStr = h.details || '';
+                const match = detailsStr.match(/\(przez: (.*?)\)/);
                 const worker = match ? match[1] : 'System';
-                const cleanDetails = h.details.replace(/\(przez:.*?\)/, '').trim();
+                const cleanDetails = detailsStr.replace(/\(przez:.*?\)/, '').trim();
 
                 tr.innerHTML = `<td data-label="Data i Czas" style="color:var(--text-light); font-size:0.85em;">${h.timestamp}</td><td data-label="Pracownik"><strong>${worker}</strong></td><td data-label="Typ Operacji">${h.action}</td><td data-label="Szczegóły">${cleanDetails}</td>`;
                 tbody.appendChild(tr);
@@ -1441,13 +1428,16 @@
 
         function updateComponentsDisplay() {
             if(!window.inventory.components) return;
-            const fields = ['ps_raw', 'clips_normal', 'clips_pass'];
-            fields.forEach(field => {
-                const el = document.getElementById(`${field.replace('_','-')}-cell`);
-                if (el) el.innerHTML = `<strong>${window.inventory.components[field]} szt.</strong>`;
-            });
+            const comps = window.inventory.components;
             
-            // Jeśli rola to worker/admin, upewnij się, że są klasy editable (applyPermissions już to robi, ale realtime może nadpisać HTML)
+            const elRaw = document.getElementById('ps-raw-cell');
+            const elNorm = document.getElementById('clips-normal-cell');
+            const elPass = document.getElementById('clips-pass-cell');
+            
+            if(elRaw) elRaw.innerHTML = `<strong>${comps.ps_raw || 0} szt.</strong>`;
+            if(elNorm) elNorm.innerHTML = `<strong>${comps.clips_normal || 0} szt.</strong>`;
+            if(elPass) elPass.innerHTML = `<strong>${comps.clips_pass || 0} szt.</strong>`;
+            
             if (currentRole !== 'viewer') {
                 document.querySelectorAll('#tab-components .table-responsive td:last-child').forEach(td => td.classList.add('editable'));
             }
@@ -1465,7 +1455,7 @@
             
             const originalHTML = cell.innerHTML;
             cell.innerHTML = ''; cell.appendChild(input);
-            cell.classList.remove('editable'); // Tymczasowo wyłącz hover
+            cell.classList.remove('editable');
             input.focus(); input.select();
 
             const save = async () => {
@@ -1473,9 +1463,8 @@
                 if (!isNaN(newValue) && newValue !== product[field]) {
                     cell.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite; color: var(--primary-terracotta);">autorenew</span>';
                     await window.inventory.updateProduct(productId, { [field]: newValue });
-                    // fetchData zaktualizuje UI
                 } else {
-                    cell.innerHTML = originalHTML; // Przywróć jeśli brak zmian
+                    cell.innerHTML = originalHTML;
                 }
                 cell.classList.add('editable');
             };
@@ -1488,7 +1477,7 @@
             if (currentRole === 'viewer') return;
             if (cell.querySelector('input')) return;
             
-            const currentVal = window.inventory.components[field];
+            const currentVal = window.inventory.components[field] || 0;
             const input = document.createElement('input');
             input.type = 'number'; input.value = currentVal; 
             input.style.width = '100%'; input.style.textAlign = 'inherit';
@@ -1513,46 +1502,7 @@
             input.addEventListener('keypress', (e) => { if (e.key === 'Enter') input.blur(); });
         }
 
-        // --- AKCJE UI DOSTAW ---
-        function confirmShipmentDateUI(id) {
-            if (confirm('Zatwierdzić termin wysyłki i przenieść do kolejki realizacji?')) {
-                window.inventory.confirmShipment(id);
-                showToast('Termin wysyłki został zatwierdzony.', 'success');
-            }
-        }
-
-        function completeShipmentUI(id) {
-            const s = window.inventory.shipments.find(x => x.id === id);
-            if (!s) return;
-            const total = s.products ? Object.values(s.products).reduce((a, b) => a + b, 0) : 0;
-            if (confirm(`Wydano towar z magazynu (${total} szt.)? \nStany 'Gotowe' zostaną zaktualizowane.`)) {
-                window.inventory.completeShipment(id);
-                showToast('Towar wydany, zaktualizowano stany.', 'success');
-            }
-        }
-
-        function completeRemainingShipmentUI(id) {
-            if (confirm('Wydano brakującą część towaru? \nZamówienie zostanie zamknięte jako kompletne.')) {
-                window.inventory.completeRemainingShipment(id);
-                showToast('Zamówienie sfinalizowane.', 'success');
-            }
-        }
-
-        function deleteShipment(id) { 
-            if (currentRole === 'admin' && confirm('⚠️ Uwaga: Czy na pewno trwale usunąć to zamówienie z bazy danych? Operacji nie można cofnąć.')) { 
-                window.inventory.deleteShipment(id); 
-                showToast('Zamówienie usunięte z bazy.', 'warning');
-            } 
-        }
-
-        function deleteAdjustment(id) {
-            if (currentRole === 'admin' && confirm('Usunąć ten termin regulacji z harmonogramu?')) {
-                window.inventory.deleteAdjustment(id);
-                showToast('Termin usunięty.', 'success');
-            }
-        }
-
-        // --- MODALE ---
+        // --- MODALE I EDYCJA ---
         function showAnglesDemand(id) {
             const shipment = window.inventory.shipments.find(s => s.id === id);
             if(!shipment) return;
@@ -1580,11 +1530,8 @@
             const shipment = window.inventory.shipments.find(s => s.id === id);
             if (!shipment) return;
 
-            const p1 = shipment.products[1] || 0;
-            const p2 = shipment.products[2] || 0;
-            const p3 = shipment.products[3] || 0;
-            const p4 = shipment.products[4] || 0;
-            const p5 = shipment.products[5] || 0;
+            const p = shipment.products || {};
+            const p1 = p[1] || 0, p2 = p[2] || 0, p3 = p[3] || 0, p4 = p[4] || 0, p5 = p[5] || 0;
 
             const isPartial = shipment.status === 'partial';
             const disableProducts = isPartial ? 'disabled' : '';
@@ -1634,7 +1581,6 @@
             const shipment = window.inventory.shipments.find(s => s.id === id);
             const data = { date: newDate, location: newLocation, company: newCompany };
 
-            // Aktualizuj produkty tylko jeśli nie jest to wysyłka częściowa
             if (shipment.status !== 'partial') {
                 data.products = {
                     1: parseInt(document.getElementById('edit_p1').value) || 0,
