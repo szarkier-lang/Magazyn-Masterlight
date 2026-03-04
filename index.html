@@ -276,27 +276,31 @@
             .leaflet-popup-content { font-size: 0.8rem !important; }
         }
 
+        /* --- DRUKOWANIE HISTORII --- */
         @media print {
-            body { background: white; color: black; font-size: 10pt; }
-            .sidebar, .header, .footer, button, form, .modal, #dashboard-alerts, .badge { display: none !important; }
-            .main-content { margin-left: 0; width: 100%; padding: 0; }
-            .content { padding: 0; max-width: none; }
-            .section { box-shadow: none; border: 1px solid #ccc; margin-bottom: 1.5cm; page-break-inside: avoid; border-radius: 0; }
-            .section-header { background: #eee !important; border-bottom: 1px solid #ccc; padding: 0.5rem 1rem; }
-            .section-header h2 { color: black; }
-            .tab-content { display: block !important; opacity: 1; transform: none; animation: none; } 
-            #tab-dashboard, #tab-history, #tab-reports { display: none !important; } 
-            .table-responsive { max-height: none; overflow: visible; border: none; border-radius: 0; }
-            table { display: table; width: 100%; border: 1px solid #ccc; }
-            thead { display: table-header-group; }
-            thead tr { position: static; }
-            th { background-color: #ddd !important; color: black !important; border-bottom: 1px solid #ccc; padding: 0.5rem; border-radius: 0 !important;}
-            tbody { display: table-row-group; }
-            tr { display: table-row; border: none; box-shadow: none; margin-bottom: 0; opacity: 1 !important; page-break-inside: avoid; }
-            td { display: table-cell; padding: 0.4rem !important; text-align: left; justify-content: flex-start; border-bottom: 1px solid #eee; }
-            td::before { display: none; }
-            .editable { background: none; }
-            #shipments-map { display: none !important; }
+            @page { size: A4 landscape; margin: 1.5cm; }
+            body { background: white !important; color: black !important; font-size: 11pt !important; }
+            .sidebar, .header, .footer, button, form, .modal, #dashboard-alerts, .badge, #toast-container, #loading-screen, .mobile-overlay { display: none !important; }
+            .main-content { margin: 0 !important; width: 100% !important; padding: 0 !important; display: block !important; }
+            .content { padding: 0 !important; max-width: none !important; }
+            .tab-content { display: none !important; }
+            .tab-content.active { display: block !important; opacity: 1 !important; animation: none !important; transform: none !important; }
+            .section { box-shadow: none !important; border: 1px solid #ddd !important; margin-bottom: 20px !important; border-radius: 0 !important; page-break-inside: avoid; }
+            .section-header { background: #f5f5f5 !important; border-bottom: 2px solid #333 !important; padding: 10px 15px !important; }
+            .section-header h2 { color: #000 !important; font-size: 14pt !important; }
+            .section-header .material-symbols-outlined { display: none !important; } 
+            .section-content { padding: 10px !important; }
+            .table-responsive { max-height: none !important; overflow: visible !important; border: none !important; box-shadow: none !important; }
+            table { display: table !important; width: 100% !important; border-collapse: collapse !important; table-layout: auto !important; }
+            thead { display: table-header-group !important; }
+            tbody { display: table-row-group !important; }
+            tr { display: table-row !important; page-break-inside: avoid !important; border-bottom: 1px solid #ddd !important; }
+            th { display: table-cell !important; background-color: #eee !important; color: #000 !important; font-weight: bold !important; border-bottom: 2px solid #333 !important; padding: 8px !important; font-size: 10pt !important; position: static !important; text-transform: uppercase; }
+            td { display: table-cell !important; padding: 8px !important; font-size: 10pt !important; border: none !important; text-align: left !important; color: #000 !important; }
+            td::before { display: none !important; }
+            .status-badge { border: 1px solid #666 !important; background: transparent !important; color: #000 !important; padding: 2px 6px !important; font-weight: normal !important; }
+            td[data-label="Akcja"], th.admin-only-col { display: none !important; }
+            #shipments-map, .section-header span { display: none !important; }
         }
     </style>
 </head>
@@ -344,7 +348,7 @@
                     <li><a href="#" onclick="switchTab('tab-inventory')" class="nav-item"><span class="material-symbols-outlined">inventory_2</span> Stan Inwentarza</a></li>
                     <li><a href="#" onclick="switchTab('tab-shipments')" class="nav-item"><span class="material-symbols-outlined">local_shipping</span> Wysyłki i Dostawy</a></li>
                     <li><a href="#" onclick="switchTab('tab-adjustments')" class="nav-item"><span class="material-symbols-outlined">handyman</span> Serwis / Regulacja</a></li>
-                    <li><a href="#" onclick="switchTab('tab-history')" class="nav-item"><span class="material-symbols-outlined">receipt_long</span> Historia Zmian</a></li>
+                    <li id="nav-history"><a href="#" onclick="switchTab('tab-history')" class="nav-item"><span class="material-symbols-outlined">receipt_long</span> Historia Zmian</a></li>
                     <li><a href="#" onclick="switchTab('tab-components')" class="nav-item"><span class="material-symbols-outlined">electrical_services</span> Komponenty</a></li>
                     <li><a href="#" onclick="switchTab('tab-reports')" class="nav-item"><span class="material-symbols-outlined">precision_manufacturing</span> Panel Produkcji</a></li>
                 </ul>
@@ -426,8 +430,8 @@
                     <div class="section">
                         <div class="section-header">
                             <h2><span class="material-symbols-outlined">inventory_2</span> Pełny Stan Magazynowy Downlightów</h2>
-                            <button class="btn-secondary btn-small" onclick="window.print()" style="margin: 0;">
-                                <span class="material-symbols-outlined">print</span> Generuj PDF
+                            <button class="btn-secondary btn-small" onclick="printInventoryPdf()" style="margin: 0;">
+                                <span class="material-symbols-outlined">print</span> Drukuj Raport PDF
                             </button>
                         </div>
                         <div class="section-content" style="padding:0;">
@@ -746,9 +750,14 @@
                 const coords = await geocodeLocation(s.location);
                 if (coords) {
                     const total = s.products ? Object.values(s.products).reduce((a, b) => a + b, 0) : 0;
+                    
+                    // ZMIANA: Inny kolor dla dostaw potwierdzonych (Zielony) vs oczekujących (Terakotowy)
+                    const mColor = s.is_confirmed ? '#10B981' : '#C4704B';
+                    const statusText = s.is_confirmed ? 'Potwierdzona' : 'Oczekująca';
+                    
                     const marker = L.circleMarker(coords, {
-                        radius: markerRadius, color: '#C4704B', fillColor: '#C4704B', fillOpacity: 0.8, weight: 1
-                    }).addTo(map).bindPopup(`<b>${s.location}</b><br>Dostawa: ${s.date || '-'}<br>Sztuk: <strong>${total}</strong><br>Odbiór: ${s.company || '-'}`);
+                        radius: markerRadius, color: mColor, fillColor: mColor, fillOpacity: 0.8, weight: 1
+                    }).addTo(map).bindPopup(`<b>${s.location}</b><br>Status: <span style="color:${mColor}; font-weight:bold;">${statusText}</span><br>Dostawa: ${s.date || '-'}<br>Sztuk: <strong>${total}</strong><br>Odbiór: ${s.company || '-'}`);
                     
                     mapMarkers.push(marker);
                     allPointsForBounds.push(marker);
@@ -795,6 +804,7 @@
             const { data, error } = await db.auth.signInWithPassword({ email, password });
 
             if (error) {
+                console.error("Błąd logowania:", error.message);
                 errorElement.textContent = 'Błąd autoryzacji. Sprawdź e-mail i hasło.';
                 errorElement.style.display = 'block';
                 submitBtn.innerHTML = '<span class="material-symbols-outlined">login</span> Zaloguj bezpiecznie';
@@ -891,6 +901,90 @@
 
         function closeModal() { document.getElementById('modal').style.display = 'none'; }
 
+        // --- ZMIANA: NOWA FUNKCJA GENERUJĄCA CZYSTY PDF DLA INWENTARZA ---
+        function printInventoryPdf() {
+            if(!window.inventory || window.inventory.products.length === 0) return;
+            
+            const dateStr = new Date().toLocaleDateString('pl-PL');
+            const totals = window.inventory.getTotals();
+            
+            let html = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <title>Raport Inwentaryzacji Masterlight</title>
+                <style>
+                    body { font-family: 'Inter', sans-serif; margin: 40px; color: #1F2937; }
+                    h1 { color: #C4704B; border-bottom: 3px solid #C4704B; padding-bottom: 10px; font-size: 20pt; }
+                    .info-box { background-color: #F3F4F6; padding: 15px; border-radius: 8px; margin: 20px 0; border: 1px solid #E5E7EB; line-height: 1.6; font-size: 11pt; }
+                    table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 10pt; }
+                    th { background-color: #C4704B; color: white; padding: 10px; text-align: left; text-transform: uppercase; font-size: 9pt; }
+                    td { padding: 10px; border-bottom: 1px solid #E5E7EB; }
+                    .totals { background: #fdf2ee; font-weight: bold; }
+                </style>
+            </head>
+            <body>
+                <h1>RAPORT STANU MAGAZYNU (WMS)</h1>
+                <div class="info-box">
+                    <strong>Firma:</strong> Masterlight Sp. z o.o.<br>
+                    <strong>Data wygenerowania:</strong> ${dateStr}<br>
+                    <strong>Wygenerował użytkownik:</strong> ${currentUserEmail.split('@')[0]}
+                </div>
+                
+                <h2>1. Oprawy Downlight</h2>
+                <table>
+                    <thead><tr><th>Model Oprawy</th><th>SKU</th><th>Gotowe</th><th>W Montażu</th><th>Serwis</th><th>Łącznie</th></tr></thead>
+                    <tbody>
+            `;
+            
+            window.inventory.products.forEach(p => {
+                const total = (p.ready || 0) + (p.assembly || 0) + (p.service || 0);
+                html += `<tr>
+                    <td>${p.name}</td>
+                    <td>${p.sku}</td>
+                    <td>${p.ready || 0}</td>
+                    <td>${p.assembly || 0}</td>
+                    <td>${p.service || 0}</td>
+                    <td><strong>${total}</strong></td>
+                </tr>`;
+            });
+            
+            html += `
+                    <tr class="totals">
+                        <td colspan="2" style="text-align:right;">SUMA CAŁKOWITA:</td>
+                        <td>${totals.totalReady}</td>
+                        <td>${totals.totalAssembly}</td>
+                        <td>${totals.totalService}</td>
+                        <td>${totals.totalAll}</td>
+                    </tr>
+                    </tbody>
+                </table>
+                
+                <h2 style="margin-top: 40px;">2. Komponenty Zapasowe</h2>
+                <table style="width: 50%;">
+                    <thead><tr><th>Typ Komponentu</th><th>Stan (szt.)</th></tr></thead>
+                    <tbody>
+                        <tr><td>Zasilacze LED</td><td>${window.inventory.components.ps_raw || 0}</td></tr>
+                        <tr><td>Klapki Montażowe Zwykłe</td><td>${window.inventory.components.clips_normal || 0}</td></tr>
+                        <tr><td>Klapki Montażowe Przelotowe</td><td>${window.inventory.components.clips_pass || 0}</td></tr>
+                    </tbody>
+                </table>
+                
+                <div style="margin-top: 60px; border-top: 1px solid #ccc; padding-top: 10px; color: #6B7280; font-size: 0.9em; text-align: right;">
+                    Podpis magazyniera: .......................................................
+                </div>
+            </body>
+            </html>
+            `;
+            
+            const printWin = window.open('', '', 'width=800,height=600');
+            printWin.document.write(html);
+            printWin.document.close();
+            printWin.focus();
+            setTimeout(() => { printWin.print(); printWin.close(); }, 300);
+        }
+
         class CloudInventoryManager {
             constructor() {
                 this.products = [];
@@ -970,7 +1064,6 @@
                 const userName = currentUserEmail.split('@')[0];
                 const detailWithUser = `${details} (przez: ${userName})`;
                 
-                // Optymistycznie dodaj do historii lokalnej
                 this.history.unshift({
                     timestamp: new Date().toLocaleString('pl-PL'),
                     action: action,
@@ -993,7 +1086,6 @@
                 if (currentRole === 'viewer') return; 
                 const product = this.products.find(p => p.id === id);
                 if (product) {
-                    // Optymistycznie
                     Object.assign(product, updates);
                     updateDashboard();
 
@@ -1015,7 +1107,6 @@
 
             async deleteAdjustment(id) {
                 if (currentRole !== 'admin') return;
-                // Optymistycznie
                 this.adjustments = this.adjustments.filter(a => a.id !== id);
                 updateDashboard();
 
@@ -1042,7 +1133,6 @@
                 if (currentRole === 'viewer') return;
                 const shipment = this.shipments.find(s => s.id === id);
                 if (shipment) {
-                    // Optymistycznie
                     shipment.is_confirmed = true;
                     updateDashboard();
 
@@ -1054,7 +1144,6 @@
 
             async deleteShipment(id) {
                 if (currentRole !== 'admin') return;
-                // Optymistycznie
                 this.shipments = this.shipments.filter(s => s.id !== id);
                 updateDashboard();
 
@@ -1067,7 +1156,6 @@
                 if (currentRole === 'viewer') return;
                 const shipment = this.shipments.find(s => s.id === id);
                 if (shipment) {
-                    // Optymistycznie
                     Object.assign(shipment, data);
                     updateDashboard();
 
@@ -1092,7 +1180,6 @@
                         if (product) {
                             const toDeduct = Math.min(quantity, product.ready || 0);
                             
-                            // Optymistycznie odejmij z inwentarza lokalnego
                             product.ready = (product.ready || 0) - toDeduct;
                             
                             const lack = quantity - toDeduct;
@@ -1115,7 +1202,6 @@
                     historyMsg = `Wysyłka zrealizowana`;
                 }
 
-                // Optymistyczna zmiana statusu
                 shipment.status = newStatus;
                 shipment.partial_missing = partialMissing;
                 shipment.is_confirmed = true;
@@ -1142,7 +1228,6 @@
                     if (product) {
                         const toDeduct = Math.min(need, product.ready || 0);
                         
-                        // Optymistycznie
                         product.ready = (product.ready || 0) - toDeduct;
                         
                         const left = need - toDeduct;
@@ -1151,6 +1236,8 @@
                         if (toDeduct > 0) updates.push(db.from('products').update({ ready: product.ready }).eq('id', product.id));
                     }
                 }
+
+                if (updates.length > 0) await Promise.all(updates);
 
                 let newStatus = 'completed';
                 let newPartialMissing = null;
@@ -1164,7 +1251,6 @@
                     historyMsg = `Dokończenie wysyłki (komplet)`;
                 }
 
-                // Optymistycznie
                 shipment.status = newStatus;
                 shipment.partial_missing = newPartialMissing;
                 updateDashboard();
@@ -1197,7 +1283,7 @@
                     }
                 }
                 
-                updateDashboard(); // Optymistycznie
+                updateDashboard();
 
                 if (dbUpdates.length > 0) await Promise.all(dbUpdates);
 
@@ -1256,7 +1342,6 @@
                     if (qty > 0) {
                         const product = this.products.find(p => p.id === parseInt(id));
                         if (product) {
-                            // Optymistycznie
                             product.ready = (product.ready || 0) + qty;
                             product.assembly = (product.assembly || 0) - qty;
                             
@@ -1275,7 +1360,6 @@
                 }
 
                 if (totalProduced > 0) {
-                    // Optymistycznie
                     this.components.ps_raw -= totalProduced;
                     this.components.clips_normal -= totalProduced;
                     this.components.clips_pass -= totalProduced;
@@ -1321,7 +1405,6 @@
                     clips_pass: (current.clips_pass || 0) + (newComps.clips_pass || 0)
                 };
                 
-                // Optymistycznie
                 this.components = updated;
                 updateDashboard();
 
@@ -1332,7 +1415,7 @@
 
             async updateComponent(field, value) {
                 if (currentRole === 'viewer') return;
-                this.components[field] = value; // Optymistycznie
+                this.components[field] = value; 
                 updateDashboard();
                 
                 await db.from('components').update({ [field]: value }).eq('id', 1);
@@ -1341,9 +1424,7 @@
             }
         }
 
-        // ---------------------------------
-        // SYMULACJA WIRTUALNEGO MAGAZYNU
-        // ---------------------------------
+        // --- ZMIANA: CZYSTO CHRONOLOGICZNA SYMULACJA MAGAZYNU (BEZ FORÓW DLA POTWIERDZONYCH) ---
         function getShipmentsReadinessMap() {
             const readinessMap = {};
             if (!window.inventory) return readinessMap;
@@ -1361,11 +1442,9 @@
 
             let pending = window.inventory.shipments.filter(s => s.status !== 'completed');
             
-            pending.sort((a, b) => {
-                if (a.is_confirmed && !b.is_confirmed) return -1;
-                if (!a.is_confirmed && b.is_confirmed) return 1;
-                return (a.date || '').localeCompare(b.date || '');
-            });
+            // ZMIANA: Sortowanie wyłącznie po dacie, ignorujemy status potwierdzenia. 
+            // Kto pierwszy (datą), ten rezerwuje towar.
+            pending.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
 
             pending.forEach(s => {
                 let isReady = true;
@@ -1405,9 +1484,6 @@
             return readinessMap;
         }
 
-        // ---------------------------------
-        // RENDEROWANIE TABEL
-        // ---------------------------------
         function getStatusClass(productId) {
             const status = window.inventory.getStatus(productId);
             return status === 'ok' ? 'status-ok' : status === 'warning' ? 'status-warning' : 'status-error';
@@ -1654,7 +1730,6 @@
             }
         }
 
-        // --- OBSŁUGA EDYCJI IN-PLACE ---
         function editCell(cell, field, productId) {
             if (currentRole === 'viewer') return;
             if (cell.querySelector('input')) return;
@@ -1713,10 +1788,11 @@
             input.addEventListener('keypress', (e) => { if (e.key === 'Enter') input.blur(); });
         }
 
-        // --- AKCJE UI DOSTAW ---
         async function confirmShipmentDateUI(id) {
             if (confirm('Zatwierdzić termin wysyłki i przenieść do kolejki realizacji?')) {
+                showLoading();
                 await window.inventory.confirmShipment(id);
+                hideLoading();
                 showToast('Termin wysyłki został zatwierdzony.', 'success');
             }
         }
@@ -1726,33 +1802,40 @@
             if (!s) return;
             const total = s.products ? Object.values(s.products).reduce((a, b) => a + b, 0) : 0;
             if (confirm(`Wydano towar z magazynu (${total} szt.)? \nStany zostaną zaktualizowane.`)) {
+                showLoading();
                 await window.inventory.completeShipment(id);
+                hideLoading();
                 showToast('Towar wydany, zaktualizowano stany.', 'success');
             }
         }
 
         async function completeRemainingShipmentUI(id) {
             if (confirm('Wydano brakującą część towaru? \nZamówienie zostanie zamknięte jako kompletne.')) {
+                showLoading();
                 await window.inventory.completeRemainingShipment(id);
+                hideLoading();
                 showToast('Zamówienie sfinalizowane.', 'success');
             }
         }
 
         async function deleteShipment(id) { 
             if (currentRole === 'admin' && confirm('⚠️ Uwaga: Czy na pewno trwale usunąć to zamówienie z bazy danych? Operacji nie można cofnąć.')) { 
+                showLoading();
                 await window.inventory.deleteShipment(id); 
+                hideLoading();
                 showToast('Zamówienie usunięte z bazy.', 'warning');
             } 
         }
 
         async function deleteAdjustment(id) {
             if (currentRole === 'admin' && confirm('Usunąć ten wpis z regulacji?')) {
+                showLoading();
                 await window.inventory.deleteAdjustment(id);
+                hideLoading();
                 showToast('Termin usunięty.', 'success');
             }
         }
 
-        // --- MODALE ---
         function showAnglesDemand(id) {
             const shipment = window.inventory.shipments.find(s => s.id === id);
             if(!shipment) return;
@@ -1842,7 +1925,9 @@
             }
 
             closeModal();
+            showLoading();
             await window.inventory.updateShipmentInDB(id, data);
+            hideLoading();
             showToast('Zmiany zostały zapisane.', 'success');
         }
 
@@ -1868,10 +1953,9 @@
                     .missing-qty { color: #DC2626; font-weight: bold; font-size: 1.2em; }
                     @media print { body { margin: 0; } }
                 </style>
-                <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
             </head>
             <body>
-                <h1>LISTA BRAKÓW DO DOSTARCZENIA</h1>
+                <h1>LISTA BRAKÓW DO DOSTARCZENIA (Dokończenie)</h1>
                 <div class="info-box">
                     <strong>Miejsce docelowe:</strong> ${shipment.location}<br>
                     <strong>Spedytor:</strong> ${shipment.company || '-'}<br>
@@ -1910,7 +1994,6 @@
             setTimeout(() => { printWin.print(); printWin.close(); }, 300);
         }
 
-        // --- HANDLERY FORMULARZY ---
         document.getElementById('shipmentForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             if (currentRole === 'viewer') return;
@@ -1926,10 +2009,12 @@
                 5: parseInt(formData.get('p5')) || 0
             };
             
+            showLoading();
             await window.inventory.addShipment({ 
                 date: formData.get('date'), location: formData.get('location'), 
                 company: formData.get('company'), products 
             });
+            hideLoading();
             
             this.reset();
             btn.innerHTML = originalText;
@@ -1945,11 +2030,13 @@
             btn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">autorenew</span> Zapisywanie...';
             btn.disabled = true;
             
+            showLoading();
             await window.inventory.addIncomingShipment(formData.get('supplier'), {
                 1: parseInt(formData.get('p1')) || 0, 
                 2: parseInt(formData.get('p2')) || 0,
                 3: parseInt(formData.get('p3')) || 0
             });
+            hideLoading();
             
             this.reset();
             btn.innerHTML = originalText;
@@ -1965,11 +2052,13 @@
             btn.disabled = true;
             
             const formData = new FormData(this);
+            showLoading();
             await window.inventory.registerProduction({
                 1: parseInt(formData.get('p1')) || 0, 2: parseInt(formData.get('p2')) || 0,
                 3: parseInt(formData.get('p3')) || 0, 4: parseInt(formData.get('p4')) || 0,
                 5: parseInt(formData.get('p5')) || 0
             });
+            hideLoading();
             
             this.reset();
             btn.innerHTML = originalText;
@@ -1984,11 +2073,13 @@
             btn.disabled = true;
             
             const formData = new FormData(this);
+            showLoading();
             await window.inventory.addComponentsShipment(formData.get('supplier'), {
                 ps_raw: parseInt(formData.get('ps_raw')) || 0, 
                 clips_normal: parseInt(formData.get('clips_normal')) || 0, 
                 clips_pass: parseInt(formData.get('clips_pass')) || 0
             });
+            hideLoading();
             
             this.reset();
             btn.innerHTML = originalText;
@@ -2004,7 +2095,9 @@
             btn.disabled = true;
             
             const formData = new FormData(this);
+            showLoading();
             await window.inventory.addAdjustment(formData.get('adj_date'), formData.get('adj_location'));
+            hideLoading();
             
             this.reset();
             btn.innerHTML = originalText;
