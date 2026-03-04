@@ -229,7 +229,6 @@
             z-index: 1; background-color: #f3f4f6;
         }
         
-        /* Nadpisywanie stylów dymków z mapy Leaflet (Premium Look) */
         .leaflet-popup-content-wrapper { border-radius: 12px !important; box-shadow: var(--shadow-lg) !important; padding: 5px !important;}
         .leaflet-popup-content { margin: 12px 16px !important; font-family: 'Inter', sans-serif !important; color: var(--text-dark) !important; font-size: 0.9rem !important; line-height: 1.5 !important;}
         .leaflet-container { font-family: 'Inter', sans-serif !important; }
@@ -273,7 +272,6 @@
             td[data-label="Akcja"] { justify-content: flex-end; flex-wrap: wrap; gap: 5px; padding-top: 1rem !important; }
             .btn-small { margin-bottom: 0; margin-right: 0; }
             
-            /* Mapa wyższa i lepiej spasowana na telefonie */
             #shipments-map { height: 400px !important; border-radius: 0 0 12px 12px !important; } 
             .leaflet-popup-content { font-size: 0.8rem !important; }
         }
@@ -404,7 +402,7 @@
                     <div class="section">
                         <div class="section-header">
                             <h2><span class="material-symbols-outlined">map</span> Mapa Oczekujących Dostaw</h2>
-                            <span id="map-status" style="font-size:0.8rem; color:var(--text-light);"><span class="material-symbols-outlined" style="font-size:1em; animation: spin 1s linear infinite;">autorenew</span> Wyszukiwanie lokalizacji...</span>
+                            <span id="map-status" style="font-size:0.8rem; color:var(--text-light);"><span class="material-symbols-outlined" style="font-size:1em; animation: spin 1s linear infinite;">autorenew</span> Oczekiwanie na dane...</span>
                         </div>
                         <div class="section-content" style="padding:0;">
                             <div id="shipments-map"></div>
@@ -662,15 +660,18 @@
 
         const db = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-        // --- MAPA LEAFLET LOGIKA ---
+        // --- MAPA LEAFLET LOGIKA (MINIMALISTYCZNA, ZAMKNIĘTA W POLSCE) ---
         let map = null;
         let mapMarkers = [];
         const geocodeCache = {}; 
 
+        const boundsPoland = L.latLngBounds(
+            L.latLng(48.9, 14.1), 
+            L.latLng(54.9, 24.2)
+        );
+
         function initMap() {
             if (map) return;
-            
-            // Inicjalizacja statycznej mapy (blokada przeciągania)
             map = L.map('shipments-map', {
                 zoomControl: false, 
                 scrollWheelZoom: false, 
@@ -678,7 +679,11 @@
                 touchZoom: false, 
                 doubleClickZoom: false, 
                 boxZoom: false, 
-                keyboard: false
+                keyboard: false,
+                maxBounds: boundsPoland,
+                maxBoundsViscosity: 1.0,
+                minZoom: 6,
+                maxZoom: 8
             }).setView([51.7592, 19.4560], 6); 
             
             L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
@@ -903,7 +908,7 @@
                 this.setupRealtime();
                 hideLoading();
                 if (this.isFirstLoad) {
-                    showToast(`Witaj, sesja aktywna dla ${currentUserEmail.split('@')[0]}.`, 'success');
+                    showToast(`Zalogowano jako ${currentUserEmail.split('@')[0]}`, 'success');
                     this.isFirstLoad = false;
                 }
             }
@@ -964,6 +969,14 @@
             async addHistory(action, details) {
                 const userName = currentUserEmail.split('@')[0];
                 const detailWithUser = `${details} (przez: ${userName})`;
+                
+                // Optymistycznie dodaj do historii lokalnej
+                this.history.unshift({
+                    timestamp: new Date().toLocaleString('pl-PL'),
+                    action: action,
+                    details: detailWithUser
+                });
+                
                 await db.from('history').insert([{ action, details: detailWithUser }]);
             }
 
@@ -980,11 +993,16 @@
                 if (currentRole === 'viewer') return; 
                 const product = this.products.find(p => p.id === id);
                 if (product) {
+                    // Optymistycznie
+                    Object.assign(product, updates);
+                    updateDashboard();
+
                     await db.from('products').update(updates).eq('id', id);
                     if (updates.assembly !== undefined && product.assembly_group) {
                         await db.from('products').update({ assembly: updates.assembly }).eq('assembly_group', product.assembly_group);
                     }
                     await this.addHistory('Ręczna edycja stanu', `${product.name} (SKU: ${product.sku})`);
+                    await this.fetchData();
                 }
             }
 
@@ -992,12 +1010,18 @@
                 if (currentRole === 'viewer') return;
                 await db.from('adjustments').insert([{ date, location }]);
                 await this.addHistory('Planowanie regulacji', `${location} - ${date}`);
+                await this.fetchData();
             }
 
             async deleteAdjustment(id) {
                 if (currentRole !== 'admin') return;
+                // Optymistycznie
+                this.adjustments = this.adjustments.filter(a => a.id !== id);
+                updateDashboard();
+
                 await db.from('adjustments').delete().eq('id', id);
-                await this.addHistory('Usunięcie regulacji', `Rekord ID: ${id}`);
+                await this.addHistory('Usunięcie regulacji', `Rekord wykasowany`);
+                await this.fetchData();
             }
 
             async addShipment(shipment) {
@@ -1011,29 +1035,45 @@
                     is_confirmed: false
                 }]);
                 await this.addHistory('Nowe zamówienie', `${shipment.location}`);
+                await this.fetchData();
             }
 
             async confirmShipment(id) {
                 if (currentRole === 'viewer') return;
                 const shipment = this.shipments.find(s => s.id === id);
                 if (shipment) {
+                    // Optymistycznie
+                    shipment.is_confirmed = true;
+                    updateDashboard();
+
                     await db.from('shipments').update({ is_confirmed: true }).eq('id', id);
                     await this.addHistory('Potwierdzenie terminu', `Cel: ${shipment.location}`);
+                    await this.fetchData();
                 }
             }
 
             async deleteShipment(id) {
                 if (currentRole !== 'admin') return;
+                // Optymistycznie
+                this.shipments = this.shipments.filter(s => s.id !== id);
+                updateDashboard();
+
                 await db.from('shipments').delete().eq('id', id);
                 await this.addHistory('Anulowanie zamówienia', `Rekord usunięto`);
+                await this.fetchData();
             }
 
             async updateShipmentInDB(id, data) {
                 if (currentRole === 'viewer') return;
                 const shipment = this.shipments.find(s => s.id === id);
                 if (shipment) {
+                    // Optymistycznie
+                    Object.assign(shipment, data);
+                    updateDashboard();
+
                     await db.from('shipments').update(data).eq('id', id);
                     await this.addHistory('Edycja zamówienia', `${data.location || shipment.location}`);
+                    await this.fetchData();
                 }
             }
 
@@ -1051,16 +1091,17 @@
                         const product = this.products.find(p => p.id === parseInt(productId));
                         if (product) {
                             const toDeduct = Math.min(quantity, product.ready || 0);
-                            const newReady = (product.ready || 0) - toDeduct;
+                            
+                            // Optymistycznie odejmij z inwentarza lokalnego
+                            product.ready = (product.ready || 0) - toDeduct;
+                            
                             const lack = quantity - toDeduct;
-
                             if (lack > 0) missing[productId] = lack;
-                            if (toDeduct > 0) updates.push(db.from('products').update({ ready: newReady }).eq('id', product.id));
+                            
+                            if (toDeduct > 0) updates.push(db.from('products').update({ ready: product.ready }).eq('id', product.id));
                         }
                     }
                 }
-
-                if (updates.length > 0) await Promise.all(updates);
 
                 let newStatus = 'completed';
                 let partialMissing = null;
@@ -1074,8 +1115,16 @@
                     historyMsg = `Wysyłka zrealizowana`;
                 }
 
+                // Optymistyczna zmiana statusu
+                shipment.status = newStatus;
+                shipment.partial_missing = partialMissing;
+                shipment.is_confirmed = true;
+                updateDashboard();
+
+                if (updates.length > 0) await Promise.all(updates);
                 await db.from('shipments').update({ status: newStatus, partial_missing: partialMissing, is_confirmed: true }).eq('id', id);
                 await this.addHistory(historyMsg, `Cel: ${shipment.location}`);
+                await this.fetchData();
             }
 
             async completeRemainingShipment(id) {
@@ -1092,15 +1141,16 @@
                     const product = this.products.find(p => p.id === parseInt(productId));
                     if (product) {
                         const toDeduct = Math.min(need, product.ready || 0);
-                        const newReady = (product.ready || 0) - toDeduct;
+                        
+                        // Optymistycznie
+                        product.ready = (product.ready || 0) - toDeduct;
+                        
                         const left = need - toDeduct;
-
                         if (left > 0) stillMissing[productId] = left;
-                        if (toDeduct > 0) updates.push(db.from('products').update({ ready: newReady }).eq('id', product.id));
+                        
+                        if (toDeduct > 0) updates.push(db.from('products').update({ ready: product.ready }).eq('id', product.id));
                     }
                 }
-
-                if (updates.length > 0) await Promise.all(updates);
 
                 let newStatus = 'completed';
                 let newPartialMissing = null;
@@ -1114,8 +1164,15 @@
                     historyMsg = `Dokończenie wysyłki (komplet)`;
                 }
 
+                // Optymistycznie
+                shipment.status = newStatus;
+                shipment.partial_missing = newPartialMissing;
+                updateDashboard();
+
+                if (updates.length > 0) await Promise.all(updates);
                 await db.from('shipments').update({ status: newStatus, partial_missing: newPartialMissing }).eq('id', id);
                 await this.addHistory(historyMsg, `Cel: ${shipment.location}`);
+                await this.fetchData();
             }
 
             async addIncomingShipment(supplier, newProducts) {
@@ -1140,10 +1197,13 @@
                     }
                 }
                 
+                updateDashboard(); // Optymistycznie
+
                 if (dbUpdates.length > 0) await Promise.all(dbUpdates);
 
                 if (totalAdded > 0) {
                     await this.addHistory('Dostawa obudów (Huta)', `${supplier} (+${totalAdded} szt.)`);
+                    await this.fetchData();
                 }
             }
 
@@ -1196,15 +1256,17 @@
                     if (qty > 0) {
                         const product = this.products.find(p => p.id === parseInt(id));
                         if (product) {
-                            const newReady = (product.ready || 0) + qty;
-                            const newAssembly = (product.assembly || 0) - qty;
-
-                            dbUpdates.push(db.from('products').update({ ready: newReady }).eq('id', product.id));
+                            // Optymistycznie
+                            product.ready = (product.ready || 0) + qty;
+                            product.assembly = (product.assembly || 0) - qty;
+                            
+                            dbUpdates.push(db.from('products').update({ ready: product.ready }).eq('id', product.id));
 
                             if (product.assembly_group) {
-                                dbUpdates.push(db.from('products').update({ assembly: newAssembly }).eq('assembly_group', product.assembly_group));
+                                dbUpdates.push(db.from('products').update({ assembly: product.assembly }).eq('assembly_group', product.assembly_group));
+                                this.products.filter(p => p.assembly_group === product.assembly_group).forEach(p => p.assembly = product.assembly);
                             } else {
-                                dbUpdates.push(db.from('products').update({ assembly: newAssembly }).eq('id', product.id));
+                                dbUpdates.push(db.from('products').update({ assembly: product.assembly }).eq('id', product.id));
                             }
 
                             totalProduced += qty;
@@ -1213,15 +1275,23 @@
                 }
 
                 if (totalProduced > 0) {
+                    // Optymistycznie
+                    this.components.ps_raw -= totalProduced;
+                    this.components.clips_normal -= totalProduced;
+                    this.components.clips_pass -= totalProduced;
+
+                    updateDashboard();
+
                     dbUpdates.push(db.from('components').update({
-                        ps_raw: (ps_raw || 0) - totalProduced,
-                        clips_normal: (clips_normal || 0) - totalProduced,
-                        clips_pass: (clips_pass || 0) - totalProduced
+                        ps_raw: this.components.ps_raw,
+                        clips_normal: this.components.clips_normal,
+                        clips_pass: this.components.clips_pass
                     }).eq('id', 1));
 
                     await Promise.all(dbUpdates);
                     await this.addHistory('Rejestracja produkcji', `Zmontowano łącznie: ${totalProduced} szt.`);
                     showToast(`Zarejestrowano produkcję ${totalProduced} sztuk.`, 'success');
+                    await this.fetchData();
                 }
             }
 
@@ -1250,14 +1320,24 @@
                     clips_normal: (current.clips_normal || 0) + (newComps.clips_normal || 0),
                     clips_pass: (current.clips_pass || 0) + (newComps.clips_pass || 0)
                 };
+                
+                // Optymistycznie
+                this.components = updated;
+                updateDashboard();
+
                 await db.from('components').update(updated).eq('id', 1);
                 await this.addHistory('Dostawa komponentów', supplier);
+                await this.fetchData();
             }
 
             async updateComponent(field, value) {
                 if (currentRole === 'viewer') return;
+                this.components[field] = value; // Optymistycznie
+                updateDashboard();
+                
                 await db.from('components').update({ [field]: value }).eq('id', 1);
                 await this.addHistory('Korekta komponentów', `Zaktualizowano stan zasilaczy/klapek`);
+                await this.fetchData();
             }
         }
 
@@ -1636,9 +1716,7 @@
         // --- AKCJE UI DOSTAW ---
         async function confirmShipmentDateUI(id) {
             if (confirm('Zatwierdzić termin wysyłki i przenieść do kolejki realizacji?')) {
-                showLoading();
                 await window.inventory.confirmShipment(id);
-                hideLoading();
                 showToast('Termin wysyłki został zatwierdzony.', 'success');
             }
         }
@@ -1648,36 +1726,28 @@
             if (!s) return;
             const total = s.products ? Object.values(s.products).reduce((a, b) => a + b, 0) : 0;
             if (confirm(`Wydano towar z magazynu (${total} szt.)? \nStany zostaną zaktualizowane.`)) {
-                showLoading();
                 await window.inventory.completeShipment(id);
-                hideLoading();
                 showToast('Towar wydany, zaktualizowano stany.', 'success');
             }
         }
 
         async function completeRemainingShipmentUI(id) {
             if (confirm('Wydano brakującą część towaru? \nZamówienie zostanie zamknięte jako kompletne.')) {
-                showLoading();
                 await window.inventory.completeRemainingShipment(id);
-                hideLoading();
                 showToast('Zamówienie sfinalizowane.', 'success');
             }
         }
 
         async function deleteShipment(id) { 
             if (currentRole === 'admin' && confirm('⚠️ Uwaga: Czy na pewno trwale usunąć to zamówienie z bazy danych? Operacji nie można cofnąć.')) { 
-                showLoading();
                 await window.inventory.deleteShipment(id); 
-                hideLoading();
                 showToast('Zamówienie usunięte z bazy.', 'warning');
             } 
         }
 
         async function deleteAdjustment(id) {
             if (currentRole === 'admin' && confirm('Usunąć ten wpis z regulacji?')) {
-                showLoading();
                 await window.inventory.deleteAdjustment(id);
-                hideLoading();
                 showToast('Termin usunięty.', 'success');
             }
         }
@@ -1761,7 +1831,6 @@
             const shipment = window.inventory.shipments.find(s => s.id === id);
             const data = { date: newDate, location: newLocation, company: newCompany };
 
-            // Aktualizuj produkty tylko jeśli nie jest to wysyłka częściowa
             if (shipment.status !== 'partial') {
                 data.products = {
                     1: parseInt(document.getElementById('edit_p1').value) || 0,
@@ -1773,9 +1842,7 @@
             }
 
             closeModal();
-            showLoading();
             await window.inventory.updateShipmentInDB(id, data);
-            hideLoading();
             showToast('Zmiany zostały zapisane.', 'success');
         }
 
@@ -1859,12 +1926,10 @@
                 5: parseInt(formData.get('p5')) || 0
             };
             
-            showLoading();
             await window.inventory.addShipment({ 
                 date: formData.get('date'), location: formData.get('location'), 
                 company: formData.get('company'), products 
             });
-            hideLoading();
             
             this.reset();
             btn.innerHTML = originalText;
@@ -1880,13 +1945,11 @@
             btn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">autorenew</span> Zapisywanie...';
             btn.disabled = true;
             
-            showLoading();
             await window.inventory.addIncomingShipment(formData.get('supplier'), {
                 1: parseInt(formData.get('p1')) || 0, 
                 2: parseInt(formData.get('p2')) || 0,
                 3: parseInt(formData.get('p3')) || 0
             });
-            hideLoading();
             
             this.reset();
             btn.innerHTML = originalText;
@@ -1902,13 +1965,11 @@
             btn.disabled = true;
             
             const formData = new FormData(this);
-            showLoading();
             await window.inventory.registerProduction({
                 1: parseInt(formData.get('p1')) || 0, 2: parseInt(formData.get('p2')) || 0,
                 3: parseInt(formData.get('p3')) || 0, 4: parseInt(formData.get('p4')) || 0,
                 5: parseInt(formData.get('p5')) || 0
             });
-            hideLoading();
             
             this.reset();
             btn.innerHTML = originalText;
@@ -1923,13 +1984,11 @@
             btn.disabled = true;
             
             const formData = new FormData(this);
-            showLoading();
             await window.inventory.addComponentsShipment(formData.get('supplier'), {
                 ps_raw: parseInt(formData.get('ps_raw')) || 0, 
                 clips_normal: parseInt(formData.get('clips_normal')) || 0, 
                 clips_pass: parseInt(formData.get('clips_pass')) || 0
             });
-            hideLoading();
             
             this.reset();
             btn.innerHTML = originalText;
@@ -1945,9 +2004,7 @@
             btn.disabled = true;
             
             const formData = new FormData(this);
-            showLoading();
             await window.inventory.addAdjustment(formData.get('adj_date'), formData.get('adj_location'));
-            hideLoading();
             
             this.reset();
             btn.innerHTML = originalText;
