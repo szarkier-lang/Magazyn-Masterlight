@@ -42,7 +42,7 @@
             color: var(--text-dark);
             line-height: 1.6;
             margin: 0; padding: 0;
-            overflow-x: hidden; /* Blokada przewijania bocznego całej strony */
+            overflow-x: hidden;
         }
 
         ::-webkit-scrollbar { width: 8px; height: 8px; }
@@ -105,7 +105,6 @@
         .mobile-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9998; backdrop-filter: blur(2px); }
         .mobile-overlay.active { display: block; }
 
-        /* SIDEBAR */
         .sidebar {
             width: 260px; background: linear-gradient(180deg, var(--sidebar-bg) 0%, #6F5A3A 100%);
             color: #fff; padding: 2rem 0; position: fixed; left: 0; top: 0; height: 100vh;
@@ -127,7 +126,6 @@
 
         .mobile-menu-btn { display: none; background: none; border: none; color: var(--text-dark); cursor: pointer; margin-right: 15px; }
 
-        /* MAIN CONTENT */
         .main-content { margin-left: 260px; flex: 1; overflow-y: auto; display: flex; flex-direction: column; width: calc(100% - 260px); transition: margin 0.3s ease; }
         
         .header {
@@ -178,7 +176,7 @@
         td { 
             padding: 0.8rem 0.75rem; border-bottom: 1px solid var(--border-color); 
             color: var(--text-dark); vertical-align: middle; 
-            word-break: break-word; /* Długi tekst zawija się do nowej linii, chroniąc tabelę przed pęczniejącą szerokością */
+            word-break: break-word; 
         }
         
         tbody tr { transition: background-color 0.2s, opacity 0.2s; }
@@ -252,7 +250,7 @@
                 border: none; border-bottom: 1px solid #F3F4F6; position: relative;
                 padding: 0.7rem 1rem 0.7rem 45% !important; text-align: right; min-height: 40px;
                 display: flex; align-items: center; justify-content: flex-end; font-size: 0.85rem;
-                white-space: normal; /* Pozwala długim tekstom na spadanie do nowej linii na telefonie */
+                white-space: normal; 
             }
             td:last-child { border-bottom: none; }
             td::before { 
@@ -346,7 +344,7 @@
                         <span class="material-symbols-outlined" style="font-size: 2rem;">menu</span>
                     </button>
                     <div class="header-title">
-                        <h1>System WMS v2.1</h1>
+                        <h1>Magazyn Masterlight</h1>
                     </div>
                 </div>
                 
@@ -409,7 +407,7 @@
                             </button>
                         </div>
                         <div class="section-content" style="padding:0;">
-                            <div class="table-responsive">
+                            <div class="table-responsive" style="max-height: 70vh;">
                                 <table>
                                     <thead><tr><th>Model Oprawy</th><th>Kod SKU</th><th>Gotowe</th><th>W Montażu</th><th>Łącznie</th><th>Dostępność</th></tr></thead>
                                     <tbody id="products-table"></tbody>
@@ -1363,7 +1361,7 @@
                 if (s.status === 'planned' && !s.is_confirmed) {
                     actionButtons = `<button class="btn-small btn-primary" onclick="confirmShipmentDateUI(${s.id})"><span class="material-symbols-outlined">event_available</span> Zatwierdź</button>` + actionButtons;
                 } else if (s.status === 'planned' && s.is_confirmed) {
-                    actionButtons = `<button class="btn-small btn-primary" onclick="completeShipmentUI(${s.id})"><span class="material-symbols-outlined">local_shipping</span> Wydaj towar</button>` + actionButtons;
+                    actionButtons = `<button class="btn-small btn-primary" onclick="completeShipmentUI(${s.id})"><span class="material-symbols-outlined">local_shipping</span> Wydaj</button>` + actionButtons;
                 } else if (s.status === 'partial') {
                     actionButtons = `<button class="btn-small btn-primary" onclick="completeRemainingShipmentUI(${s.id})"><span class="material-symbols-outlined">done_all</span> Wydaj braki</button>` + actionButtons;
                 }
@@ -1458,7 +1456,7 @@
             const product = window.inventory.products.find(p => p.id === productId);
             const input = document.createElement('input');
             input.type = 'number'; input.value = product[field] || 0; 
-            input.style.width = window.innerWidth <= 768 ? '100px' : '100%';
+            input.style.width = '100%'; input.style.textAlign = 'inherit';
             
             const originalHTML = cell.innerHTML;
             cell.innerHTML = ''; cell.appendChild(input);
@@ -1487,7 +1485,7 @@
             const currentVal = window.inventory.components[field] || 0;
             const input = document.createElement('input');
             input.type = 'number'; input.value = currentVal; 
-            input.style.width = window.innerWidth <= 768 ? '100px' : '100%';
+            input.style.width = '100%'; input.style.textAlign = 'inherit';
             
             const originalHTML = cell.innerHTML;
             cell.innerHTML = ''; cell.appendChild(input);
@@ -1509,46 +1507,7 @@
             input.addEventListener('keypress', (e) => { if (e.key === 'Enter') input.blur(); });
         }
 
-        // --- AKCJE UI DOSTAW ---
-        function confirmShipmentDateUI(id) {
-            if (confirm('Zatwierdzić termin wysyłki i przenieść do kolejki realizacji?')) {
-                window.inventory.confirmShipment(id);
-                showToast('Termin wysyłki został zatwierdzony.', 'success');
-            }
-        }
-
-        function completeShipmentUI(id) {
-            const s = window.inventory.shipments.find(x => x.id === id);
-            if (!s) return;
-            const total = s.products ? Object.values(s.products).reduce((a, b) => a + b, 0) : 0;
-            if (confirm(`Wydano towar z magazynu (${total} szt.)? \nStany 'Gotowe' zostaną zaktualizowane.`)) {
-                window.inventory.completeShipment(id);
-                showToast('Towar wydany, zaktualizowano stany.', 'success');
-            }
-        }
-
-        function completeRemainingShipmentUI(id) {
-            if (confirm('Wydano brakującą część towaru? \nZamówienie zostanie zamknięte jako kompletne.')) {
-                window.inventory.completeRemainingShipment(id);
-                showToast('Zamówienie sfinalizowane.', 'success');
-            }
-        }
-
-        function deleteShipment(id) { 
-            if (currentRole === 'admin' && confirm('⚠️ Uwaga: Czy na pewno trwale usunąć to zamówienie z bazy danych? Operacji nie można cofnąć.')) { 
-                window.inventory.deleteShipment(id); 
-                showToast('Zamówienie usunięte z bazy.', 'warning');
-            } 
-        }
-
-        function deleteAdjustment(id) {
-            if (currentRole === 'admin' && confirm('Usunąć ten termin regulacji z harmonogramu?')) {
-                window.inventory.deleteAdjustment(id);
-                showToast('Termin usunięty.', 'success');
-            }
-        }
-
-        // --- MODALE ---
+        // --- MODALE I EDYCJA ---
         function showAnglesDemand(id) {
             const shipment = window.inventory.shipments.find(s => s.id === id);
             if(!shipment) return;
@@ -1627,6 +1586,7 @@
             const shipment = window.inventory.shipments.find(s => s.id === id);
             const data = { date: newDate, location: newLocation, company: newCompany };
 
+            // Aktualizuj produkty tylko jeśli nie jest to wysyłka częściowa
             if (shipment.status !== 'partial') {
                 data.products = {
                     1: parseInt(document.getElementById('edit_p1').value) || 0,
