@@ -34,7 +34,7 @@
             --success-status: #10B981;
             --warning-status: #F59E0B;
             --error-status: #EF4444;
-            --info-status: #3B82F6; 
+            --info-status: #3B82F6; /* Niebieski dla serwisu */
             --background: #F3F4F6;
             --sidebar-bg: #8B6F47;
             
@@ -43,9 +43,6 @@
             --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
             --shadow-hover: 0 20px 25px -5px rgba(196, 112, 75, 0.15), 0 10px 10px -5px rgba(196, 112, 75, 0.04);
         }
-
-        /* Wymuszenie drukowania kolorów i tła */
-        * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
 
         body {
             font-family: 'Inter', sans-serif;
@@ -175,17 +172,20 @@
 
         .table-responsive { width: 100%; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm); overflow: hidden; }
         table { width: 100%; border-collapse: separate; border-spacing: 0; margin: 0; font-size: 0.9rem; table-layout: auto; }
+        
         th { 
             background-color: var(--primary-terracotta); color: #fff; padding: 1rem 0.75rem; text-align: left; 
             font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px;
             border-bottom: 1px solid var(--primary-dark);
             position: sticky; top: 0; z-index: 10;
         }
+        
         td { 
             padding: 0.8rem 0.75rem; border-bottom: 1px solid var(--border-color); 
             color: var(--text-dark); vertical-align: middle; 
             word-break: break-word; 
         }
+        
         tbody tr { transition: background-color 0.2s, opacity 0.2s; }
         tbody tr:last-child td { border-bottom: none; }
         tbody tr:hover { background-color: #FEF6F3; }
@@ -216,6 +216,7 @@
 
         .form-group { margin-bottom: 1.25rem; display: flex; flex-direction: column; gap: 0.5rem; }
         .form-group label { font-weight: 600; color: var(--text-dark); font-size: 0.85rem; letter-spacing: 0.3px; }
+        
         input[type="text"], input[type="number"], input[type="date"], input[type="email"], input[type="password"] { 
             padding: 0.75rem 1.1rem; background: #fff; border: 1px solid #D1D5DB; border-radius: 10px; 
             font-size: 0.95rem; color: var(--text-dark); width: 100%; font-family: 'Inter', sans-serif;
@@ -233,15 +234,9 @@
             border-bottom-left-radius: 16px; border-bottom-right-radius: 16px; 
             z-index: 1; background-color: #f3f4f6;
         }
-        
-        /* Pływające etykiety na mapie (Stale widoczne) */
-        .custom-map-tooltip {
-            background-color: rgba(255, 255, 255, 0.95); border: 1px solid var(--border-color);
-            box-shadow: 0 2px 6px rgba(0,0,0,0.15); border-radius: 8px;
-            font-family: 'Inter', sans-serif; font-size: 0.75rem; padding: 6px 10px; color: var(--text-dark);
-            white-space: nowrap;
-        }
-        .leaflet-tooltip-left::before, .leaflet-tooltip-right::before, .leaflet-tooltip-top::before, .leaflet-tooltip-bottom::before { display: none !important; }
+        .leaflet-popup-content-wrapper { border-radius: 12px !important; box-shadow: var(--shadow-lg) !important; padding: 5px !important;}
+        .leaflet-popup-content { margin: 12px 16px !important; font-family: 'Inter', sans-serif !important; color: var(--text-dark) !important; font-size: 0.9rem !important; line-height: 1.5 !important;}
+        .leaflet-container { font-family: 'Inter', sans-serif !important; }
 
         /* WŁASNE ZNACZNIKI NA MAPIE (KROPKI Z NUMERAMI) */
         .custom-map-marker {
@@ -294,14 +289,13 @@
             .btn-small { margin-bottom: 0; margin-right: 0; }
             
             .map-container { height: 400px !important; border-radius: 0 0 12px 12px !important; } 
+            .leaflet-popup-content { font-size: 0.8rem !important; }
         }
 
-        /* --- DRUKOWANIE (GENERALNE I MAPY) --- */
+        /* --- DRUKOWANIE --- */
         @media print {
-            @page { size: A4 landscape; margin: 10mm; }
+            @page { size: A4 landscape; margin: 1.5cm; }
             body { background: white !important; color: black !important; font-size: 11pt !important; }
-            
-            /* Domyślne ukrywanie elementów na wydruku (zostawiamy to, co istotne w sekcjach) */
             .sidebar, .header, .footer, button, form, .modal, #dashboard-alerts, .badge, #toast-container, #loading-screen, .mobile-overlay { display: none !important; }
             .main-content { margin: 0 !important; width: 100% !important; padding: 0 !important; display: block !important; }
             .content { padding: 0 !important; max-width: none !important; }
@@ -312,7 +306,6 @@
             .section-header h2 { color: #000 !important; font-size: 14pt !important; }
             .section-header .material-symbols-outlined { display: none !important; } 
             .section-content { padding: 10px !important; }
-            
             .table-responsive { max-height: none !important; overflow: visible !important; border: none !important; box-shadow: none !important; }
             table { display: table !important; width: 100% !important; border-collapse: collapse !important; table-layout: auto !important; }
             thead { display: table-header-group !important; }
@@ -323,29 +316,7 @@
             td::before { display: none !important; }
             .status-badge { border: 1px solid #666 !important; background: transparent !important; color: #000 !important; padding: 2px 6px !important; font-weight: normal !important; }
             td[data-label="Akcja"], th.admin-only-col { display: none !important; }
-            
-            /* Domyślnie chowamy mapę przy zwykłym druku ekranu (np. historii) */
-            .map-container { display: none !important; }
-
-            /* --- SPECJALNY TRYB DRUKOWANIA MAPY (Pełny ekran) --- */
-            body.print-map-mode * { visibility: hidden !important; }
-            body.print-map-mode #map-print-container, 
-            body.print-map-mode #map-print-container * { visibility: visible !important; }
-            
-            body.print-map-mode #map-print-container {
-                position: fixed !important;
-                left: 0 !important; top: 0 !important;
-                width: 100vw !important; height: 100vh !important;
-                margin: 0 !important; padding: 0 !important; border: none !important;
-                z-index: 999999 !important; display: block !important;
-            }
-            body.print-map-mode .map-container {
-                display: block !important;
-                width: 100% !important; height: 100% !important;
-                border-radius: 0 !important;
-            }
-            body.print-map-mode .section-header { display: none !important; }
-            body.print-map-mode .section-content { padding: 0 !important; }
+            .map-container, .section-header span { display: none !important; }
         }
     </style>
 </head>
@@ -435,26 +406,23 @@
                     
                     <div class="section">
                         <div class="section-header">
-                            <h2><span class="material-symbols-outlined">event_upcoming</span> Najbliższe wysyłki (Kolejka)</h2>
+                            <h2><span class="material-symbols-outlined">event_upcoming</span> Najbliższe wysyłki (Kolejka 7 dni)</h2>
                             <div class="badge" id="upcoming-total-badge">Zapotrzebowanie: 0 szt.</div>
                         </div>
                         <div class="section-content" style="padding:0;">
                             <div class="table-responsive">
                                 <table>
-                                    <thead><tr><th>Priorytet / Data</th><th>Cel / Klient</th><th>Spedytor</th><th>Sztuk</th><th>Wirtualny Magazyn</th><th>Status</th></tr></thead>
+                                    <thead><tr><th>Data</th><th>Cel / Klient</th><th>Spedytor</th><th>Sztuk</th><th>Wirtualny Magazyn</th><th>Status</th></tr></thead>
                                     <tbody id="dashboard-upcoming-shipments"></tbody>
                                 </table>
                             </div>
                         </div>
                     </div>
 
-                    <div class="section" id="map-section-container">
+                    <div class="section">
                         <div class="section-header">
-                            <h2><span class="material-symbols-outlined">map</span> Trasy Dostaw (Kolejność)</h2>
-                            <div style="display:flex; gap:15px; align-items:center;">
-                                <span id="map-status" style="font-size:0.8rem; color:var(--text-light);"><span class="material-symbols-outlined" style="font-size:1em; animation: spin 1s linear infinite;">autorenew</span> Oczekiwanie na dane...</span>
-                                <button class="btn-secondary btn-small" onclick="printMapPdf()" style="margin: 0;"><span class="material-symbols-outlined">print</span> Drukuj Mapę</button>
-                            </div>
+                            <h2><span class="material-symbols-outlined">map</span> Mapa Oczekujących Dostaw</h2>
+                            <span id="map-status" style="font-size:0.8rem; color:var(--text-light);"><span class="material-symbols-outlined" style="font-size:1em; animation: spin 1s linear infinite;">autorenew</span> Oczekiwanie na dane...</span>
                         </div>
                         <div class="section-content" style="padding:0;">
                             <div id="shipments-map" class="map-container"></div>
@@ -573,13 +541,10 @@
                 </div>
 
                 <div id="tab-adjustments" class="tab-content">
-                    <div class="section" id="adj-map-section-container">
+                    <div class="section">
                         <div class="section-header">
                             <h2><span class="material-symbols-outlined">map</span> Mapa Wyjazdów Serwisowych</h2>
-                            <div style="display:flex; gap:15px; align-items:center;">
-                                <span id="map-adj-status" style="font-size:0.8rem; color:var(--text-light);"><span class="material-symbols-outlined" style="font-size:1em; animation: spin 1s linear infinite;">autorenew</span> Ładowanie mapy...</span>
-                                <button class="btn-secondary btn-small" onclick="printAdjMapPdf()" style="margin: 0;"><span class="material-symbols-outlined">print</span> Drukuj Mapę</button>
-                            </div>
+                            <span id="map-adj-status" style="font-size:0.8rem; color:var(--text-light);"><span class="material-symbols-outlined" style="font-size:1em; animation: spin 1s linear infinite;">autorenew</span> Ładowanie mapy...</span>
                         </div>
                         <div class="section-content" style="padding:0;">
                             <div id="adjustments-map" class="map-container"></div>
@@ -744,7 +709,10 @@
         const geocodeCache = {}; 
         let isUpdatingMap = false;
 
-        const boundsPoland = L.latLngBounds(L.latLng(48.9, 14.1), L.latLng(54.9, 24.2));
+        const boundsPoland = L.latLngBounds(
+            L.latLng(48.9, 14.1), 
+            L.latLng(54.9, 24.2)
+        );
 
         function initMap() {
             if (map) return;
@@ -769,7 +737,9 @@
         async function geocodeLocation(locationStr) {
             let searchStr = locationStr.split('(')[0].trim();
             let queryUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchStr)}&countrycodes=pl&limit=1`;
+            
             if (geocodeCache[searchStr]) return geocodeCache[searchStr];
+            
             try {
                 let res = await fetch(queryUrl);
                 let data = await res.json();
@@ -785,6 +755,7 @@
                     }
                 }
             } catch (e) { }
+            
             geocodeCache[searchStr] = null; 
             return null;
         }
@@ -805,12 +776,10 @@
                     html: `<div class="custom-map-marker marker-home" style="width:28px; height:28px; font-size:15px;"><span class="material-symbols-outlined" style="font-size:16px;">home</span></div>`,
                     className: '', iconSize: [28, 28], iconAnchor: [14, 14]
                 });
-                const homeMarker = L.marker([51.7592, 19.4560], {icon: homeIcon}).addTo(map)
-                    .bindPopup('<b>Salon Masterlight</b><br>Główny Magazyn w Łodzi');
+                const homeMarker = L.marker([51.7592, 19.4560], {icon: homeIcon}).addTo(map).bindPopup('<b>Salon Masterlight</b><br>Główny Magazyn w Łodzi');
                 
                 const activeShipments = shipments.filter(s => s.status !== 'completed');
                 
-                // PRIORYTET: 1. Potwierdzone, 2. Data
                 activeShipments.sort((a, b) => {
                     if (a.is_confirmed && !b.is_confirmed) return -1;
                     if (!a.is_confirmed && b.is_confirmed) return 1;
@@ -832,17 +801,13 @@
                         const mColorText = s.is_confirmed ? '#10B981' : '#C4704B';
                         const statusText = s.is_confirmed ? 'Potwierdzona' : 'Oczekująca';
                         const priority = i + 1;
-                        const cityOnly = s.location.split(',')[0].trim().split('(')[0].trim();
                         
                         const icon = L.divIcon({
                             html: `<div class="custom-map-marker ${mClass}" style="width:${size}px; height:${size}px; font-size:${fontSize}px;">${priority}</div>`,
                             className: '', iconSize: [size, size], iconAnchor: [size/2, size/2]
                         });
 
-                        const tooltipHtml = `<div style="line-height:1.3;"><strong>${escapeHTML(cityOnly)}</strong><br><span style="color:#666;">${escapeHTML(s.date || '-')}</span></div>`;
-
                         const marker = L.marker(coords, { icon: icon }).addTo(map)
-                            .bindTooltip(tooltipHtml, { permanent: true, direction: 'right', offset: [size/2 + 2, 0], className: 'custom-map-tooltip' })
                             .bindPopup(`<b>${escapeHTML(s.location)}</b><br>Kolejka (Priorytet): <strong>Nr ${priority}</strong><br>Status: <span style="color:${mColorText}; font-weight:bold;">${statusText}</span><br>Dostawa: ${escapeHTML(s.date)}<br>Sztuk: <strong>${total}</strong><br>Odbiór: ${escapeHTML(s.company)}`);
                         
                         mapMarkers.push(marker);
@@ -883,6 +848,7 @@
                 const size = window.innerWidth <= 768 ? 28 : 24;
                 const fontSize = window.innerWidth <= 768 ? 13 : 11;
                 
+                // SORTOWANIE REGULACJI PO DACIE
                 const sortedAdjustments = [...adjustments].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
 
                 for (let i = 0; i < sortedAdjustments.length; i++) {
@@ -891,18 +857,14 @@
                     const coords = await geocodeLocation(a.location);
                     
                     if (coords) {
-                        const priority = i + 1;
-                        const cityOnly = a.location.split(',')[0].trim().split('(')[0].trim();
+                        const priority = i + 1; // Numeracja od 1
                         
                         const icon = L.divIcon({
                             html: `<div class="custom-map-marker marker-adjustment" style="width:${size}px; height:${size}px; font-size:${fontSize}px;">${priority}</div>`,
                             className: '', iconSize: [size, size], iconAnchor: [size/2, size/2]
                         });
 
-                        const tooltipHtml = `<div style="line-height:1.3;"><strong>${escapeHTML(cityOnly)}</strong><br><span style="color:#666;">${escapeHTML(a.date || '-')}</span></div>`;
-
                         const marker = L.marker(coords, { icon: icon }).addTo(mapAdj)
-                            .bindTooltip(tooltipHtml, { permanent: true, direction: 'right', offset: [size/2 + 2, 0], className: 'custom-map-tooltip' })
                             .bindPopup(`<b>${escapeHTML(a.location)}</b><br>Kolejka: <strong>Nr ${priority}</strong><br>Termin serwisu:<br><strong>${escapeHTML(a.date)}</strong>`);
                         
                         mapAdjMarkers.push(marker);
@@ -923,66 +885,7 @@
             } catch(e) {}
         }
 
-        // --- FUNKCJE DRUKOWANIA MAP ---
-        function printMapPdf() {
-            document.body.classList.add('print-map-mode');
-            if (map) map.invalidateSize();
-            
-            let title = document.getElementById('print-map-title');
-            if (!title) {
-                title = document.createElement('div');
-                title.id = 'print-map-title';
-                title.innerHTML = `<h2 style="font-family:'Inter',sans-serif; background:white; display:inline-block; padding:10px 20px; border-radius:8px; border:2px solid var(--primary-terracotta); color:var(--text-dark);">Mapa Trasy Dostaw - Masterlight (${new Date().toLocaleDateString('pl-PL')})</h2>`;
-                title.style.position = 'fixed';
-                title.style.top = '10mm';
-                title.style.left = '0';
-                title.style.width = '100%';
-                title.style.textAlign = 'center';
-                title.style.zIndex = '9999999';
-                document.body.appendChild(title);
-            }
-
-            setTimeout(() => {
-                window.print();
-                document.body.classList.remove('print-map-mode');
-                if (title) title.remove();
-                if (map) map.invalidateSize();
-            }, 600);
-        }
-
-        function printAdjMapPdf() {
-            document.body.classList.add('print-map-mode');
-            if (mapAdj) mapAdj.invalidateSize();
-            
-            let title = document.getElementById('print-map-title');
-            if (!title) {
-                title = document.createElement('div');
-                title.id = 'print-map-title';
-                title.innerHTML = `<h2 style="font-family:'Inter',sans-serif; background:white; display:inline-block; padding:10px 20px; border-radius:8px; border:2px solid var(--info-status); color:var(--text-dark);">Mapa Wyjazdów Serwisowych - Masterlight (${new Date().toLocaleDateString('pl-PL')})</h2>`;
-                title.style.position = 'fixed';
-                title.style.top = '10mm';
-                title.style.left = '0';
-                title.style.width = '100%';
-                title.style.textAlign = 'center';
-                title.style.zIndex = '9999999';
-                document.body.appendChild(title);
-            }
-
-            // Odkrywamy tylko kontener drugiej mapy
-            document.getElementById('map-section-container').style.display = 'none';
-            document.getElementById('adj-map-section-container').style.display = 'block';
-
-            setTimeout(() => {
-                window.print();
-                document.body.classList.remove('print-map-mode');
-                if (title) title.remove();
-                document.getElementById('map-section-container').style.display = '';
-                document.getElementById('adj-map-section-container').style.display = '';
-                if (mapAdj) mapAdj.invalidateSize();
-            }, 600);
-        }
-
-        // --- UI INNE ---
+        // --- UI ---
         function showLoading() { document.getElementById('loading-screen').classList.remove('hidden'); }
         function hideLoading() { document.getElementById('loading-screen').classList.add('hidden'); }
 
@@ -1113,6 +1016,89 @@
         }
 
         function closeModal() { document.getElementById('modal').style.display = 'none'; }
+
+        function printInventoryPdf() {
+            if(!window.inventory || window.inventory.products.length === 0) return;
+            
+            const dateStr = new Date().toLocaleDateString('pl-PL');
+            const totals = window.inventory.getTotals();
+            
+            let html = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <title>Raport Inwentaryzacji Masterlight</title>
+                <style>
+                    body { font-family: 'Inter', sans-serif; margin: 40px; color: #1F2937; }
+                    h1 { color: #C4704B; border-bottom: 3px solid #C4704B; padding-bottom: 10px; font-size: 20pt; }
+                    .info-box { background-color: #F3F4F6; padding: 15px; border-radius: 8px; margin: 20px 0; border: 1px solid #E5E7EB; line-height: 1.6; font-size: 11pt; }
+                    table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 10pt; }
+                    th { background-color: #C4704B; color: white; padding: 10px; text-align: left; text-transform: uppercase; font-size: 9pt; }
+                    td { padding: 10px; border-bottom: 1px solid #E5E7EB; }
+                    .totals { background: #fdf2ee; font-weight: bold; }
+                </style>
+            </head>
+            <body>
+                <h1>RAPORT STANU MAGAZYNU (WMS)</h1>
+                <div class="info-box">
+                    <strong>Firma:</strong> Masterlight Sp. z o.o.<br>
+                    <strong>Data wygenerowania:</strong> ${dateStr}<br>
+                    <strong>Wygenerował użytkownik:</strong> ${currentUserEmail.split('@')[0]}
+                </div>
+                
+                <h2>1. Oprawy Downlight</h2>
+                <table>
+                    <thead><tr><th>Model Oprawy</th><th>SKU</th><th>Gotowe</th><th>W Montażu</th><th>Serwis</th><th>Łącznie</th></tr></thead>
+                    <tbody>
+            `;
+            
+            window.inventory.products.forEach(p => {
+                const total = (p.ready || 0) + (p.assembly || 0) + (p.service || 0);
+                html += `<tr>
+                    <td>${escapeHTML(p.name)}</td>
+                    <td>${escapeHTML(p.sku)}</td>
+                    <td>${p.ready || 0}</td>
+                    <td>${p.assembly || 0}</td>
+                    <td>${p.service || 0}</td>
+                    <td><strong>${total}</strong></td>
+                </tr>`;
+            });
+            
+            html += `
+                    <tr class="totals">
+                        <td colspan="2" style="text-align:right;">SUMA CAŁKOWITA:</td>
+                        <td>${totals.totalReady}</td>
+                        <td>${totals.totalAssembly}</td>
+                        <td>${totals.totalService}</td>
+                        <td>${totals.totalAll}</td>
+                    </tr>
+                    </tbody>
+                </table>
+                
+                <h2 style="margin-top: 40px;">2. Komponenty Zapasowe</h2>
+                <table style="width: 50%;">
+                    <thead><tr><th>Typ Komponentu</th><th>Stan (szt.)</th></tr></thead>
+                    <tbody>
+                        <tr><td>Zasilacze LED</td><td>${window.inventory.components.ps_raw || 0}</td></tr>
+                        <tr><td>Klapki Montażowe Zwykłe</td><td>${window.inventory.components.clips_normal || 0}</td></tr>
+                        <tr><td>Klapki Montażowe Przelotowe</td><td>${window.inventory.components.clips_pass || 0}</td></tr>
+                    </tbody>
+                </table>
+                
+                <div style="margin-top: 60px; border-top: 1px solid #ccc; padding-top: 10px; color: #6B7280; font-size: 0.9em; text-align: right;">
+                    Podpis magazyniera: .......................................................
+                </div>
+            </body>
+            </html>
+            `;
+            
+            const printWin = window.open('', '', 'width=800,height=600');
+            printWin.document.write(html);
+            printWin.document.close();
+            printWin.focus();
+            setTimeout(() => { printWin.print(); printWin.close(); }, 300);
+        }
 
         class CloudInventoryManager {
             constructor() {
@@ -1588,7 +1574,7 @@
                 if (reqs && typeof reqs === 'object') {
                     for (const [pId, qty] of Object.entries(reqs)) {
                         if (qty > 0) {
-                            const prod = window.inventory.products.find(p => String(p.id) == pId);
+                            const prod = window.inventory.products.find(p => String(p.id) === String(pId));
                             if (!prod) { isReady = false; continue; }
                             
                             let needed = qty;
@@ -2067,6 +2053,71 @@
             showToast('Zmiany zostały zapisane.', 'success');
         }
 
+        function printMissingPdf(id) {
+            const shipment = window.inventory.shipments.find(s => s.id === id);
+            if (!shipment || !shipment.partial_missing) return;
+            
+            const dateStr = new Date().toLocaleDateString('pl-PL');
+            
+            let html = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <title>Lista Braków - ${shipment.location}</title>
+                <style>
+                    body { font-family: 'Inter', sans-serif; margin: 40px; color: #1F2937; }
+                    h1 { color: #C4704B; border-bottom: 3px solid #C4704B; padding-bottom: 10px; font-size: 20pt; }
+                    .info-box { background-color: #F3F4F6; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #E5E7EB; line-height: 1.7; }
+                    table { width: 100%; border-collapse: collapse; margin: 30px 0; font-size: 11pt; }
+                    th { background-color: #C4704B; color: white; padding: 12px; text-align: left; text-transform: uppercase; font-size: 9pt; letter-spacing: 1px; }
+                    td { padding: 12px; border-bottom: 1px solid #E5E7EB; }
+                    .missing-qty { color: #DC2626; font-weight: bold; font-size: 1.2em; }
+                    @media print { body { margin: 0; } }
+                </style>
+                <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+            </head>
+            <body>
+                <h1>LISTA BRAKÓW DO DOSTARCZENIA (Dokończenie)</h1>
+                <div class="info-box">
+                    <strong>Miejsce docelowe:</strong> ${shipment.location}<br>
+                    <strong>Spedytor:</strong> ${shipment.company || '-'}<br>
+                    <strong>Data pierwszej wysyłki:</strong> ${shipment.date}<br>
+                    <strong>Wygenerowano:</strong> ${dateStr}
+                </div>
+                <table>
+                    <thead><tr><th>Model Oprawy (Downlight)</th><th>Kod SKU</th><th>Ilość do dosłania</th></tr></thead>
+                    <tbody>
+            `;
+            
+            let total = 0;
+            Object.entries(shipment.partial_missing).forEach(([pid, qty]) => {
+                const prod = window.inventory.products.find(p => p.id === parseInt(pid));
+                if (prod) {
+                    html += `<tr><td>${prod.name}</td><td>${prod.sku}</td><td class="missing-qty">${qty} szt.</td></tr>`;
+                    total += qty;
+                }
+            });
+            
+            html += `
+                    </tbody>
+                </table>
+                <p style="text-align: right; font-size: 1.2em;"><strong>Łącznie do dosłania: <span class="missing-qty">${total} szt.</span></strong></p>
+                <div style="margin-top: 50px; border-top: 1px solid #ccc; padding-top: 10px; color: #6B7280; font-size: 0.9em;">
+                    Podpis magazyniera: .......................................................
+                </div>
+            </body>
+            </html>
+            `;
+            
+            const printWin = window.open('', '', 'width=800,height=600');
+            printWin.document.write(html);
+            printWin.document.close();
+            printWin.focus();
+            setTimeout(() => { printWin.print(); printWin.close(); }, 300);
+        }
+
+        // --- HANDLERY FORMULARZY ---
         document.getElementById('shipmentForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             if (currentRole === 'viewer') return;
