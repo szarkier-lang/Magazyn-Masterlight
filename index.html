@@ -10,6 +10,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -57,9 +60,9 @@
 
         #loading-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(243, 244, 246, 0.85); z-index: 99999;
+            background: rgba(243, 244, 246, 0.95); z-index: 99999;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
-            transition: opacity 0.3s ease; backdrop-filter: blur(3px);
+            transition: opacity 0.4s ease; backdrop-filter: blur(4px);
         }
         .spinner {
             width: 50px; height: 50px; border: 4px solid #E5E7EB;
@@ -169,6 +172,7 @@
             background-color: var(--primary-terracotta); color: #fff; padding: 1rem 0.75rem; text-align: left; 
             font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px;
             border-bottom: 1px solid var(--primary-dark);
+            position: sticky; top: 0; z-index: 10;
         }
         
         td { 
@@ -237,7 +241,7 @@
             #toast-container { right: 10px; top: 10px; left: 10px; align-items: stretch; }
             .toast { max-width: none; }
 
-            .table-responsive { border: none; box-shadow: none; border-radius: 0; background: transparent; }
+            .table-responsive { border: none; box-shadow: none; border-radius: 0; background: transparent; max-height: none; overflow: hidden; }
             table, thead, tbody, th, td, tr { display: block; width: 100%; }
             thead tr { position: absolute; top: -9999px; left: -9999px; }
             tr { border: 1px solid var(--border-color); margin-bottom: 1rem; border-radius: 12px; overflow: hidden; box-shadow: var(--shadow-sm); background: #fff; padding: 0.5rem 0; }
@@ -257,6 +261,8 @@
             .editable input { max-width: 140px; text-align: right; padding: 0.5rem; border-radius: 6px; }
             td[data-label="Akcja"] { justify-content: flex-end; flex-wrap: wrap; gap: 5px; padding-top: 1rem !important; }
             .btn-small { margin-bottom: 0; margin-right: 0; }
+            
+            #shipments-map { height: 300px !important; } /* Mniejsza mapa na telefonie */
         }
 
         @media print {
@@ -279,6 +285,7 @@
             td { display: table-cell; padding: 0.4rem !important; text-align: left; justify-content: flex-start; border-bottom: 1px solid #eee; }
             td::before { display: none; }
             .editable { background: none; }
+            #shipments-map { display: none !important; }
         }
     </style>
 </head>
@@ -474,7 +481,7 @@
                             <form id="shipmentForm">
                                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.25rem;">
                                     <div class="form-group"><label>Data Wstępna</label><input type="date" name="date" required></div>
-                                    <div class="form-group"><label>Cel / Adresat</label><input type="text" name="location" required placeholder="np. Inwestycja Warszawa Center"></div>
+                                    <div class="form-group"><label>Cel / Adresat</label><input type="text" name="location" required placeholder="np. Warszawa, Inwestycja XYZ"></div>
                                     <div class="form-group"><label>Spedytor / Odbiór</label><input type="text" name="company" placeholder="np. DPD, Własny" required></div>
                                 </div>
                                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 1.25rem; margin-top: 0.5rem; background-color: var(--background); padding: 1.25rem; border-radius: 12px; border: 1px solid var(--border-color);">
@@ -488,6 +495,16 @@
                                     <button type="submit" class="btn-primary" style="padding: 0.9rem 2rem;"><span class="material-symbols-outlined">save</span> Zapisz i Dodaj do Kolejki</button>
                                 </div>
                             </form>
+                        </div>
+                    </div>
+                    
+                    <div class="section">
+                        <div class="section-header">
+                            <h2><span class="material-symbols-outlined">map</span> Mapa Celów Dostaw</h2>
+                            <span id="map-status" style="font-size:0.8rem; color:var(--text-light);"><span class="material-symbols-outlined" style="font-size:1em; animation: spin 1s linear infinite;">autorenew</span> Aktualizacja...</span>
+                        </div>
+                        <div class="section-content" style="padding:0;">
+                            <div id="shipments-map" style="height: 450px; width: 100%; border-bottom-left-radius: 16px; border-bottom-right-radius: 16px; z-index: 1;"></div>
                         </div>
                     </div>
                 </div>
@@ -632,6 +649,81 @@
 
         const db = window.supabase.createClient(supabaseUrl, supabaseKey);
 
+        // --- MAPA LEAFLET LOGIKA ---
+        let map = null;
+        let mapMarkers = [];
+        const geocodeCache = {}; 
+
+        function initMap() {
+            if (map) return;
+            map = L.map('shipments-map').setView([51.7592, 19.4560], 6); 
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+
+            const homeIcon = L.icon({
+                iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+                shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
+            });
+            L.marker([51.7592, 19.4560], {icon: homeIcon}).addTo(map).bindPopup('<b>Salon Masterlight</b><br>Łódź');
+        }
+
+        async function geocodeLocation(locationStr) {
+            // Spróbuj wyciągnąć pierwszą część przed przecinkiem (często to miasto)
+            let searchStr = locationStr.split(',')[0].trim();
+            if (geocodeCache[searchStr]) return geocodeCache[searchStr];
+            
+            try {
+                const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchStr)}&limit=1`);
+                const data = await res.json();
+                if (data && data.length > 0) {
+                    geocodeCache[searchStr] = [data[0].lat, data[0].lon];
+                    return geocodeCache[searchStr];
+                } else {
+                    // Fallback do pierwszego słowa z tekstu
+                    const firstWord = searchStr.split(/[ ,]+/)[0];
+                    if (firstWord !== searchStr) {
+                        const res2 = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(firstWord)}&limit=1`);
+                        const data2 = await res2.json();
+                        if (data2 && data2.length > 0) {
+                            geocodeCache[searchStr] = [data2[0].lat, data2[0].lon];
+                            return geocodeCache[searchStr];
+                        }
+                    }
+                }
+            } catch (e) { console.error("Błąd mapy", e); }
+            
+            geocodeCache[searchStr] = null; // Zapisz brak wyniku by nie dzwonić w kółko do API
+            return null;
+        }
+
+        async function updateMapMarkers(shipments) {
+            if (!map) initMap();
+            document.getElementById('map-status').innerHTML = '<span class="material-symbols-outlined" style="font-size:1em; animation: spin 1s linear infinite;">autorenew</span> Aktualizacja...';
+            
+            mapMarkers.forEach(m => map.removeLayer(m));
+            mapMarkers = [];
+
+            const activeShipments = shipments.filter(s => s.status !== 'completed');
+            
+            for (const s of activeShipments) {
+                if(!s.location) continue;
+                const coords = await geocodeLocation(s.location);
+                if (coords) {
+                    const total = s.products ? Object.values(s.products).reduce((a, b) => a + b, 0) : 0;
+                    const marker = L.marker(coords).addTo(map)
+                        .bindPopup(`<b>${s.location}</b><br>Dostawa: ${s.date || '-'}<br>Sztuk: <strong>${total}</strong><br>Odbiór: ${s.company || '-'}`);
+                    mapMarkers.push(marker);
+                }
+                await new Promise(r => setTimeout(r, 600)); // Opóźnienie dla darmowego API Nominatim
+            }
+            
+            document.getElementById('map-status').innerHTML = '<span class="material-symbols-outlined" style="font-size:1em; color: var(--success-status);">check_circle</span> Zaktualizowano';
+            setTimeout(() => { map.invalidateSize(); }, 300);
+        }
+
+        // --- FUNKCJE UI ---
         function showLoading() {
             document.getElementById('loading-screen').classList.remove('hidden');
         }
@@ -748,6 +840,10 @@
                 document.querySelector('.sidebar').classList.remove('open');
                 document.getElementById('mobile-overlay').classList.remove('active');
             }
+
+            if (tabId === 'tab-shipments' && map) {
+                setTimeout(() => { map.invalidateSize(); }, 200);
+            }
         }
 
         function showModal(title, content) {
@@ -777,7 +873,7 @@
                 this.setupRealtime();
                 hideLoading();
                 if (this.isFirstLoad) {
-                    showToast(`Witaj, sesja aktywna dla ${currentUserEmail.split('@')[0]}.`, 'success');
+                    showToast(`Witaj, sesja aktywna.`, 'success');
                     this.isFirstLoad = false;
                 }
             }
@@ -816,9 +912,13 @@
                     if (dbUpdates.length > 0) await Promise.all(dbUpdates);
 
                     updateDashboard();
+                    
+                    // Asynchroniczna aktualizacja mapy w tle
+                    updateMapMarkers(this.shipments);
+
                 } catch (err) {
                     console.error("Błąd pobierania danych:", err);
-                    showToast('Błąd krytyczny połączenia z bazą danych.', 'error');
+                    showToast('Błąd odczytu z bazy danych.', 'error');
                 }
             }
 
@@ -901,7 +1001,7 @@
             async deleteShipment(id) {
                 if (currentRole !== 'admin') return;
                 await db.from('shipments').delete().eq('id', id);
-                await this.addHistory('Anulowanie zamówienia', `Rekord ID: ${id}`);
+                await this.addHistory('Anulowanie zamówienia', `Rekord usunięto`);
                 await this.fetchData();
             }
 
@@ -1102,7 +1202,7 @@
 
                     await Promise.all(dbUpdates);
                     await this.addHistory('Rejestracja produkcji', `Zmontowano łącznie: ${totalProduced} szt.`);
-                    showToast(`✅ Zarejestrowano produkcję ${totalProduced} sztuk.`, 'success');
+                    showToast(`Zarejestrowano produkcję ${totalProduced} sztuk.`, 'success');
                     await this.fetchData();
                 }
             }
@@ -1133,14 +1233,14 @@
                     clips_pass: (current.clips_pass || 0) + (newComps.clips_pass || 0)
                 };
                 await db.from('components').update(updated).eq('id', 1);
-                await this.addHistory('Dostawa komponentów E', supplier);
+                await this.addHistory('Dostawa komponentów', supplier);
                 await this.fetchData();
             }
 
             async updateComponent(field, value) {
                 if (currentRole === 'viewer') return;
                 await db.from('components').update({ [field]: value }).eq('id', 1);
-                await this.addHistory('Korekta komponentów', `${field} -> ${value}`);
+                await this.addHistory('Korekta komponentów', `Zaktualizowano stan zasilaczy/klapek`);
                 await this.fetchData();
             }
         }
@@ -1517,55 +1617,6 @@
             input.addEventListener('keypress', (e) => { if (e.key === 'Enter') input.blur(); });
         }
 
-        // --- AKCJE UI DOSTAW ---
-        async function confirmShipmentDateUI(id) {
-            if (confirm('Zatwierdzić termin wysyłki i przenieść do kolejki realizacji?')) {
-                showLoading();
-                await window.inventory.confirmShipment(id);
-                hideLoading();
-                showToast('Termin wysyłki został zatwierdzony.', 'success');
-            }
-        }
-
-        async function completeShipmentUI(id) {
-            const s = window.inventory.shipments.find(x => x.id === id);
-            if (!s) return;
-            const total = s.products ? Object.values(s.products).reduce((a, b) => a + b, 0) : 0;
-            if (confirm(`Wydano towar z magazynu (${total} szt.)? \nStany zostaną zaktualizowane.`)) {
-                showLoading();
-                await window.inventory.completeShipment(id);
-                hideLoading();
-                showToast('Towar wydany, zaktualizowano stany.', 'success');
-            }
-        }
-
-        async function completeRemainingShipmentUI(id) {
-            if (confirm('Wydano brakującą część towaru? \nZamówienie zostanie zamknięte jako kompletne.')) {
-                showLoading();
-                await window.inventory.completeRemainingShipment(id);
-                hideLoading();
-                showToast('Zamówienie sfinalizowane.', 'success');
-            }
-        }
-
-        async function deleteShipment(id) { 
-            if (currentRole === 'admin' && confirm('⚠️ Uwaga: Czy na pewno trwale usunąć to zamówienie z bazy danych? Operacji nie można cofnąć.')) { 
-                showLoading();
-                await window.inventory.deleteShipment(id); 
-                hideLoading();
-                showToast('Zamówienie usunięte z bazy.', 'warning');
-            } 
-        }
-
-        async function deleteAdjustment(id) {
-            if (currentRole === 'admin' && confirm('Usunąć ten wpis z regulacji?')) {
-                showLoading();
-                await window.inventory.deleteAdjustment(id);
-                hideLoading();
-                showToast('Termin usunięty.', 'success');
-            }
-        }
-
         // --- MODALE ---
         function showAnglesDemand(id) {
             const shipment = window.inventory.shipments.find(s => s.id === id);
@@ -1628,7 +1679,7 @@
                     </div>
                     
                     <div style="margin-top: 1rem;">
-                        <button class="btn-primary" onclick="saveShipment(${id})" style="width:100%; padding: 1rem;"><span class="material-symbols-outlined">save</span> Zapisz Zmiany</button>
+                        <button class="btn-primary" onclick="saveShipment(${id})" style="width:100%; padding: 1rem;"><span class="material-symbols-outlined">save</span> Zapisz Zmiany w Zamówieniu</button>
                     </div>
                 </div>
             `;
@@ -1687,7 +1738,7 @@
                 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
             </head>
             <body>
-                <h1>LISTA BRAKÓW DO DOSTARCZENIA</h1>
+                <h1>LISTA BRAKÓW DO DOSTARCZENIA (Dokończenie)</h1>
                 <div class="info-box">
                     <strong>Miejsce docelowe:</strong> ${shipment.location}<br>
                     <strong>Spedytor:</strong> ${shipment.company || '-'}<br>
@@ -1755,12 +1806,12 @@
 
         document.getElementById('incomingForm').addEventListener('submit', async function(e) {
             e.preventDefault();
+            const formData = new FormData(this);
             const btn = this.querySelector('button');
             const originalText = btn.innerHTML;
             btn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">autorenew</span> Zapisywanie...';
             btn.disabled = true;
             
-            const formData = new FormData(this);
             await window.inventory.addIncomingShipment(formData.get('supplier'), {
                 1: parseInt(formData.get('p1')) || 0, 
                 2: parseInt(formData.get('p2')) || 0,
