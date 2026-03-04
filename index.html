@@ -394,6 +394,16 @@
                     </div>
 
                     <div class="section">
+                        <div class="section-header">
+                            <h2><span class="material-symbols-outlined">map</span> Mapa Oczekujących Dostaw</h2>
+                            <span id="map-status" style="font-size:0.8rem; color:var(--text-light);"><span class="material-symbols-outlined" style="font-size:1em; animation: spin 1s linear infinite;">autorenew</span> Oczekiwanie na dane...</span>
+                        </div>
+                        <div class="section-content" style="padding:0;">
+                            <div id="shipments-map"></div>
+                        </div>
+                    </div>
+
+                    <div class="section">
                         <div class="section-header"><h2><span class="material-symbols-outlined">fact_check</span> Bieżący Stan Opraw Gotowych</h2></div>
                         <div class="section-content" style="padding:0;">
                             <div class="table-responsive">
@@ -500,16 +510,6 @@
                                     <button type="submit" class="btn-primary" style="padding: 0.9rem 2rem;"><span class="material-symbols-outlined">save</span> Zapisz i Dodaj do Kolejki</button>
                                 </div>
                             </form>
-                        </div>
-                    </div>
-
-                    <div class="section">
-                        <div class="section-header">
-                            <h2><span class="material-symbols-outlined">map</span> Mapa Celów Dostaw</h2>
-                            <span id="map-status" style="font-size:0.8rem; color:var(--text-light);"><span class="material-symbols-outlined" style="font-size:1em; animation: spin 1s linear infinite;">autorenew</span> Oczekiwanie na dane...</span>
-                        </div>
-                        <div class="section-content" style="padding:0;">
-                            <div id="shipments-map"></div>
                         </div>
                     </div>
                 </div>
@@ -654,29 +654,50 @@
 
         const db = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-        // --- MAPA LEAFLET LOGIKA (MINIMALISTYCZNA I STATYCZNA) ---
+        // --- MAPA LEAFLET LOGIKA (MINIMALISTYCZNA, ZAMKNIĘTA W POLSCE) ---
         let map = null;
         let mapMarkers = [];
         const geocodeCache = {}; 
 
+        // Definiowanie granic Polski (południowy zachód i północny wschód)
+        const boundsPoland = L.latLngBounds(
+            L.latLng(48.9, 14.1), 
+            L.latLng(54.9, 24.2)
+        );
+
         function initMap() {
             if (map) return;
+            
+            // Inicjalizacja ze zblokowanym sterowaniem i sztywnymi granicami
             map = L.map('shipments-map', {
-                zoomControl: false, scrollWheelZoom: false, dragging: false, touchZoom: false, doubleClickZoom: false, boxZoom: false, keyboard: false
+                zoomControl: false, 
+                scrollWheelZoom: false, 
+                dragging: false, 
+                touchZoom: false, 
+                doubleClickZoom: false, 
+                boxZoom: false, 
+                keyboard: false,
+                maxBounds: boundsPoland,
+                maxBoundsViscosity: 1.0,
+                minZoom: 6,
+                maxZoom: 8
             }).setView([51.7592, 19.4560], 6); 
             
+            // Styl CartoDB Positron
             L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-                attribution: '© OpenStreetMap, © CartoDB',
-                maxZoom: 19
+                attribution: '© OpenStreetMap, © CartoDB'
             }).addTo(map);
         }
 
         async function geocodeLocation(locationStr) {
             let searchStr = locationStr.split(',')[0].trim();
+            // Zmuszenie wyszukiwarki do szukania tylko w Polsce
+            let queryUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchStr)}&countrycodes=pl&limit=1`;
+            
             if (geocodeCache[searchStr]) return geocodeCache[searchStr];
             
             try {
-                const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchStr)}&limit=1`);
+                const res = await fetch(queryUrl);
                 const data = await res.json();
                 if (data && data.length > 0) {
                     geocodeCache[searchStr] = [data[0].lat, data[0].lon];
@@ -684,7 +705,7 @@
                 } else {
                     const firstWord = searchStr.split(/[ ,]+/)[0];
                     if (firstWord !== searchStr) {
-                        const res2 = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(firstWord)}&limit=1`);
+                        const res2 = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(firstWord)}&countrycodes=pl&limit=1`);
                         const data2 = await res2.json();
                         if (data2 && data2.length > 0) {
                             geocodeCache[searchStr] = [data2[0].lat, data2[0].lon];
@@ -699,18 +720,14 @@
         }
 
         async function updateMapMarkers(shipments) {
-            // Oczekuj z odrysowaniem mapy dopóki zakładka dostaw nie będzie widoczna na ekranie
-            if (document.getElementById('tab-shipments').style.display === 'none' && !document.getElementById('tab-shipments').classList.contains('active')) {
-                return;
-            }
-
             if (!map) initMap();
             const statusEl = document.getElementById('map-status');
-            if(statusEl) statusEl.innerHTML = '<span class="material-symbols-outlined" style="font-size:1em; animation: spin 1s linear infinite;">autorenew</span> Aktualizacja...';
+            if(statusEl) statusEl.innerHTML = '<span class="material-symbols-outlined" style="font-size:1em; animation: spin 1s linear infinite;">autorenew</span> Wyszukiwanie lokalizacji...';
             
             mapMarkers.forEach(m => map.removeLayer(m));
             mapMarkers = [];
 
+            // Główny punkt: Salon (Teraz też wektorowy dla spójności, szary)
             const homeMarker = L.circleMarker([51.7592, 19.4560], {
                 radius: 8, color: '#1F2937', fillColor: '#1F2937', fillOpacity: 1, weight: 2
             }).addTo(map).bindPopup('<b>Salon Masterlight</b><br>Łódź');
@@ -723,6 +740,7 @@
                 const coords = await geocodeLocation(s.location);
                 if (coords) {
                     const total = s.products ? Object.values(s.products).reduce((a, b) => a + b, 0) : 0;
+                    // Terakotowa kropka
                     const marker = L.circleMarker(coords, {
                         radius: 6, color: '#C4704B', fillColor: '#C4704B', fillOpacity: 0.8, weight: 1
                     }).addTo(map).bindPopup(`<b>${s.location}</b><br>Dostawa: ${s.date || '-'}<br>Sztuk: <strong>${total}</strong><br>Odbiór: ${s.company || '-'}`);
@@ -733,14 +751,15 @@
                 await new Promise(r => setTimeout(r, 400)); 
             }
             
+            // Auto-zoom z uwzględnieniem granic Polski
             if (allPointsForBounds.length > 1) {
                 const group = new L.featureGroup(allPointsForBounds);
-                map.fitBounds(group.getBounds(), { padding: [40, 40] });
+                map.fitBounds(group.getBounds(), { padding: [40, 40], maxZoom: 8 });
             } else {
                 map.setView([51.7592, 19.4560], 6);
             }
 
-            if(statusEl) statusEl.innerHTML = '<span class="material-symbols-outlined" style="font-size:1em; color: var(--success-status);">check_circle</span> Zaktualizowano';
+            if(statusEl) statusEl.innerHTML = '<span class="material-symbols-outlined" style="font-size:1em; color: var(--success-status);">check_circle</span> Mapa gotowa';
             setTimeout(() => { map.invalidateSize(); }, 300);
         }
 
@@ -771,6 +790,7 @@
             const { data, error } = await db.auth.signInWithPassword({ email, password });
 
             if (error) {
+                console.error("Błąd logowania:", error.message);
                 errorElement.textContent = 'Błąd autoryzacji. Sprawdź e-mail i hasło.';
                 errorElement.style.display = 'block';
                 submitBtn.innerHTML = '<span class="material-symbols-outlined">login</span> Zaloguj bezpiecznie';
@@ -849,8 +869,8 @@
                 document.getElementById('mobile-overlay').classList.remove('active');
             }
 
-            // Inicjalizacja/Aktualizacja mapy tylko gdy otwieramy odpowiednią zakładkę
-            if (tabId === 'tab-shipments') {
+            // Inicjalizacja/Aktualizacja mapy tylko gdy otwieramy Dashboard
+            if (tabId === 'tab-dashboard') {
                 if (!map) {
                     initMap();
                     if(window.inventory) updateMapMarkers(window.inventory.shipments);
@@ -925,8 +945,8 @@
 
                     updateDashboard();
                     
-                    // Aktualizuj mapę tylko jeśli zakładka jest otwarta
-                    if (document.getElementById('tab-shipments').classList.contains('active')) {
+                    // Aktualizuj mapę tylko jeśli zakładka Dashboard jest otwarta
+                    if (document.getElementById('tab-dashboard').classList.contains('active')) {
                         updateMapMarkers(this.shipments);
                     }
 
@@ -1245,7 +1265,7 @@
                     clips_pass: (current.clips_pass || 0) + (newComps.clips_pass || 0)
                 };
                 await db.from('components').update(updated).eq('id', 1);
-                await this.addHistory('Dostawa komponentów', supplier);
+                await this.addHistory('Dostawa komponentów E', supplier);
                 await this.fetchData();
             }
 
@@ -1757,7 +1777,6 @@
             const shipment = window.inventory.shipments.find(s => s.id === id);
             const data = { date: newDate, location: newLocation, company: newCompany };
 
-            // Aktualizuj produkty tylko jeśli nie jest to wysyłka częściowa
             if (shipment.status !== 'partial') {
                 data.products = {
                     1: parseInt(document.getElementById('edit_p1').value) || 0,
