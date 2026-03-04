@@ -34,14 +34,13 @@
             --success-status: #10B981;
             --warning-status: #F59E0B;
             --error-status: #EF4444;
-            --info-status: #3B82F6; /* Niebieski dla serwisu */
+            --info-status: #3B82F6;
             --background: #F3F4F6;
             --sidebar-bg: #8B6F47;
             
             --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
             --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
             --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-            --shadow-hover: 0 20px 25px -5px rgba(196, 112, 75, 0.15), 0 10px 10px -5px rgba(196, 112, 75, 0.04);
         }
 
         body {
@@ -172,20 +171,17 @@
 
         .table-responsive { width: 100%; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm); overflow: hidden; }
         table { width: 100%; border-collapse: separate; border-spacing: 0; margin: 0; font-size: 0.9rem; table-layout: auto; }
-        
         th { 
             background-color: var(--primary-terracotta); color: #fff; padding: 1rem 0.75rem; text-align: left; 
             font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px;
             border-bottom: 1px solid var(--primary-dark);
             position: sticky; top: 0; z-index: 10;
         }
-        
         td { 
             padding: 0.8rem 0.75rem; border-bottom: 1px solid var(--border-color); 
             color: var(--text-dark); vertical-align: middle; 
             word-break: break-word; 
         }
-        
         tbody tr { transition: background-color 0.2s, opacity 0.2s; }
         tbody tr:last-child td { border-bottom: none; }
         tbody tr:hover { background-color: #FEF6F3; }
@@ -208,9 +204,10 @@
 
         button { display: inline-flex; align-items: center; justify-content: center; padding: 0.75rem 1.5rem; border: none; border-radius: 10px; cursor: pointer; font-size: 0.9rem; font-weight: 600; transition: all 0.2s ease; font-family: 'Inter', sans-serif; box-shadow: var(--shadow-sm); letter-spacing: 0.3px; }
         .btn-primary { background-color: var(--primary-terracotta); color: white; }
-        .btn-primary:hover { background-color: var(--primary-dark); transform: translateY(-1px); box-shadow: 0 7px 14px rgba(196, 112, 75, 0.2); }
+        .btn-primary:hover:not(:disabled) { background-color: var(--primary-dark); transform: translateY(-1px); box-shadow: 0 7px 14px rgba(196, 112, 75, 0.2); }
+        .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
         .btn-secondary { background-color: white; color: var(--text-dark); border: 1px solid var(--border-color); }
-        .btn-secondary:hover { background-color: #F9FAFB; border-color: #D1D5DB; transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+        .btn-secondary:hover:not(:disabled) { background-color: #F9FAFB; border-color: #D1D5DB; transform: translateY(-1px); box-shadow: var(--shadow-sm); }
         .btn-small { padding: 0.5rem 0.8rem; font-size: 0.75rem; margin-right: 0.3rem; margin-bottom: 0.3rem; border-radius: 6px; }
 
         .form-group { margin-bottom: 1.25rem; display: flex; flex-direction: column; gap: 0.5rem; }
@@ -246,7 +243,7 @@
         .marker-home { background-color: #1F2937; }
         .marker-confirmed { background-color: #10B981; }
         .marker-planned { background-color: #C4704B; }
-        .marker-adjustment { background-color: #3B82F6; } /* Niebieski dla serwisu */
+        .marker-adjustment { background-color: #3B82F6; }
 
         .footer { text-align: center; padding: 3rem 2rem; color: var(--text-light); font-size: 0.85rem; margin-top: 2rem; border-top: 1px solid var(--border-color); background: #fff; }
 
@@ -341,7 +338,7 @@
                     <label>Hasło dostępu</label>
                     <input type="password" id="login-password" required placeholder="••••••••">
                 </div>
-                <button type="submit" class="btn-primary" style="width: 100%; margin-top: 1.5rem; padding: 1rem; font-size: 1rem;">
+                <button type="submit" id="login-submit-btn" class="btn-primary" style="width: 100%; margin-top: 1.5rem; padding: 1rem; font-size: 1rem;">
                     <span class="material-symbols-outlined">login</span> Zaloguj bezpiecznie
                 </button>
             </form>
@@ -421,7 +418,7 @@
                     <div class="section">
                         <div class="section-header">
                             <h2><span class="material-symbols-outlined">map</span> Mapa Oczekujących Dostaw</h2>
-                            <span id="map-status" style="font-size:0.8rem; color:var(--text-light);"><span class="material-symbols-outlined" style="font-size:1em; animation: spin 1s linear infinite;">autorenew</span> Ładowanie mapy...</span>
+                            <span id="map-status" style="font-size:0.8rem; color:var(--text-light);"><span class="material-symbols-outlined" style="font-size:1em; animation: spin 1s linear infinite;">autorenew</span> Oczekiwanie na dane...</span>
                         </div>
                         <div class="section-content" style="padding:0;">
                             <div id="shipments-map" class="map-container"></div>
@@ -519,13 +516,9 @@
                         <div class="section-header"><h2><span class="material-symbols-outlined">add_location_alt</span> Dodaj Nowe Zamówienie / Plan Wysyłki</h2></div>
                         <div class="section-content">
                             <form id="shipmentForm">
-                                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.25rem;">
-                                    <div class="form-group"><label>Miejscowość *</label><input type="text" name="ship_city" required placeholder="np. Warszawa"></div>
-                                    <div class="form-group"><label>Ulica i nr (opcjonalnie)</label><input type="text" name="ship_street" placeholder="np. Złota 44"></div>
-                                    <div class="form-group"><label>Obiekt / Inwestycja (opcjonalnie)</label><input type="text" name="ship_target" placeholder="np. Biurowiec Skylight"></div>
-                                </div>
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-top: 0.5rem;">
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.25rem;">
                                     <div class="form-group"><label>Data Wstępna</label><input type="date" name="date" required></div>
+                                    <div class="form-group"><label>Cel / Adresat</label><input type="text" name="location" required placeholder="np. Warszawa, Inwestycja XYZ"></div>
                                     <div class="form-group"><label>Spedytor / Odbiór</label><input type="text" name="company" placeholder="np. DPD, Własny" required></div>
                                 </div>
                                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 1.25rem; margin-top: 0.5rem; background-color: var(--background); padding: 1.25rem; border-radius: 12px; border: 1px solid var(--border-color);">
@@ -570,14 +563,10 @@
                         <div class="section-header"><h2><span class="material-symbols-outlined">add_circle</span> Dodaj Nowy Termin Regulacji</h2></div>
                         <div class="section-content">
                             <form id="adjustmentForm">
-                                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.25rem;">
-                                    <div class="form-group"><label>Miejscowość *</label><input type="text" name="adj_city" required placeholder="np. Gdańsk"></div>
-                                    <div class="form-group"><label>Ulica i nr</label><input type="text" name="adj_street" placeholder="np. Długa 5"></div>
-                                    <div class="form-group"><label>Obiekt / Klient</label><input type="text" name="adj_target" placeholder="np. Hotel Seaside"></div>
-                                </div>
-                                <div style="display: flex; gap: 1rem; align-items: end; margin-top: 0.5rem;">
-                                    <div class="form-group" style="margin:0; width: 200px;"><label>Data Wyjazdu</label><input type="date" name="adj_date" required></div>
-                                    <button type="submit" class="btn-primary" style="height: 47px;"><span class="material-symbols-outlined">save</span> Zaplanuj Wyjazd</button>
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; align-items: end;">
+                                    <div class="form-group" style="margin:0;"><label>Data</label><input type="date" name="adj_date" required></div>
+                                    <div class="form-group" style="margin:0;"><label>Miejscowość i Obiekt</label><input type="text" name="adj_location" required placeholder="np. Gdynia, Hotel Sailor"></div>
+                                    <button type="submit" class="btn-primary" style="height: 47px;"><span class="material-symbols-outlined">save</span> Dodaj</button>
                                 </div>
                             </form>
                         </div>
@@ -697,6 +686,17 @@
 
         const db = window.supabase.createClient(supabaseUrl, supabaseKey);
 
+        // BEZPIECZEŃSTWO TEKSTÓW HTML INJECTION
+        function escapeHTML(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
         // --- MAPY LEAFLET LOGIKA ---
         let map = null;
         let mapMarkers = [];
@@ -710,7 +710,6 @@
             L.latLng(54.9, 24.2)
         );
 
-        // Inicjalizacja Głównej Mapy (Dostawy)
         function initMap() {
             if (map) return;
             map = L.map('shipments-map', {
@@ -718,13 +717,9 @@
                 doubleClickZoom: false, boxZoom: false, keyboard: false,
                 maxBounds: boundsPoland, maxBoundsViscosity: 1.0, minZoom: 5, maxZoom: 9
             }).setView([51.7592, 19.4560], 6); 
-            
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-                attribution: '© OpenStreetMap, © CartoDB'
-            }).addTo(map);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '© OpenStreetMap, © CartoDB' }).addTo(map);
         }
 
-        // Inicjalizacja Drugiej Mapy (Regulacje)
         function initAdjMap() {
             if (mapAdj) return;
             mapAdj = L.map('adjustments-map', {
@@ -732,15 +727,11 @@
                 doubleClickZoom: false, boxZoom: false, keyboard: false,
                 maxBounds: boundsPoland, maxBoundsViscosity: 1.0, minZoom: 5, maxZoom: 9
             }).setView([51.7592, 19.4560], 6); 
-            
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-                attribution: '© OpenStreetMap, © CartoDB'
-            }).addTo(mapAdj);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '© OpenStreetMap, © CartoDB' }).addTo(mapAdj);
         }
 
-        // Inteligentny Geocoder ucinający teksty w nawiasach
         async function geocodeLocation(locationStr) {
-            let searchStr = locationStr.split('(')[0].trim(); // Ucina nazwę obiektu np. (Biurowiec)
+            let searchStr = locationStr.split(',')[0].trim();
             let queryUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchStr)}&countrycodes=pl&limit=1`;
             
             if (geocodeCache[searchStr]) return geocodeCache[searchStr];
@@ -749,21 +740,17 @@
                 let res = await fetch(queryUrl);
                 let data = await res.json();
                 if (data && data.length > 0) {
-                    geocodeCache[searchStr] = [data[0].lat, data[0].lon];
-                    return geocodeCache[searchStr];
+                    geocodeCache[searchStr] = [data[0].lat, data[0].lon]; return geocodeCache[searchStr];
                 } else if (searchStr.includes(',')) {
-                    // Fallback jeśli ulica była błędna - szukamy samego miasta
                     let cityStr = searchStr.split(',')[0].trim();
                     let queryUrl2 = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(cityStr)}&countrycodes=pl&limit=1`;
                     res = await fetch(queryUrl2);
                     data = await res.json();
                     if (data && data.length > 0) {
-                        geocodeCache[searchStr] = [data[0].lat, data[0].lon];
-                        return geocodeCache[searchStr];
+                        geocodeCache[searchStr] = [data[0].lat, data[0].lon]; return geocodeCache[searchStr];
                     }
                 }
-            } catch (e) { console.error("Błąd geokodowania", e); }
-            
+            } catch (e) { }
             geocodeCache[searchStr] = null; 
             return null;
         }
@@ -787,11 +774,7 @@
                 const homeMarker = L.marker([51.7592, 19.4560], {icon: homeIcon}).addTo(map).bindPopup('<b>Salon Masterlight</b><br>Główny Magazyn w Łodzi');
                 
                 const activeShipments = shipments.filter(s => s.status !== 'completed');
-                activeShipments.sort((a, b) => {
-                    if (a.is_confirmed && !b.is_confirmed) return -1;
-                    if (!a.is_confirmed && b.is_confirmed) return 1;
-                    return (a.date || '').localeCompare(b.date || '');
-                });
+                activeShipments.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
 
                 const allPointsForBounds = [homeMarker];
                 const size = window.innerWidth <= 768 ? 28 : 24;
@@ -815,12 +798,12 @@
                         });
 
                         const marker = L.marker(coords, { icon: icon }).addTo(map)
-                            .bindPopup(`<b>${s.location}</b><br>Kolejka (Priorytet): <strong>Nr ${priority}</strong><br>Status: <span style="color:${mColorText}; font-weight:bold;">${statusText}</span><br>Dostawa: ${s.date || '-'}<br>Sztuk: <strong>${total}</strong><br>Odbiór: ${s.company || '-'}`);
+                            .bindPopup(`<b>${escapeHTML(s.location)}</b><br>Kolejka (Priorytet): <strong>Nr ${priority}</strong><br>Status: <span style="color:${mColorText}; font-weight:bold;">${statusText}</span><br>Dostawa: ${escapeHTML(s.date)}<br>Sztuk: <strong>${total}</strong><br>Odbiór: ${escapeHTML(s.company)}`);
                         
                         mapMarkers.push(marker);
                         allPointsForBounds.push(marker);
                     }
-                    await new Promise(r => setTimeout(r, 400)); 
+                    await new Promise(r => setTimeout(r, 300)); 
                 }
                 
                 if (allPointsForBounds.length > 1) {
@@ -832,11 +815,8 @@
                 }
 
                 if(statusEl) statusEl.innerHTML = '<span class="material-symbols-outlined" style="font-size:1em; color: var(--success-status);">check_circle</span> Mapa gotowa';
-            } catch(e) {
-                console.error("Błąd aktualizacji mapy:", e);
-            } finally {
-                isUpdatingMap = false;
-            }
+            } catch(e) { console.error(e); } 
+            finally { isUpdatingMap = false; }
         }
 
         async function updateAdjMapMarkers(adjustments) {
@@ -868,12 +848,12 @@
                         });
 
                         const marker = L.marker(coords, { icon: icon }).addTo(mapAdj)
-                            .bindPopup(`<b>${a.location}</b><br>Termin serwisu:<br><strong>${a.date || '-'}</strong>`);
+                            .bindPopup(`<b>${escapeHTML(a.location)}</b><br>Termin serwisu:<br><strong>${escapeHTML(a.date)}</strong>`);
                         
                         mapAdjMarkers.push(marker);
                         allPointsForBounds.push(marker);
                     }
-                    await new Promise(r => setTimeout(r, 400)); 
+                    await new Promise(r => setTimeout(r, 300)); 
                 }
                 
                 if (allPointsForBounds.length > 1) {
@@ -885,7 +865,7 @@
                 }
 
                 if(statusEl) statusEl.innerHTML = '<span class="material-symbols-outlined" style="font-size:1em; color: var(--info-status);">check_circle</span> Mapa gotowa';
-            } catch(e) { console.error("Błąd mapy regulacji:", e); }
+            } catch(e) {}
         }
 
         // --- UI ---
@@ -907,17 +887,18 @@
             const email = document.getElementById('login-email').value;
             const password = document.getElementById('login-password').value;
             const errorElement = document.getElementById('login-error');
-            const submitBtn = document.querySelector('#login-form button');
+            const submitBtn = document.getElementById('login-submit-btn');
             
             errorElement.style.display = 'none';
+            submitBtn.disabled = true;
             submitBtn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">autorenew</span> Autoryzacja...';
 
             const { data, error } = await db.auth.signInWithPassword({ email, password });
 
             if (error) {
-                console.error("Błąd logowania:", error.message);
                 errorElement.textContent = 'Błąd autoryzacji. Sprawdź e-mail i hasło.';
                 errorElement.style.display = 'block';
+                submitBtn.disabled = false;
                 submitBtn.innerHTML = '<span class="material-symbols-outlined">login</span> Zaloguj bezpiecznie';
             } else {
                 initApp(data.user); 
@@ -938,7 +919,7 @@
             
             let roleText = 'Obserwator (Viewer)';
             if (currentRole === 'admin') roleText = 'Kierownik (Admin)';
-            if (currentRole === 'worker') roleText = 'Pracownik Produkcji (Worker)';
+            if (currentRole === 'worker') roleText = 'Pracownik (Worker)';
             document.getElementById('logged-role').textContent = roleText;
 
             document.getElementById('auth-screen').classList.add('hidden');
@@ -994,12 +975,11 @@
                 document.getElementById('mobile-overlay').classList.remove('active');
             }
 
-            // Wymuszenie odświeżenia map zależnie od otwartej zakładki
             if (tabId === 'tab-dashboard') {
                 setTimeout(() => { 
                     if (!map) initMap();
                     if (map) map.invalidateSize(); 
-                    if(window.inventory && !isUpdatingMap) updateMapMarkers(window.inventory.shipments);
+                    if(window.inventory) updateMapMarkers(window.inventory.shipments);
                 }, 150);
             }
             if (tabId === 'tab-adjustments') {
@@ -1058,8 +1038,8 @@
             window.inventory.products.forEach(p => {
                 const total = (p.ready || 0) + (p.assembly || 0) + (p.service || 0);
                 html += `<tr>
-                    <td>${p.name}</td>
-                    <td>${p.sku}</td>
+                    <td>${escapeHTML(p.name)}</td>
+                    <td>${escapeHTML(p.sku)}</td>
                     <td>${p.ready || 0}</td>
                     <td>${p.assembly || 0}</td>
                     <td>${p.service || 0}</td>
@@ -1194,7 +1174,7 @@
             }
 
             getStatus(productId) {
-                const product = this.products.find(p => p.id === productId);
+                const product = this.products.find(p => String(p.id) === String(productId));
                 if (!product) return 'unknown';
                 const total = (product.ready || 0) + (product.assembly || 0) + (product.service || 0);
                 if (total === 0) return 'error';
@@ -1204,7 +1184,7 @@
 
             async updateProduct(id, updates) {
                 if (currentRole === 'viewer') return; 
-                const product = this.products.find(p => p.id === id);
+                const product = this.products.find(p => String(p.id) === String(id));
                 if (product) {
                     Object.assign(product, updates);
                     updateDashboard();
@@ -1227,7 +1207,7 @@
 
             async deleteAdjustment(id) {
                 if (currentRole !== 'admin') return;
-                this.adjustments = this.adjustments.filter(a => a.id !== id);
+                this.adjustments = this.adjustments.filter(a => String(a.id) !== String(id));
                 updateDashboard();
 
                 await db.from('adjustments').delete().eq('id', id);
@@ -1251,7 +1231,7 @@
 
             async confirmShipment(id) {
                 if (currentRole === 'viewer') return;
-                const shipment = this.shipments.find(s => s.id === id);
+                const shipment = this.shipments.find(s => String(s.id) === String(id));
                 if (shipment) {
                     shipment.is_confirmed = true;
                     updateDashboard();
@@ -1264,7 +1244,7 @@
 
             async deleteShipment(id) {
                 if (currentRole !== 'admin') return;
-                this.shipments = this.shipments.filter(s => s.id !== id);
+                this.shipments = this.shipments.filter(s => String(s.id) !== String(id));
                 updateDashboard();
 
                 await db.from('shipments').delete().eq('id', id);
@@ -1274,7 +1254,7 @@
 
             async updateShipmentInDB(id, data) {
                 if (currentRole === 'viewer') return;
-                const shipment = this.shipments.find(s => s.id === id);
+                const shipment = this.shipments.find(s => String(s.id) === String(id));
                 if (shipment) {
                     Object.assign(shipment, data);
                     updateDashboard();
@@ -1287,7 +1267,7 @@
 
             async completeShipment(id) {
                 if (currentRole === 'viewer') return;
-                const shipment = this.shipments.find(s => s.id === id);
+                const shipment = this.shipments.find(s => String(s.id) === String(id));
                 if (!shipment) return;
 
                 const missing = {};
@@ -1296,7 +1276,7 @@
                 for (const productId of Object.keys(shipment.products || {})) {
                     const quantity = shipment.products[productId];
                     if (quantity > 0) {
-                        const product = this.products.find(p => p.id === parseInt(productId));
+                        const product = this.products.find(p => String(p.id) === String(productId));
                         if (product) {
                             const toDeduct = Math.min(quantity, product.ready || 0);
                             
@@ -1335,7 +1315,7 @@
 
             async completeRemainingShipment(id) {
                 if (currentRole === 'viewer') return;
-                const shipment = this.shipments.find(s => s.id === id);
+                const shipment = this.shipments.find(s => String(s.id) === String(id));
                 if (!shipment || shipment.status !== 'partial' || !shipment.partial_missing) return;
 
                 const missing = shipment.partial_missing;
@@ -1344,7 +1324,7 @@
 
                 for (const productId of Object.keys(missing)) {
                     const need = missing[productId];
-                    const product = this.products.find(p => p.id === parseInt(productId));
+                    const product = this.products.find(p => String(p.id) === String(productId));
                     if (product) {
                         const toDeduct = Math.min(need, product.ready || 0);
                         
@@ -1356,8 +1336,6 @@
                         if (toDeduct > 0) updates.push(db.from('products').update({ ready: product.ready }).eq('id', product.id));
                     }
                 }
-
-                if (updates.length > 0) await Promise.all(updates);
 
                 let newStatus = 'completed';
                 let newPartialMissing = null;
@@ -1388,7 +1366,7 @@
                 
                 for (const [id, qty] of Object.entries(newProducts)) {
                     if (qty > 0) {
-                        const product = this.products.find(p => p.id === parseInt(id));
+                        const product = this.products.find(p => String(p.id) === String(id));
                         if (product) {
                             const newAssembly = (product.assembly || 0) + qty;
                             if (product.assembly_group) {
@@ -1430,7 +1408,7 @@
                 const groupReq = {};
                 for (const [id, qty] of Object.entries(produced)) {
                     if (qty > 0) {
-                        const product = this.products.find(p => p.id === parseInt(id));
+                        const product = this.products.find(p => String(p.id) === String(id));
                         if (product) {
                             const key = product.assembly_group || `single_${product.id}`;
                             groupReq[key] = (groupReq[key] || 0) + qty;
@@ -1442,7 +1420,7 @@
                     let available = 0;
                     if (key.startsWith('single_')) {
                         const pid = parseInt(key.replace('single_', ''));
-                        const p = this.products.find(x => x.id === pid);
+                        const p = this.products.find(x => String(x.id) === String(pid));
                         available = p ? (p.assembly || 0) : 0;
                     } else {
                         const p = this.products.find(x => x.assembly_group === key);
@@ -1460,7 +1438,7 @@
 
                 for (const [id, qty] of Object.entries(produced)) {
                     if (qty > 0) {
-                        const product = this.products.find(p => p.id === parseInt(id));
+                        const product = this.products.find(p => String(p.id) === String(id));
                         if (product) {
                             product.ready = (product.ready || 0) + qty;
                             product.assembly = (product.assembly || 0) - qty;
@@ -1480,9 +1458,9 @@
                 }
 
                 if (totalProduced > 0) {
-                    this.components.ps_raw -= totalProduced;
-                    this.components.clips_normal -= totalProduced;
-                    this.components.clips_pass -= totalProduced;
+                    this.components.ps_raw = (this.components.ps_raw || 0) - totalProduced;
+                    this.components.clips_normal = (this.components.clips_normal || 0) - totalProduced;
+                    this.components.clips_pass = (this.components.clips_pass || 0) - totalProduced;
 
                     updateDashboard();
 
@@ -1572,7 +1550,7 @@
                 if (reqs && typeof reqs === 'object') {
                     for (const [pId, qty] of Object.entries(reqs)) {
                         if (qty > 0) {
-                            const prod = window.inventory.products.find(p => p.id == pId);
+                            const prod = window.inventory.products.find(p => String(p.id) === String(pId));
                             if (!prod) { isReady = false; continue; }
                             
                             let needed = qty;
@@ -1658,7 +1636,7 @@
                 dashboardTbody.innerHTML = '';
                 window.inventory.products.forEach(p => {
                     const row = document.createElement('tr');
-                    row.innerHTML = `<td data-label="Model Oprawy">${p.name}</td><td data-label="Ilość Gotowych"><strong>${p.ready || 0} szt</strong></td><td data-label="Dostępność"><span class="status-badge ${getStatusClass(p.id)}">${getStatusText(p.id)}</span></td>`;
+                    row.innerHTML = `<td data-label="Model Oprawy">${escapeHTML(p.name)}</td><td data-label="Ilość Gotowych"><strong>${p.ready || 0} szt</strong></td><td data-label="Dostępność"><span class="status-badge ${getStatusClass(p.id)}">${getStatusText(p.id)}</span></td>`;
                     dashboardTbody.appendChild(row);
                 });
 
@@ -1696,9 +1674,9 @@
 
                         upcomingTbody.innerHTML += `
                             <tr>
-                                <td data-label="Data"><strong>${s.date || '-'}</strong></td>
-                                <td data-label="Cel / Klient">${s.location}</td>
-                                <td data-label="Spedytor" style="color:var(--text-light);">${s.company || '-'}</td>
+                                <td data-label="Data"><strong>${escapeHTML(s.date || '-')}</strong></td>
+                                <td data-label="Cel / Klient">${escapeHTML(s.location)}</td>
+                                <td data-label="Spedytor" style="color:var(--text-light);">${escapeHTML(s.company || '-')}</td>
                                 <td data-label="Sztuk"><strong>${total}</strong></td>
                                 <td data-label="Wirtualny Magazyn">${readinessBadge}</td>
                                 <td data-label="Status">${statusBadge}</td>
@@ -1727,12 +1705,12 @@
             window.inventory.products.forEach(p => {
                 const total = (p.ready || 0) + (p.assembly || 0) + (p.service || 0);
                 
-                const readyCell = isViewer ? `<strong>${p.ready || 0}</strong>` : `<td data-label="Gotowe" onclick="editCell(this, 'ready', ${p.id})" class="editable"><strong>${p.ready || 0}</strong></td>`;
-                const assemblyCell = isViewer ? (p.assembly || 0) : `<td data-label="W Montażu" onclick="editCell(this, 'assembly', ${p.id})" class="editable">${p.assembly || 0}</td>`;
+                const readyCell = isViewer ? `<strong>${p.ready || 0}</strong>` : `<td data-label="Gotowe" onclick="editCell(this, 'ready', '${p.id}')" class="editable"><strong>${p.ready || 0}</strong></td>`;
+                const assemblyCell = isViewer ? (p.assembly || 0) : `<td data-label="W Montażu" onclick="editCell(this, 'assembly', '${p.id}')" class="editable">${p.assembly || 0}</td>`;
 
                 const rowHTML = `
-                    <td data-label="Model Oprawy">${p.name}</td>
-                    <td data-label="Kod SKU" style="color:var(--text-light); font-size:0.85em;">${p.sku}</td>
+                    <td data-label="Model Oprawy">${escapeHTML(p.name)}</td>
+                    <td data-label="Kod SKU" style="color:var(--text-light); font-size:0.85em;">${escapeHTML(p.sku)}</td>
                     ${isViewer ? `<td data-label="Gotowe">${readyCell}</td>` : readyCell}
                     ${isViewer ? `<td data-label="W Montażu">${assemblyCell}</td>` : assemblyCell}
                     <td data-label="Łącznie"><strong>${total}</strong></td>
@@ -1740,8 +1718,8 @@
                 `;
                 const tr = document.createElement('tr'); tr.innerHTML = rowHTML; tbody.appendChild(tr);
 
-                const serviceCell = isViewer ? (p.service || 0) : `<td data-label="Ilość (szt)" onclick="editCell(this, 'service', ${p.id})" class="editable">${p.service || 0}</td>`;
-                const serviceRowHTML = `<td data-label="Model Oprawy">${p.name}</td>${isViewer ? `<td data-label="Ilość (szt)">${serviceCell}</td>` : serviceCell}`;
+                const serviceCell = isViewer ? (p.service || 0) : `<td data-label="Ilość (szt)" onclick="editCell(this, 'service', '${p.id}')" class="editable">${p.service || 0}</td>`;
+                const serviceRowHTML = `<td data-label="Model Oprawy">${escapeHTML(p.name)}</td>${isViewer ? `<td data-label="Ilość (szt)">${serviceCell}</td>` : serviceCell}`;
                 const trS = document.createElement('tr'); trS.innerHTML = serviceRowHTML; tbodyService.appendChild(trS);
             });
         }
@@ -1757,28 +1735,28 @@
 
             let actionButtons = '';
             if (currentRole !== 'viewer') {
-                actionButtons += `<button class="btn-small btn-secondary" onclick="editShipment(${s.id})" title="Edytuj dane"><span class="material-symbols-outlined">edit</span></button>`;
-                if (currentRole === 'admin') actionButtons += `<button class="btn-small btn-secondary" onclick="deleteShipment(${s.id})" title="Usuń trwale"><span class="material-symbols-outlined" style="color:var(--accent-red);">delete</span></button>`;
+                actionButtons += `<button class="btn-small btn-secondary" onclick="editShipment('${s.id}')" title="Edytuj dane"><span class="material-symbols-outlined">edit</span></button>`;
+                if (currentRole === 'admin') actionButtons += `<button class="btn-small btn-secondary" onclick="deleteShipment('${s.id}')" title="Usuń trwale"><span class="material-symbols-outlined" style="color:var(--accent-red);">delete</span></button>`;
                 
                 if (s.status === 'planned' && !s.is_confirmed) {
-                    actionButtons = `<button class="btn-small btn-primary" onclick="confirmShipmentDateUI(${s.id})"><span class="material-symbols-outlined">event_available</span> Zatwierdź</button>` + actionButtons;
+                    actionButtons = `<button class="btn-small btn-primary" onclick="confirmShipmentDateUI('${s.id}')"><span class="material-symbols-outlined">event_available</span> Zatwierdź</button>` + actionButtons;
                 } else if (s.status === 'planned' && s.is_confirmed) {
-                    actionButtons = `<button class="btn-small btn-primary" onclick="completeShipmentUI(${s.id})"><span class="material-symbols-outlined">local_shipping</span> Wydaj</button>` + actionButtons;
+                    actionButtons = `<button class="btn-small btn-primary" onclick="completeShipmentUI('${s.id}')"><span class="material-symbols-outlined">local_shipping</span> Wydaj</button>` + actionButtons;
                 } else if (s.status === 'partial') {
-                    actionButtons = `<button class="btn-small btn-primary" onclick="completeRemainingShipmentUI(${s.id})"><span class="material-symbols-outlined">done_all</span> Wydaj braki</button>` + actionButtons;
+                    actionButtons = `<button class="btn-small btn-primary" onclick="completeRemainingShipmentUI('${s.id}')"><span class="material-symbols-outlined">done_all</span> Wydaj braki</button>` + actionButtons;
                 }
             }
             if (s.status === 'partial') {
-                actionButtons += `<button class="btn-small btn-secondary" onclick="printMissingPdf(${s.id})" title="Drukuj listę braków"><span class="material-symbols-outlined">picture_as_pdf</span> Braki</button>`;
+                actionButtons += `<button class="btn-small btn-secondary" onclick="printMissingPdf('${s.id}')" title="Drukuj listę braków"><span class="material-symbols-outlined">picture_as_pdf</span> Braki</button>`;
             }
 
             return `
                 <tr class="${s.status === 'completed' ? 'row-completed' : ''}">
-                    <td data-label="Data"><strong>${s.date || '-'}</strong></td>
-                    <td data-label="Cel">${s.location}</td>
-                    <td data-label="Spedytor" style="color:var(--text-light);">${s.company || '-'}</td>
+                    <td data-label="Data"><strong>${escapeHTML(s.date || '-')}</strong></td>
+                    <td data-label="Cel">${escapeHTML(s.location)}</td>
+                    <td data-label="Spedytor" style="color:var(--text-light);">${escapeHTML(s.company || '-')}</td>
                     <td data-label="Sztuk"><strong>${total}</strong></td>
-                    <td data-label="Kąty"><button class="btn-small btn-secondary" onclick="showAnglesDemand(${s.id})" style="margin:0;"><span class="material-symbols-outlined">visibility</span> Pokaż</button></td>
+                    <td data-label="Kąty"><button class="btn-small btn-secondary" onclick="showAnglesDemand('${s.id}')" style="margin:0;"><span class="material-symbols-outlined">visibility</span> Pokaż</button></td>
                     <td data-label="Wirtualny Magazyn">${readinessBadge}</td>
                     <td data-label="Status">${statusBadge}</td>
                     ${currentRole !== 'viewer' || s.status === 'partial' ? `<td data-label="Akcja">${actionButtons}</td>` : '<td class="admin-only-col"></td>'}
@@ -1810,8 +1788,8 @@
             tbody.innerHTML = '';
             window.inventory.adjustments.forEach(a => {
                 const tr = document.createElement('tr');
-                let action = currentRole === 'admin' ? `<td data-label="Akcja"><button class="btn-small btn-secondary" onclick="deleteAdjustment(${a.id})" style="margin:0;"><span class="material-symbols-outlined" style="color:var(--accent-red);">delete</span></button></td>` : `<td class="admin-only-col"></td>`;
-                tr.innerHTML = `<td data-label="Data Wyjazdu"><strong>${a.date || '-'}</strong></td><td data-label="Miejscowość / Obiekt">${a.location}</td>${action}`;
+                let action = currentRole === 'admin' ? `<td data-label="Akcja"><button class="btn-small btn-secondary" onclick="deleteAdjustment('${a.id}')" style="margin:0;"><span class="material-symbols-outlined" style="color:var(--accent-red);">delete</span></button></td>` : `<td class="admin-only-col"></td>`;
+                tr.innerHTML = `<td data-label="Data Wyjazdu"><strong>${escapeHTML(a.date || '-')}</strong></td><td data-label="Miejscowość / Obiekt">${escapeHTML(a.location)}</td>${action}`;
                 tbody.appendChild(tr);
             });
         }
@@ -1822,13 +1800,12 @@
             tbody.innerHTML = '';
             window.inventory.history.forEach(h => {
                 const tr = document.createElement('tr');
-                
                 const detailsStr = h.details || '';
                 const match = detailsStr.match(/\(przez: (.*?)\)/);
                 const worker = match ? match[1] : 'System';
                 const cleanDetails = detailsStr.replace(/\(przez:.*?\)/, '').trim();
 
-                tr.innerHTML = `<td data-label="Data i Czas" style="color:var(--text-light); font-size:0.85em;">${h.timestamp}</td><td data-label="Pracownik"><strong>${worker}</strong></td><td data-label="Typ Operacji">${h.action}</td><td data-label="Szczegóły">${cleanDetails}</td>`;
+                tr.innerHTML = `<td data-label="Data i Czas" style="color:var(--text-light); font-size:0.85em;">${escapeHTML(h.timestamp)}</td><td data-label="Pracownik"><strong>${escapeHTML(worker)}</strong></td><td data-label="Typ Operacji">${escapeHTML(h.action)}</td><td data-label="Szczegóły">${escapeHTML(cleanDetails)}</td>`;
                 tbody.appendChild(tr);
             });
         }
@@ -1850,7 +1827,207 @@
             }
         }
 
-        // --- OBSŁUGA FORMULARZY ---
+        function editCell(cell, field, productId) {
+            if (currentRole === 'viewer') return;
+            if (cell.querySelector('input')) return;
+            
+            const product = window.inventory.products.find(p => String(p.id) === String(productId));
+            const input = document.createElement('input');
+            input.type = 'number'; input.value = product[field] || 0; 
+            input.style.width = '100%'; input.style.textAlign = 'inherit';
+            
+            const originalHTML = cell.innerHTML;
+            cell.innerHTML = ''; cell.appendChild(input);
+            cell.classList.remove('editable');
+            input.focus(); input.select();
+
+            const save = async () => {
+                const newValue = parseInt(input.value);
+                if (!isNaN(newValue) && newValue !== (product[field]||0)) {
+                    cell.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite; color: var(--primary-terracotta);">autorenew</span>';
+                    await window.inventory.updateProduct(productId, { [field]: newValue });
+                } else {
+                    cell.innerHTML = originalHTML;
+                }
+                cell.classList.add('editable');
+            };
+
+            input.addEventListener('blur', save);
+            input.addEventListener('keypress', (e) => { if (e.key === 'Enter') input.blur(); });
+        }
+
+        function editComponentCell(cell, field) {
+            if (currentRole === 'viewer') return;
+            if (cell.querySelector('input')) return;
+            
+            const currentVal = window.inventory.components[field] || 0;
+            const input = document.createElement('input');
+            input.type = 'number'; input.value = currentVal; 
+            input.style.width = '100%'; input.style.textAlign = 'inherit';
+            
+            const originalHTML = cell.innerHTML;
+            cell.innerHTML = ''; cell.appendChild(input);
+            cell.classList.remove('editable');
+            input.focus(); input.select();
+
+            const save = async () => {
+                const newValue = parseInt(input.value);
+                if (!isNaN(newValue) && newValue !== currentVal) {
+                    cell.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite; color: var(--primary-terracotta);">autorenew</span>';
+                    await window.inventory.updateComponent(field, newValue);
+                } else {
+                    cell.innerHTML = originalHTML;
+                }
+                cell.classList.add('editable');
+            };
+
+            input.addEventListener('blur', save);
+            input.addEventListener('keypress', (e) => { if (e.key === 'Enter') input.blur(); });
+        }
+
+        async function confirmShipmentDateUI(id) {
+            if (confirm('Zatwierdzić termin wysyłki i przenieść do kolejki realizacji?')) {
+                showLoading();
+                await window.inventory.confirmShipment(id);
+                hideLoading();
+                showToast('Termin wysyłki został zatwierdzony.', 'success');
+            }
+        }
+
+        async function completeShipmentUI(id) {
+            const s = window.inventory.shipments.find(x => String(x.id) === String(id));
+            if (!s) return;
+            const total = s.products ? Object.values(s.products).reduce((a, b) => a + b, 0) : 0;
+            if (confirm(`Wydano towar z magazynu (${total} szt.)? \nStany zostaną zaktualizowane.`)) {
+                showLoading();
+                await window.inventory.completeShipment(id);
+                hideLoading();
+                showToast('Towar wydany, zaktualizowano stany.', 'success');
+            }
+        }
+
+        async function completeRemainingShipmentUI(id) {
+            if (confirm('Wydano brakującą część towaru? \nZamówienie zostanie zamknięte jako kompletne.')) {
+                showLoading();
+                await window.inventory.completeRemainingShipment(id);
+                hideLoading();
+                showToast('Zamówienie sfinalizowane.', 'success');
+            }
+        }
+
+        async function deleteShipment(id) { 
+            if (currentRole === 'admin' && confirm('⚠️ Uwaga: Czy na pewno trwale usunąć to zamówienie z bazy danych? Operacji nie można cofnąć.')) { 
+                showLoading();
+                await window.inventory.deleteShipment(id); 
+                hideLoading();
+                showToast('Zamówienie usunięte z bazy.', 'warning');
+            } 
+        }
+
+        async function deleteAdjustment(id) {
+            if (currentRole === 'admin' && confirm('Usunąć ten wpis z regulacji?')) {
+                showLoading();
+                await window.inventory.deleteAdjustment(id);
+                hideLoading();
+                showToast('Termin usunięty.', 'success');
+            }
+        }
+
+        function showAnglesDemand(id) {
+            const shipment = window.inventory.shipments.find(s => String(s.id) === String(id));
+            if(!shipment) return;
+            
+            const p = shipment.products || {};
+            const a22 = p[1] || 0;
+            const a37 = (p[2] || 0) + (p[4] || 0);
+            const a58 = (p[3] || 0) + (p[5] || 0);
+
+            const content = `
+                <div style="text-align: center;">
+                    <p style="color: var(--text-light); margin-bottom: 1.5rem; font-size:0.95rem;">Zapotrzebowanie dla: <br><strong style="color:var(--text-dark); font-size:1.2rem;">${escapeHTML(shipment.location)}</strong></p>
+                    <div style="display:flex; justify-content: space-around; background: var(--background); padding: 2rem 1rem; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: inset 0 2px 4px rgba(0,0,0,0.03);">
+                        <div><div style="font-size: 0.8rem; color: var(--text-light); text-transform:uppercase; letter-spacing:1px; margin-bottom:5px; font-weight:600;">Kąt 22°</div><div style="font-size: 2.5rem; font-weight: 700; color:var(--primary-dark);">${a22}</div></div>
+                        <div><div style="font-size: 0.8rem; color: var(--text-light); text-transform:uppercase; letter-spacing:1px; margin-bottom:5px; font-weight:600;">Kąt 37°</div><div style="font-size: 2.5rem; font-weight: 700; color:var(--primary-dark);">${a37}</div></div>
+                        <div><div style="font-size: 0.8rem; color: var(--text-light); text-transform:uppercase; letter-spacing:1px; margin-bottom:5px; font-weight:600;">Kąt 58°</div><div style="font-size: 2.5rem; font-weight: 700; color:var(--primary-dark);">${a58}</div></div>
+                    </div>
+                </div>
+            `;
+            showModal('Zapotrzebowanie Kątowe', content);
+        }
+
+        function editShipment(id) {
+            if (currentRole === 'viewer') return;
+            const shipment = window.inventory.shipments.find(s => String(s.id) === String(id));
+            if (!shipment) return;
+
+            const p = shipment.products || {};
+            const p1 = p[1] || 0, p2 = p[2] || 0, p3 = p[3] || 0, p4 = p[4] || 0, p5 = p[5] || 0;
+
+            const isPartial = shipment.status === 'partial';
+            const disableProducts = isPartial ? 'disabled' : '';
+            
+            const formHTML = `
+                <div style="display: grid; gap: 1.25rem;">
+                    <div class="form-group">
+                        <label>Data Wysyłki</label>
+                        <input type="date" id="edit_shipment_date" value="${escapeHTML(shipment.date)}">
+                    </div>
+                    <div class="form-group">
+                        <label>Pełny Cel / Adresat</label>
+                        <input type="text" id="edit_shipment_location" value="${escapeHTML(shipment.location)}">
+                    </div>
+                    <div class="form-group">
+                        <label>Spedytor / Firma Przewozowa</label>
+                        <input type="text" id="edit_shipment_company" value="${escapeHTML(shipment.company || '')}">
+                    </div>
+                    
+                    <div style="margin-top: 0.5rem; background-color: var(--background); padding: 1.25rem; border-radius: 12px; border: 1px solid var(--border-color);">
+                        <h3 style="margin-bottom: 1rem; font-size: 0.85rem; color: var(--text-light); text-transform:uppercase; letter-spacing:1px;">Ilości Opraw (szt.)</h3>
+                        ${isPartial ? '<p style="color: var(--accent-red); font-size:0.8rem; margin-top:-10px; margin-bottom:10px; font-weight:500;">Edycja ilości zablokowana dla wysyłki częściowej.</p>' : ''}
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
+                            <div class="form-group" style="margin:0;"><label>22°-15W</label><input type="number" id="edit_p1" value="${p1}" min="0" ${disableProducts}></div>
+                            <div class="form-group" style="margin:0;"><label>37°-15W</label><input type="number" id="edit_p2" value="${p2}" min="0" ${disableProducts}></div>
+                            <div class="form-group" style="margin:0;"><label>58°-15W</label><input type="number" id="edit_p3" value="${p3}" min="0" ${disableProducts}></div>
+                            <div class="form-group" style="margin:0;"><label>37°-20W</label><input type="number" id="edit_p4" value="${p4}" min="0" ${disableProducts}></div>
+                            <div class="form-group" style="margin:0;"><label>58°-20W</label><input type="number" id="edit_p5" value="${p5}" min="0" ${disableProducts}></div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 1rem;">
+                        <button class="btn-primary" onclick="saveShipment('${id}')" style="width:100%; padding: 1rem;"><span class="material-symbols-outlined">save</span> Zapisz Zmiany w Zamówieniu</button>
+                    </div>
+                </div>
+            `;
+            showModal('Edycja Zamówienia', formHTML);
+        }
+
+        async function saveShipment(id) {
+            const newDate = document.getElementById('edit_shipment_date').value;
+            const newLocation = document.getElementById('edit_shipment_location').value;
+            const newCompany = document.getElementById('edit_shipment_company').value;
+            
+            if (!newDate || !newLocation) { showToast('Data i cel są wymagane.', 'error'); return; }
+
+            const shipment = window.inventory.shipments.find(s => String(s.id) === String(id));
+            const data = { date: newDate, location: newLocation, company: newCompany };
+
+            if (shipment.status !== 'partial') {
+                data.products = {
+                    1: parseInt(document.getElementById('edit_p1').value) || 0,
+                    2: parseInt(document.getElementById('edit_p2').value) || 0,
+                    3: parseInt(document.getElementById('edit_p3').value) || 0,
+                    4: parseInt(document.getElementById('edit_p4').value) || 0,
+                    5: parseInt(document.getElementById('edit_p5').value) || 0,
+                };
+            }
+
+            closeModal();
+            showLoading();
+            await window.inventory.updateShipmentInDB(id, data);
+            hideLoading();
+            showToast('Zmiany zostały zapisane.', 'success');
+        }
+
         document.getElementById('shipmentForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             if (currentRole === 'viewer') return;
@@ -1866,7 +2043,6 @@
                 5: parseInt(formData.get('p5')) || 0
             };
             
-            // Łączenie adresu
             const city = formData.get('ship_city').trim();
             const street = formData.get('ship_street').trim();
             const target = formData.get('ship_target').trim();
