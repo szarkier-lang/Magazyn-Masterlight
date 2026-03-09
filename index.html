@@ -269,7 +269,6 @@
 
             .mobile-only-logout { display: block !important; }
 
-            /* Naprawa uciętej tabeli inwentarza na telefonie */
             .table-responsive { border: none; box-shadow: none; border-radius: 0; background: transparent; max-height: none !important; overflow: visible !important; }
             table, thead, tbody, th, td, tr { display: block; width: 100%; }
             thead tr { position: absolute; top: -9999px; left: -9999px; }
@@ -322,7 +321,7 @@
             .status-badge { border: 1px solid #666 !important; background: transparent !important; color: #000 !important; padding: 2px 6px !important; font-weight: normal !important; }
             td[data-label="Akcja"], th.admin-only-col { display: none !important; }
             
-            /* Zawsze ukrywaj mapę na standardowych wydrukach z przeglądarki */
+            /* Zawsze ukrywaj mapę na wydrukach z przeglądarki */
             .map-container { display: none !important; }
             #map-section-container, #adj-map-section-container { display: none !important; }
         }
@@ -702,7 +701,8 @@
             'b.hajduk@masterlight.pl': 'admin',      
             'm.olejnik@masterlight.pl': 'viewer',         
             'f.robert@interia.pl': 'viewer',         
-            'd.lewandowska@masterlight.pl': 'worker'      
+            'd.lewandowska@masterlight.pl': 'worker',
+            'm.czyzewska@masterlight.pl': 'worker'
         };
 
         let currentUserEmail = '';
@@ -816,7 +816,6 @@
                 
                 const activeShipments = shipments.filter(s => s.status !== 'completed');
                 
-                // PRIORYTET: 1. Potwierdzone, 2. Data
                 activeShipments.sort((a, b) => {
                     if (a.is_confirmed && !b.is_confirmed) return -1;
                     if (!a.is_confirmed && b.is_confirmed) return 1;
@@ -1128,6 +1127,73 @@
                 </table>
                 
                 <div style="margin-top: 60px; border-top: 1px solid #ccc; padding-top: 10px; color: #6B7280; font-size: 0.9em; text-align: right;">
+                    Podpis magazyniera: .......................................................
+                </div>
+            </body>
+            </html>
+            `;
+            
+            const printWin = window.open('', '', 'width=800,height=600');
+            printWin.document.write(html);
+            printWin.document.close();
+            printWin.focus();
+            setTimeout(() => { printWin.print(); printWin.close(); }, 300);
+        }
+
+        // FUNKCJA DRUKU BRAKÓW DO ZAMÓWIENIA CZĘŚCIOWEGO
+        function printMissingPdf(id) {
+            const shipment = window.inventory.shipments.find(s => String(s.id) === String(id));
+            if (!shipment || !shipment.partial_missing) {
+                showToast('Brak danych o brakach dla tego zamówienia.', 'error');
+                return;
+            }
+            
+            const dateStr = new Date().toLocaleDateString('pl-PL');
+            
+            let html = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <title>Lista Braków - ${escapeHTML(shipment.location)}</title>
+                <style>
+                    body { font-family: 'Inter', sans-serif; margin: 40px; color: #1F2937; }
+                    h1 { color: #C4704B; border-bottom: 3px solid #C4704B; padding-bottom: 10px; font-size: 20pt; }
+                    .info-box { background-color: #F3F4F6; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #E5E7EB; line-height: 1.7; font-size: 11pt; }
+                    table { width: 100%; border-collapse: collapse; margin: 30px 0; font-size: 11pt; }
+                    th { background-color: #C4704B; color: white; padding: 12px; text-align: left; text-transform: uppercase; font-size: 9pt; letter-spacing: 1px; }
+                    td { padding: 12px; border-bottom: 1px solid #E5E7EB; }
+                    .missing-qty { color: #DC2626; font-weight: bold; font-size: 1.2em; }
+                    @media print { body { margin: 0; } }
+                </style>
+            </head>
+            <body>
+                <h1>LISTA BRAKÓW DO DOSTARCZENIA (Dokończenie)</h1>
+                <div class="info-box">
+                    <strong>Miejsce docelowe:</strong> ${escapeHTML(shipment.location)}<br>
+                    <strong>Spedytor:</strong> ${escapeHTML(shipment.company || '-')}<br>
+                    <strong>Data pierwszej wysyłki:</strong> ${escapeHTML(shipment.date)}<br>
+                    <strong>Wygenerowano:</strong> ${dateStr}
+                </div>
+                <table>
+                    <thead><tr><th>Model Oprawy (Downlight)</th><th>Kod SKU</th><th>Ilość do dosłania</th></tr></thead>
+                    <tbody>
+            `;
+            
+            let total = 0;
+            Object.entries(shipment.partial_missing).forEach(([pid, qty]) => {
+                const prod = window.inventory.products.find(p => String(p.id) === String(pid));
+                if (prod) {
+                    html += `<tr><td>${escapeHTML(prod.name)}</td><td>${escapeHTML(prod.sku)}</td><td class="missing-qty">${qty} szt.</td></tr>`;
+                    total += qty;
+                }
+            });
+            
+            html += `
+                    </tbody>
+                </table>
+                <p style="text-align: right; font-size: 1.2em;"><strong>Łącznie do dosłania: <span class="missing-qty">${total} szt.</span></strong></p>
+                <div style="margin-top: 50px; border-top: 1px solid #ccc; padding-top: 10px; color: #6B7280; font-size: 0.9em;">
                     Podpis magazyniera: .......................................................
                 </div>
             </body>
@@ -1615,7 +1681,7 @@
                 if (reqs && typeof reqs === 'object') {
                     for (const [pId, qty] of Object.entries(reqs)) {
                         if (qty > 0) {
-                            const prod = window.inventory.products.find(p => String(p.id) === String(pId));
+                            const prod = window.inventory.products.find(p => String(p.id) == pId);
                             if (!prod) { isReady = false; continue; }
                             
                             let needed = qty;
@@ -2093,7 +2159,7 @@
             showToast('Zmiany zostały zapisane.', 'success');
         }
 
-        // --- BRAKUJĄCA FUNKCJA DO DRUKU BRAKÓW ---
+        // FUNKCJA DRUKU BRAKÓW DO ZAMÓWIENIA CZĘŚCIOWEGO
         function printMissingPdf(id) {
             const shipment = window.inventory.shipments.find(s => String(s.id) === String(id));
             if (!shipment || !shipment.partial_missing) {
