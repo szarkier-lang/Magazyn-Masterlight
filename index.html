@@ -292,7 +292,7 @@
             .leaflet-popup-content { font-size: 0.8rem !important; }
         }
 
-        /* --- DRUKOWANIE PDF --- */
+        /* --- DRUKOWANIE (TYLKO DLA PDF INWENTARZA / HISTORII) --- */
         @media print {
             @page { size: A4 landscape; margin: 10mm; }
             body { background: white !important; color: black !important; font-size: 11pt !important; }
@@ -319,6 +319,7 @@
             .status-badge { border: 1px solid #666 !important; background: transparent !important; color: #000 !important; padding: 2px 6px !important; font-weight: normal !important; }
             td[data-label="Akcja"], th.admin-only-col { display: none !important; }
             
+            /* Zawsze ukrywaj mapę na wydrukach z przeglądarki */
             .map-container { display: none !important; }
             #map-section-container, #adj-map-section-container { display: none !important; }
         }
@@ -351,6 +352,18 @@
                 </button>
             </form>
             <p id="login-error" style="color: var(--accent-red); margin-top: 1.5rem; display: none; font-weight: 600; background-color: #FEF2F2; padding: 0.8rem; border-radius: 8px; border: 1px solid #FECACA;"></p>
+        </div>
+    </div>
+
+    <div id="api-key-modal" class="modal">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h2 style="color: var(--primary-dark); font-size: 1.3rem;"><span class="material-symbols-outlined">smart_toy</span> Aktywacja Skanera AI</h2>
+                <span class="close" onclick="document.getElementById('api-key-modal').style.display='none'"><span class="material-symbols-outlined">close</span></span>
+            </div>
+            <p style="margin-bottom: 1.5rem; color: var(--text-light); font-size: 0.95rem; line-height: 1.6;">Wprowadź swój darmowy klucz API Google Gemini. Zostanie on bezpiecznie zaszyfrowany i zapisany <strong>tylko w pamięci tej przeglądarki</strong>.</p>
+            <input type="text" id="api-key-input" placeholder="Wklej klucz (np. AIzaSy...)" style="margin-bottom: 1.5rem;">
+            <button onclick="saveApiKey()" class="btn-primary" style="width: 100%; padding: 1rem;"><span class="material-symbols-outlined">save</span> Zapisz i Wybierz Plik</button>
         </div>
     </div>
 
@@ -430,9 +443,7 @@
                     <div class="section" id="map-section-container">
                         <div class="section-header">
                             <h2><span class="material-symbols-outlined">map</span> Trasy Dostaw (Kolejność)</h2>
-                            <div style="display:flex; gap:15px; align-items:center;">
-                                <span id="map-status" style="font-size:0.8rem; color:var(--text-light);"><span class="material-symbols-outlined" style="font-size:1em; animation: spin 1s linear infinite;">autorenew</span> Oczekiwanie na dane...</span>
-                            </div>
+                            <span id="map-status" style="font-size:0.8rem; color:var(--text-light);"><span class="material-symbols-outlined" style="font-size:1em; animation: spin 1s linear infinite;">autorenew</span> Oczekiwanie na dane...</span>
                         </div>
                         <div class="section-content" style="padding:0;">
                             <div id="shipments-map" class="map-container"></div>
@@ -461,7 +472,7 @@
                             </button>
                         </div>
                         <div class="section-content" style="padding:0;">
-                            <div class="table-responsive" style="max-height: 70vh;">
+                            <div class="table-responsive">
                                 <table>
                                     <thead><tr><th>Model Oprawy</th><th>Kod SKU</th><th>Gotowe</th><th>W Montażu</th><th>Łącznie</th><th>Dostępność</th></tr></thead>
                                     <tbody id="products-table"></tbody>
@@ -530,11 +541,11 @@
                         <div class="section-header">
                             <h2><span class="material-symbols-outlined">add_location_alt</span> Dodaj Nowe Zamówienie / Plan Wysyłki</h2>
                             <div style="display:flex; align-items:center; gap:10px;">
-                                <input type="file" id="ai-image-input" accept="image/*" capture="environment" style="display: none;" onchange="scanOfferWithAI(this.files[0])">
-                                <button type="button" id="ai-scan-btn" class="btn-primary btn-small" onclick="document.getElementById('ai-image-input').click()" style="background-color: #3B82F6; margin: 0; padding: 0.5rem 1rem;">
-                                    <span class="material-symbols-outlined">document_scanner</span> Skanuj Ofertę (AI)
+                                <input type="file" id="ai-image-input" accept="image/*,application/pdf" style="display: none;" onchange="scanOfferWithAI(this.files[0])">
+                                <button type="button" id="ai-scan-btn" class="btn-primary btn-small" onclick="triggerAiScan()" style="background-color: #3B82F6; margin: 0; padding: 0.5rem 1rem;">
+                                    <span class="material-symbols-outlined">document_scanner</span> Skanuj Dokument (AI)
                                 </button>
-                                <a href="#" onclick="resetAiKey()" style="font-size:0.7rem; color:var(--text-light); text-decoration:underline;">Zresetuj klucz AI</a>
+                                <a href="#" onclick="resetAiKey()" style="font-size:0.7rem; color:var(--text-light); text-decoration:underline; cursor:pointer;">Zresetuj klucz AI</a>
                             </div>
                         </div>
                         <div class="section-content">
@@ -567,9 +578,7 @@
                     <div class="section" id="adj-map-section-container">
                         <div class="section-header">
                             <h2><span class="material-symbols-outlined">map</span> Mapa Wyjazdów Serwisowych</h2>
-                            <div style="display:flex; gap:15px; align-items:center;">
-                                <span id="map-adj-status" style="font-size:0.8rem; color:var(--text-light);"><span class="material-symbols-outlined" style="font-size:1em; animation: spin 1s linear infinite;">autorenew</span> Ładowanie mapy...</span>
-                            </div>
+                            <span id="map-adj-status" style="font-size:0.8rem; color:var(--text-light);"><span class="material-symbols-outlined" style="font-size:1em; animation: spin 1s linear infinite;">autorenew</span> Ładowanie mapy...</span>
                         </div>
                         <div class="section-content" style="padding:0;">
                             <div id="adjustments-map" class="map-container"></div>
@@ -721,23 +730,43 @@
         const db = window.supabase.createClient(supabaseUrl, supabaseKey);
 
         // --- SKANER AI GEMINI (SECURE LOCAL STORAGE) ---
+        function triggerAiScan() {
+            let apiKey = localStorage.getItem('gemini_api_key');
+            if (!apiKey) {
+                document.getElementById('api-key-modal').style.display = 'block';
+            } else {
+                document.getElementById('ai-image-input').click();
+            }
+        }
+
+        function saveApiKey() {
+            const val = document.getElementById('api-key-input').value.trim();
+            if(val) {
+                localStorage.setItem('gemini_api_key', val);
+                document.getElementById('api-key-modal').style.display = 'none';
+                document.getElementById('ai-image-input').click();
+            } else {
+                showToast('Wprowadź poprawny klucz API.', 'error');
+            }
+        }
+
         function resetAiKey() {
             localStorage.removeItem('gemini_api_key');
-            showToast('Zresetowano klucz AI z pamięci. Przy następnym skanowaniu system poprosi o nowy klucz.', 'success');
+            showToast('Zresetowano klucz AI. Skonfiguruj ponownie przy kolejnym skanowaniu.', 'success');
         }
 
         async function scanOfferWithAI(file) {
             if (!file) return;
 
-            let apiKey = localStorage.getItem('gemini_api_key');
-            if (!apiKey) {
-                apiKey = prompt("Wprowadź jednorazowo klucz API Google Gemini.\nZostanie on bezpiecznie zapamiętany tylko w Twojej przeglądarce.");
-                if (!apiKey) {
-                    document.getElementById('ai-image-input').value = '';
-                    return; 
-                }
-                localStorage.setItem('gemini_api_key', apiKey.trim());
+            // Zabezpieczenie przed zbyt dużym plikiem (np. ogromny PDF)
+            if (file.size > 15 * 1024 * 1024) {
+                showToast('Plik jest za duży (max 15MB). Zmniejsz rozmiar zdjęcia lub PDF.', 'error');
+                document.getElementById('ai-image-input').value = '';
+                return;
             }
+
+            let apiKey = localStorage.getItem('gemini_api_key');
+            if (!apiKey) return;
 
             const btn = document.getElementById('ai-scan-btn');
             const originalText = btn.innerHTML;
@@ -751,7 +780,7 @@
                     reader.readAsDataURL(file);
                 });
 
-                const promptText = `Przeanalizuj załączone zdjęcie oferty, faktury lub zamówienia. Wyciągnij z niego dane dotyczące dostawy opraw oświetleniowych i zwróć TYLKO czysty obiekt JSON (bez znaczników markdown, sam tekst JSON), o dokładnie takiej strukturze:
+                const promptText = `Przeanalizuj załączony dokument (zdjęcie, skan lub plik PDF). Wyciągnij z niego dane dotyczące dostawy opraw oświetleniowych i zwróć TYLKO czysty obiekt JSON (bez znaczników markdown, sam tekst JSON), o dokładnie takiej strukturze:
                 {
                     "ship_city": "Miasto dostawy (np. Warszawa, zostaw puste jeśli brak)",
                     "ship_street": "Ulica i numer (zostaw puste jeśli brak)",
@@ -782,8 +811,11 @@
                 const result = await response.json();
                 
                 if(result.error) {
-                    localStorage.removeItem('gemini_api_key'); // Reset if invalid
-                    throw new Error("Nieprawidłowy klucz lub błąd usługi: " + result.error.message);
+                    if (result.error.code === 400 && result.error.message.includes('API key')) {
+                        localStorage.removeItem('gemini_api_key');
+                        throw new Error("Wprowadzono zły klucz API. Zresetuj go i wprowadź poprawny.");
+                    }
+                    throw new Error("Błąd usługi Google: " + result.error.message);
                 }
 
                 const textResponse = result.candidates[0].content.parts[0].text;
@@ -803,11 +835,11 @@
                 if(data.p4 !== undefined) form.elements['p4'].value = data.p4;
                 if(data.p5 !== undefined) form.elements['p5'].value = data.p5;
 
-                showToast('AI z sukcesem odczytało ofertę!', 'success');
+                showToast('Sukces! AI wypełniło formularz z dokumentu.', 'success');
 
             } catch (error) {
                 console.error("AI Error:", error);
-                showToast('Błąd skanowania. Upewnij się, że klucz API jest poprawny.', 'error');
+                showToast(error.message || 'Nie udało się odczytać dokumentu.', 'error');
             } finally {
                 btn.innerHTML = originalText;
                 btn.disabled = false;
@@ -1756,6 +1788,7 @@
             }
         }
 
+        // --- SYMULACJA WIRTUALNEGO MAGAZYNU ---
         function getShipmentsReadinessMap() {
             const readinessMap = {};
             if (!window.inventory) return readinessMap;
@@ -1773,6 +1806,7 @@
 
             let pending = window.inventory.shipments.filter(s => s.status !== 'completed');
             
+            // PRIORYTET 1: Potwierdzone, PRIORYTET 2: Data
             pending.sort((a, b) => {
                 if (a.is_confirmed && !b.is_confirmed) return -1;
                 if (!a.is_confirmed && b.is_confirmed) return 1;
@@ -1817,6 +1851,7 @@
             return readinessMap;
         }
 
+        // --- RENDEROWANIE TABEL ---
         function getStatusClass(productId) {
             const status = window.inventory.getStatus(productId);
             return status === 'ok' ? 'status-ok' : status === 'warning' ? 'status-warning' : 'status-error';
@@ -1880,6 +1915,7 @@
                 
                 const activeShipments = window.inventory.shipments.filter(s => s.status !== 'completed');
                 
+                // PRIORYTET: 1. Potwierdzone, 2. Data
                 activeShipments.sort((a, b) => {
                     if (a.is_confirmed && !b.is_confirmed) return -1;
                     if (!a.is_confirmed && b.is_confirmed) return 1;
