@@ -41,10 +41,8 @@
             --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
             --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
             --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-            --shadow-hover: 0 20px 25px -5px rgba(196, 112, 75, 0.15), 0 10px 10px -5px rgba(196, 112, 75, 0.04);
         }
 
-        /* Wymuszenie drukowania kolorów i tła na wszystkich przeglądarkach */
         * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
 
         body {
@@ -238,7 +236,6 @@
         .leaflet-popup-content { margin: 12px 16px !important; font-family: 'Inter', sans-serif !important; color: var(--text-dark) !important; font-size: 0.9rem !important; line-height: 1.5 !important;}
         .leaflet-container { font-family: 'Inter', sans-serif !important; }
 
-        /* WŁASNE ZNACZNIKI NA MAPIE (KROPKI Z NUMERAMI) */
         .custom-map-marker {
             display: flex; align-items: center; justify-content: center;
             border-radius: 50%; color: #fff; font-weight: 700;
@@ -321,7 +318,6 @@
             .status-badge { border: 1px solid #666 !important; background: transparent !important; color: #000 !important; padding: 2px 6px !important; font-weight: normal !important; }
             td[data-label="Akcja"], th.admin-only-col { display: none !important; }
             
-            /* Zawsze ukrywaj mapę na wydrukach z przeglądarki */
             .map-container { display: none !important; }
             #map-section-container, #adj-map-section-container { display: none !important; }
         }
@@ -528,7 +524,13 @@
                     </div>
 
                     <div id="form-shipment-container" class="section">
-                        <div class="section-header"><h2><span class="material-symbols-outlined">add_location_alt</span> Dodaj Nowe Zamówienie / Plan Wysyłki</h2></div>
+                        <div class="section-header">
+                            <h2><span class="material-symbols-outlined">add_location_alt</span> Dodaj Nowe Zamówienie / Plan Wysyłki</h2>
+                            <input type="file" id="ai-image-input" accept="image/*" capture="environment" style="display: none;" onchange="scanOfferWithAI(this.files[0])">
+                            <button type="button" id="ai-scan-btn" class="btn-primary btn-small" onclick="document.getElementById('ai-image-input').click()" style="background-color: #3B82F6; margin: 0; padding: 0.5rem 1rem;">
+                                <span class="material-symbols-outlined">document_scanner</span> Skanuj Ofertę (AI)
+                            </button>
+                        </div>
                         <div class="section-content">
                             <form id="shipmentForm">
                                 <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.25rem;">
@@ -697,6 +699,11 @@
         const supabaseUrl = 'https://ghdswvjhqpxupzcrixlu.supabase.co';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdoZHN3dmpocXB4dXB6Y3JpeGx1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4NTEwMDAsImV4cCI6MjA4NzQyNzAwMH0._sk7mCv27tC153DTvqp_7O3CUyYsk3iuYuf0f93GCfo';
         
+        // ==========================================
+        // TUTAJ WKLEJ SWÓJ KLUCZ API GOOGLE GEMINI
+        // ==========================================
+        const GEMINI_API_KEY = 'AIzaSyAFRUinoZsMhdNm9i4ruwkrQUkMO3wMkaw'; 
+        
         const ROLES = {
             'b.hajduk@masterlight.pl': 'admin',      
             'm.olejnik@masterlight.pl': 'viewer',         
@@ -709,6 +716,91 @@
         let currentRole = 'viewer';
 
         const db = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        // --- SKANER AI GEMINI ---
+        async function scanOfferWithAI(file) {
+            if (!file) return;
+
+            const btn = document.getElementById('ai-scan-btn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">autorenew</span> Sztuczna Inteligencja czyta...';
+            btn.disabled = true;
+
+            try {
+                if (GEMINI_API_KEY === 'TUTAJ_WKLEJ_SWOJ_KLUCZ_API') {
+                    throw new Error("Brak klucza API. Wklej klucz w kodzie aplikacji.");
+                }
+
+                // Zamiana zdjęcia na Base64
+                const base64Data = await new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result.split(',')[1]);
+                    reader.readAsDataURL(file);
+                });
+
+                // Czego szukamy na zdjęciu
+                const promptText = `Przeanalizuj załączone zdjęcie oferty, faktury lub zamówienia. Wyciągnij z niego dane dotyczące dostawy opraw oświetleniowych i zwróć TYLKO czysty obiekt JSON (bez znaczników markdown, sam tekst JSON), o dokładnie takiej strukturze:
+                {
+                    "ship_city": "Miasto dostawy (np. Warszawa, zostaw puste jeśli brak)",
+                    "ship_street": "Ulica i numer (zostaw puste jeśli brak)",
+                    "ship_target": "Nazwa inwestycji/obiektu/firmy klienta (zostaw puste jeśli brak)",
+                    "date": "Data w formacie YYYY-MM-DD (jeśli nie ma daty dostawy, wymyśl dzisiejszą datę)",
+                    "company": "Spedytor lub firma docelowa (zostaw puste jeśli brak)",
+                    "p1": ilość opraw 22 stopnie 15W (zwróć jako liczba całkowita, 0 jeśli brak),
+                    "p2": ilość opraw 37 stopni 15W (zwróć jako liczba całkowita, 0 jeśli brak),
+                    "p3": ilość opraw 58 stopni 15W (zwróć jako liczba całkowita, 0 jeśli brak),
+                    "p4": ilość opraw 37 stopni 20W (zwróć jako liczba całkowita, 0 jeśli brak),
+                    "p5": ilość opraw 58 stopni 20W (zwróć jako liczba całkowita, 0 jeśli brak)
+                }
+                Jeśli na ofercie brakuje którejś informacji, wstaw 0 dla liczb lub puste pole "" dla tekstu.`;
+
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [
+                                { text: promptText },
+                                { inline_data: { mime_type: file.type, data: base64Data } }
+                            ]
+                        }]
+                    })
+                });
+
+                const result = await response.json();
+                if(result.error) throw new Error(result.error.message);
+
+                const textResponse = result.candidates[0].content.parts[0].text;
+                const jsonString = textResponse.replace(/\`\`\`json/g, '').replace(/\`\`\`/g, '').trim();
+                const data = JSON.parse(jsonString);
+
+                // Automatyczne wypełnianie formularza na ekranie
+                const form = document.getElementById('shipmentForm');
+                if(data.ship_city) form.elements['ship_city'].value = data.ship_city;
+                if(data.ship_street) form.elements['ship_street'].value = data.ship_street;
+                if(data.ship_target) form.elements['ship_target'].value = data.ship_target;
+                if(data.date) form.elements['date'].value = data.date;
+                if(data.company) form.elements['company'].value = data.company;
+                
+                if(data.p1 !== undefined) form.elements['p1'].value = data.p1;
+                if(data.p2 !== undefined) form.elements['p2'].value = data.p2;
+                if(data.p3 !== undefined) form.elements['p3'].value = data.p3;
+                if(data.p4 !== undefined) form.elements['p4'].value = data.p4;
+                if(data.p5 !== undefined) form.elements['p5'].value = data.p5;
+
+                showToast('AI z sukcesem odczytało ofertę!', 'success');
+
+            } catch (error) {
+                console.error("AI Error:", error);
+                showToast('Nie udało się odczytać oferty. Sprawdź klucz API.', 'error');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                // Czyszczenie inputa by można było wgrać ten sam plik ponownie
+                document.getElementById('ai-image-input').value = ''; 
+            }
+        }
+
 
         // --- AUTO-LOGOUT (5 MINUT BEZCZYNNOŚCI) ---
         let inactivityTimer;
@@ -816,6 +908,7 @@
                 
                 const activeShipments = shipments.filter(s => s.status !== 'completed');
                 
+                // PRIORYTET: 1. Potwierdzone, 2. Data
                 activeShipments.sort((a, b) => {
                     if (a.is_confirmed && !b.is_confirmed) return -1;
                     if (!a.is_confirmed && b.is_confirmed) return 1;
@@ -919,6 +1012,7 @@
                 if(statusEl) statusEl.innerHTML = '<span class="material-symbols-outlined" style="font-size:1em; color: var(--info-status);">check_circle</span> Mapa gotowa';
             } catch(e) {}
         }
+
 
         // --- UI INNE ---
         function showLoading() { document.getElementById('loading-screen').classList.remove('hidden'); }
@@ -1127,73 +1221,6 @@
                 </table>
                 
                 <div style="margin-top: 60px; border-top: 1px solid #ccc; padding-top: 10px; color: #6B7280; font-size: 0.9em; text-align: right;">
-                    Podpis magazyniera: .......................................................
-                </div>
-            </body>
-            </html>
-            `;
-            
-            const printWin = window.open('', '', 'width=800,height=600');
-            printWin.document.write(html);
-            printWin.document.close();
-            printWin.focus();
-            setTimeout(() => { printWin.print(); printWin.close(); }, 300);
-        }
-
-        // FUNKCJA DRUKU BRAKÓW DO ZAMÓWIENIA CZĘŚCIOWEGO
-        function printMissingPdf(id) {
-            const shipment = window.inventory.shipments.find(s => String(s.id) === String(id));
-            if (!shipment || !shipment.partial_missing) {
-                showToast('Brak danych o brakach dla tego zamówienia.', 'error');
-                return;
-            }
-            
-            const dateStr = new Date().toLocaleDateString('pl-PL');
-            
-            let html = `
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <meta charset="UTF-8">
-                <title>Lista Braków - ${escapeHTML(shipment.location)}</title>
-                <style>
-                    body { font-family: 'Inter', sans-serif; margin: 40px; color: #1F2937; }
-                    h1 { color: #C4704B; border-bottom: 3px solid #C4704B; padding-bottom: 10px; font-size: 20pt; }
-                    .info-box { background-color: #F3F4F6; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #E5E7EB; line-height: 1.7; font-size: 11pt; }
-                    table { width: 100%; border-collapse: collapse; margin: 30px 0; font-size: 11pt; }
-                    th { background-color: #C4704B; color: white; padding: 12px; text-align: left; text-transform: uppercase; font-size: 9pt; letter-spacing: 1px; }
-                    td { padding: 12px; border-bottom: 1px solid #E5E7EB; }
-                    .missing-qty { color: #DC2626; font-weight: bold; font-size: 1.2em; }
-                    @media print { body { margin: 0; } }
-                </style>
-            </head>
-            <body>
-                <h1>LISTA BRAKÓW DO DOSTARCZENIA (Dokończenie)</h1>
-                <div class="info-box">
-                    <strong>Miejsce docelowe:</strong> ${escapeHTML(shipment.location)}<br>
-                    <strong>Spedytor:</strong> ${escapeHTML(shipment.company || '-')}<br>
-                    <strong>Data pierwszej wysyłki:</strong> ${escapeHTML(shipment.date)}<br>
-                    <strong>Wygenerowano:</strong> ${dateStr}
-                </div>
-                <table>
-                    <thead><tr><th>Model Oprawy (Downlight)</th><th>Kod SKU</th><th>Ilość do dosłania</th></tr></thead>
-                    <tbody>
-            `;
-            
-            let total = 0;
-            Object.entries(shipment.partial_missing).forEach(([pid, qty]) => {
-                const prod = window.inventory.products.find(p => String(p.id) === String(pid));
-                if (prod) {
-                    html += `<tr><td>${escapeHTML(prod.name)}</td><td>${escapeHTML(prod.sku)}</td><td class="missing-qty">${qty} szt.</td></tr>`;
-                    total += qty;
-                }
-            });
-            
-            html += `
-                    </tbody>
-                </table>
-                <p style="text-align: right; font-size: 1.2em;"><strong>Łącznie do dosłania: <span class="missing-qty">${total} szt.</span></strong></p>
-                <div style="margin-top: 50px; border-top: 1px solid #ccc; padding-top: 10px; color: #6B7280; font-size: 0.9em;">
                     Podpis magazyniera: .......................................................
                 </div>
             </body>
@@ -2157,73 +2184,6 @@
             await window.inventory.updateShipmentInDB(id, data);
             hideLoading();
             showToast('Zmiany zostały zapisane.', 'success');
-        }
-
-        // FUNKCJA DRUKU BRAKÓW DO ZAMÓWIENIA CZĘŚCIOWEGO
-        function printMissingPdf(id) {
-            const shipment = window.inventory.shipments.find(s => String(s.id) === String(id));
-            if (!shipment || !shipment.partial_missing) {
-                showToast('Brak danych o brakach dla tego zamówienia.', 'error');
-                return;
-            }
-            
-            const dateStr = new Date().toLocaleDateString('pl-PL');
-            
-            let html = `
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <meta charset="UTF-8">
-                <title>Lista Braków - ${escapeHTML(shipment.location)}</title>
-                <style>
-                    body { font-family: 'Inter', sans-serif; margin: 40px; color: #1F2937; }
-                    h1 { color: #C4704B; border-bottom: 3px solid #C4704B; padding-bottom: 10px; font-size: 20pt; }
-                    .info-box { background-color: #F3F4F6; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #E5E7EB; line-height: 1.7; font-size: 11pt; }
-                    table { width: 100%; border-collapse: collapse; margin: 30px 0; font-size: 11pt; }
-                    th { background-color: #C4704B; color: white; padding: 12px; text-align: left; text-transform: uppercase; font-size: 9pt; letter-spacing: 1px; }
-                    td { padding: 12px; border-bottom: 1px solid #E5E7EB; }
-                    .missing-qty { color: #DC2626; font-weight: bold; font-size: 1.2em; }
-                    @media print { body { margin: 0; } }
-                </style>
-            </head>
-            <body>
-                <h1>LISTA BRAKÓW DO DOSTARCZENIA (Dokończenie)</h1>
-                <div class="info-box">
-                    <strong>Miejsce docelowe:</strong> ${escapeHTML(shipment.location)}<br>
-                    <strong>Spedytor:</strong> ${escapeHTML(shipment.company || '-')}<br>
-                    <strong>Data pierwszej wysyłki:</strong> ${escapeHTML(shipment.date)}<br>
-                    <strong>Wygenerowano:</strong> ${dateStr}
-                </div>
-                <table>
-                    <thead><tr><th>Model Oprawy (Downlight)</th><th>Kod SKU</th><th>Ilość do dosłania</th></tr></thead>
-                    <tbody>
-            `;
-            
-            let total = 0;
-            Object.entries(shipment.partial_missing).forEach(([pid, qty]) => {
-                const prod = window.inventory.products.find(p => String(p.id) === String(pid));
-                if (prod) {
-                    html += `<tr><td>${escapeHTML(prod.name)}</td><td>${escapeHTML(prod.sku)}</td><td class="missing-qty">${qty} szt.</td></tr>`;
-                    total += qty;
-                }
-            });
-            
-            html += `
-                    </tbody>
-                </table>
-                <p style="text-align: right; font-size: 1.2em;"><strong>Łącznie do dosłania: <span class="missing-qty">${total} szt.</span></strong></p>
-                <div style="margin-top: 50px; border-top: 1px solid #ccc; padding-top: 10px; color: #6B7280; font-size: 0.9em;">
-                    Podpis magazyniera: .......................................................
-                </div>
-            </body>
-            </html>
-            `;
-            
-            const printWin = window.open('', '', 'width=800,height=600');
-            printWin.document.write(html);
-            printWin.document.close();
-            printWin.focus();
-            setTimeout(() => { printWin.print(); printWin.close(); }, 300);
         }
 
         document.getElementById('shipmentForm').addEventListener('submit', async function(e) {
