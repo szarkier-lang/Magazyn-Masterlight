@@ -236,7 +236,6 @@
         .leaflet-popup-content { margin: 12px 16px !important; font-family: 'Inter', sans-serif !important; color: var(--text-dark) !important; font-size: 0.9rem !important; line-height: 1.5 !important;}
         .leaflet-container { font-family: 'Inter', sans-serif !important; }
 
-        /* WŁASNE ZNACZNIKI NA MAPIE (KROPKI Z NUMERAMI - BEZ ETYKIET W TLE) */
         .custom-map-marker {
             display: flex; align-items: center; justify-content: center;
             border-radius: 50%; color: #fff; font-weight: 700;
@@ -319,7 +318,6 @@
             .status-badge { border: 1px solid #666 !important; background: transparent !important; color: #000 !important; padding: 2px 6px !important; font-weight: normal !important; }
             td[data-label="Akcja"], th.admin-only-col { display: none !important; }
             
-            /* Zawsze ukrywaj mapę na wydrukach z przeglądarki */
             .map-container { display: none !important; }
             #map-section-container, #adj-map-section-container { display: none !important; }
         }
@@ -355,18 +353,6 @@
         </div>
     </div>
 
-    <div id="api-key-modal" class="modal">
-        <div class="modal-dialog">
-            <div class="modal-header">
-                <h2 style="color: var(--primary-dark); font-size: 1.3rem;"><span class="material-symbols-outlined">smart_toy</span> Aktywacja Skanera AI</h2>
-                <span class="close" onclick="document.getElementById('api-key-modal').style.display='none'"><span class="material-symbols-outlined">close</span></span>
-            </div>
-            <p style="margin-bottom: 1.5rem; color: var(--text-light); font-size: 0.95rem; line-height: 1.6;">Wprowadź swój darmowy klucz API Google Gemini. Zostanie on bezpiecznie zaszyfrowany i zapisany <strong>tylko w pamięci tej przeglądarki</strong>.</p>
-            <input type="text" id="api-key-input" placeholder="Wklej klucz (np. AIzaSy...)" style="margin-bottom: 1.5rem;">
-            <button onclick="saveApiKey()" class="btn-primary" style="width: 100%; padding: 1rem;"><span class="material-symbols-outlined">save</span> Zapisz i Wybierz Plik</button>
-        </div>
-    </div>
-
     <div id="mobile-overlay" class="mobile-overlay" onclick="toggleSidebar()"></div>
 
     <div id="app-container" class="hidden" style="display: flex; width: 100%; height: 100vh;">
@@ -384,6 +370,7 @@
                     <li id="nav-history"><a href="#" onclick="switchTab('tab-history')" class="nav-item"><span class="material-symbols-outlined">receipt_long</span> Historia Zmian</a></li>
                     <li><a href="#" onclick="switchTab('tab-components')" class="nav-item"><span class="material-symbols-outlined">electrical_services</span> Komponenty</a></li>
                     <li id="nav-reports"><a href="#" onclick="switchTab('tab-reports')" class="nav-item"><span class="material-symbols-outlined">precision_manufacturing</span> Panel Produkcji</a></li>
+                    <li id="nav-settings"><a href="#" onclick="switchTab('tab-settings')" class="nav-item"><span class="material-symbols-outlined">settings_suggest</span> Ustawienia Systemu (AI)</a></li>
                     
                     <li class="mobile-only-logout" style="margin-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1rem;">
                         <a href="#" onclick="logoutUser()" class="nav-item" style="color: #FECACA;"><span class="material-symbols-outlined">logout</span> Wyloguj się</a>
@@ -443,7 +430,9 @@
                     <div class="section" id="map-section-container">
                         <div class="section-header">
                             <h2><span class="material-symbols-outlined">map</span> Trasy Dostaw (Kolejność)</h2>
-                            <span id="map-status" style="font-size:0.8rem; color:var(--text-light);"><span class="material-symbols-outlined" style="font-size:1em; animation: spin 1s linear infinite;">autorenew</span> Oczekiwanie na dane...</span>
+                            <div style="display:flex; gap:15px; align-items:center;">
+                                <span id="map-status" style="font-size:0.8rem; color:var(--text-light);"><span class="material-symbols-outlined" style="font-size:1em; animation: spin 1s linear infinite;">autorenew</span> Oczekiwanie na dane...</span>
+                            </div>
                         </div>
                         <div class="section-content" style="padding:0;">
                             <div id="shipments-map" class="map-container"></div>
@@ -472,7 +461,7 @@
                             </button>
                         </div>
                         <div class="section-content" style="padding:0;">
-                            <div class="table-responsive">
+                            <div class="table-responsive" style="max-height: 70vh;">
                                 <table>
                                     <thead><tr><th>Model Oprawy</th><th>Kod SKU</th><th>Gotowe</th><th>W Montażu</th><th>Łącznie</th><th>Dostępność</th></tr></thead>
                                     <tbody id="products-table"></tbody>
@@ -542,10 +531,9 @@
                             <h2><span class="material-symbols-outlined">add_location_alt</span> Dodaj Nowe Zamówienie / Plan Wysyłki</h2>
                             <div style="display:flex; align-items:center; gap:10px;">
                                 <input type="file" id="ai-image-input" accept="image/*,application/pdf" style="display: none;" onchange="scanOfferWithAI(this.files[0])">
-                                <button type="button" id="ai-scan-btn" class="btn-primary btn-small" onclick="triggerAiScan()" style="background-color: #3B82F6; margin: 0; padding: 0.5rem 1rem;">
-                                    <span class="material-symbols-outlined">document_scanner</span> Skanuj Dokument (AI)
+                                <button type="button" id="ai-scan-btn" class="btn-primary btn-small" onclick="startAiScan()" style="background-color: #3B82F6; margin: 0; padding: 0.5rem 1rem;">
+                                    <span class="material-symbols-outlined">document_scanner</span> Skanuj Ofertę (AI)
                                 </button>
-                                <a href="#" onclick="resetAiKey()" style="font-size:0.7rem; color:var(--text-light); text-decoration:underline; cursor:pointer;">Zresetuj klucz AI</a>
                             </div>
                         </div>
                         <div class="section-content">
@@ -578,7 +566,9 @@
                     <div class="section" id="adj-map-section-container">
                         <div class="section-header">
                             <h2><span class="material-symbols-outlined">map</span> Mapa Wyjazdów Serwisowych</h2>
-                            <span id="map-adj-status" style="font-size:0.8rem; color:var(--text-light);"><span class="material-symbols-outlined" style="font-size:1em; animation: spin 1s linear infinite;">autorenew</span> Ładowanie mapy...</span>
+                            <div style="display:flex; gap:15px; align-items:center;">
+                                <span id="map-adj-status" style="font-size:0.8rem; color:var(--text-light);"><span class="material-symbols-outlined" style="font-size:1em; animation: spin 1s linear infinite;">autorenew</span> Ładowanie mapy...</span>
+                            </div>
                         </div>
                         <div class="section-content" style="padding:0;">
                             <div id="adjustments-map" class="map-container"></div>
@@ -694,6 +684,26 @@
                     </div>
                 </div>
 
+                <div id="tab-settings" class="tab-content">
+                    <div class="section" style="max-width: 700px;">
+                        <div class="section-header"><h2><span class="material-symbols-outlined">settings_suggest</span> Konfiguracja Skanera AI (Gemini)</h2></div>
+                        <div class="section-content">
+                            <p style="color: var(--text-dark); font-size: 0.95rem; margin-bottom: 1.5rem; line-height: 1.6;">
+                                Aby korzystać z funkcji automatycznego odczytywania ofert ze zdjęć i plików PDF, musisz wprowadzić prywatny klucz API Google. 
+                                <br><br><span style="color: var(--text-light); font-size: 0.85rem;">Klucz jest bezpiecznie szyfrowany i zapisywany wyłącznie w pamięci podręcznej (Local Storage) Twojego urządzenia. Nie jest on widoczny w kodzie źródłowym ani przesyłany do innych pracowników.</span>
+                            </p>
+                            <div class="form-group">
+                                <label>Twój Klucz API Google Gemini</label>
+                                <input type="password" id="settings-api-key" placeholder="Wklej klucz (np. AIzaSy...)">
+                            </div>
+                            <div style="margin-top: 1.5rem; display: flex; gap: 15px;">
+                                <button class="btn-primary" onclick="saveSettingsApiKey()"><span class="material-symbols-outlined">save</span> Zapisz Klucz</button>
+                                <button class="btn-secondary" onclick="deleteSettingsApiKey()"><span class="material-symbols-outlined">delete</span> Usuń Klucz z urządzenia</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <footer class="footer">
                     <p>© 2026 Masterlight Sp. z o.o. - Wszelkie prawa zastrzeżone</p>
                     <p style="font-size: 0.75rem; color: var(--text-light); margin-top: 5px;">Cloud WMS Engine v2.1 | Zalogowano jako: <span id="footer-user">...</span></p>
@@ -730,37 +740,37 @@
         const db = window.supabase.createClient(supabaseUrl, supabaseKey);
 
         // --- SKANER AI GEMINI (SECURE LOCAL STORAGE) ---
-        function triggerAiScan() {
-            let apiKey = localStorage.getItem('gemini_api_key');
-            if (!apiKey) {
-                document.getElementById('api-key-modal').style.display = 'block';
+        function saveSettingsApiKey() {
+            const key = document.getElementById('settings-api-key').value.trim();
+            if(key) {
+                localStorage.setItem('gemini_api_key', key);
+                showToast('Klucz API został pomyślnie zapisany w pamięci.', 'success');
             } else {
-                document.getElementById('ai-image-input').click();
+                showToast('Pole klucza nie może być puste.', 'warning');
             }
         }
 
-        function saveApiKey() {
-            const val = document.getElementById('api-key-input').value.trim();
-            if(val) {
-                localStorage.setItem('gemini_api_key', val);
-                document.getElementById('api-key-modal').style.display = 'none';
-                document.getElementById('ai-image-input').click();
-            } else {
-                showToast('Wprowadź poprawny klucz API.', 'error');
-            }
-        }
-
-        function resetAiKey() {
+        function deleteSettingsApiKey() {
             localStorage.removeItem('gemini_api_key');
-            showToast('Zresetowano klucz AI. Skonfiguruj ponownie przy kolejnym skanowaniu.', 'success');
+            document.getElementById('settings-api-key').value = '';
+            showToast('Klucz API został usunięty z tego urządzenia.', 'warning');
+        }
+
+        function startAiScan() {
+            const apiKey = localStorage.getItem('gemini_api_key');
+            if (!apiKey) {
+                showToast('Brak klucza API! Przejdź do zakładki "Ustawienia Systemu" i dodaj swój klucz.', 'error');
+                return;
+            }
+            // Zabezpieczone przed przeładowaniem przez type="button" wywołujące to click()
+            document.getElementById('ai-image-input').click();
         }
 
         async function scanOfferWithAI(file) {
             if (!file) return;
 
-            // Zabezpieczenie przed zbyt dużym plikiem (np. ogromny PDF)
             if (file.size > 15 * 1024 * 1024) {
-                showToast('Plik jest za duży (max 15MB). Zmniejsz rozmiar zdjęcia lub PDF.', 'error');
+                showToast('Plik jest za duży (max 15MB). Wgraj mniejsze zdjęcie lub PDF.', 'error');
                 document.getElementById('ai-image-input').value = '';
                 return;
             }
@@ -811,10 +821,6 @@
                 const result = await response.json();
                 
                 if(result.error) {
-                    if (result.error.code === 400 && result.error.message.includes('API key')) {
-                        localStorage.removeItem('gemini_api_key');
-                        throw new Error("Wprowadzono zły klucz API. Zresetuj go i wprowadź poprawny.");
-                    }
                     throw new Error("Błąd usługi Google: " + result.error.message);
                 }
 
@@ -835,11 +841,11 @@
                 if(data.p4 !== undefined) form.elements['p4'].value = data.p4;
                 if(data.p5 !== undefined) form.elements['p5'].value = data.p5;
 
-                showToast('Sukces! AI wypełniło formularz z dokumentu.', 'success');
+                showToast('Sukces! AI wypełniło formularz.', 'success');
 
             } catch (error) {
                 console.error("AI Error:", error);
-                showToast(error.message || 'Nie udało się odczytać dokumentu.', 'error');
+                showToast('Wystąpił błąd analizy dokumentu.', 'error');
             } finally {
                 btn.innerHTML = originalText;
                 btn.disabled = false;
@@ -867,7 +873,6 @@
             document.addEventListener(event, resetInactivityTimer, true);
         });
 
-        // BEZPIECZEŃSTWO TEKSTÓW HTML INJECTION
         function escapeHTML(str) {
             if (str === null || str === undefined) return '';
             return String(str)
@@ -954,7 +959,6 @@
                 
                 const activeShipments = shipments.filter(s => s.status !== 'completed');
                 
-                // PRIORYTET: 1. Potwierdzone, 2. Data
                 activeShipments.sort((a, b) => {
                     if (a.is_confirmed && !b.is_confirmed) return -1;
                     if (!a.is_confirmed && b.is_confirmed) return 1;
@@ -1131,7 +1135,7 @@
                 const elsToHide = [
                     'form-shipment-container', 'form-incoming-container', 
                     'form-components-container', 'form-production-container', 
-                    'form-adjustments-container', 'nav-history', 'nav-reports'
+                    'form-adjustments-container', 'nav-history', 'nav-reports', 'nav-settings'
                 ];
                 elsToHide.forEach(id => {
                     const el = document.getElementById(id);
@@ -1141,8 +1145,11 @@
                 document.querySelectorAll('.admin-only-col').forEach(el => el.style.display = 'none');
             }
             if (currentRole === 'worker') {
-                const navHistory = document.getElementById('nav-history');
-                if (navHistory) navHistory.style.display = 'none';
+                const elsToHide = ['nav-history', 'nav-settings'];
+                elsToHide.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.style.display = 'none';
+                });
             }
         }
 
@@ -1186,6 +1193,15 @@
                     if (mapAdj) mapAdj.invalidateSize(); 
                     if(window.inventory) updateAdjMapMarkers(window.inventory.adjustments);
                 }, 150);
+            }
+            
+            if (tabId === 'tab-settings') {
+                const savedKey = localStorage.getItem('gemini_api_key');
+                if (savedKey) {
+                    document.getElementById('settings-api-key').value = savedKey;
+                } else {
+                    document.getElementById('settings-api-key').value = '';
+                }
             }
         }
 
@@ -1915,7 +1931,7 @@
                 
                 const activeShipments = window.inventory.shipments.filter(s => s.status !== 'completed');
                 
-                // PRIORYTET: 1. Potwierdzone, 2. Data
+                // PRIORYTET: 1. Potwierdzone, 2. Data (Do tabeli na Dashboardzie też!)
                 activeShipments.sort((a, b) => {
                     if (a.is_confirmed && !b.is_confirmed) return -1;
                     if (!a.is_confirmed && b.is_confirmed) return 1;
