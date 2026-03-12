@@ -371,7 +371,6 @@
                     <li id="nav-history"><a href="#" onclick="switchTab('tab-history')" class="nav-item"><span class="material-symbols-outlined">receipt_long</span> Historia Zmian</a></li>
                     <li><a href="#" onclick="switchTab('tab-components')" class="nav-item"><span class="material-symbols-outlined">electrical_services</span> Komponenty</a></li>
                     <li id="nav-reports"><a href="#" onclick="switchTab('tab-reports')" class="nav-item"><span class="material-symbols-outlined">precision_manufacturing</span> Panel Produkcji</a></li>
-                    
                     <li id="nav-settings"><a href="#" onclick="switchTab('tab-settings')" class="nav-item"><span class="material-symbols-outlined">settings_suggest</span> Ustawienia Systemu (AI)</a></li>
                     
                     <li class="mobile-only-logout" style="margin-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1rem;">
@@ -692,11 +691,11 @@
                         <div class="section-content">
                             <div class="alert-banner" style="background:#EFF6FF; border-color:#BFDBFE; border-left-color:#3B82F6; color:#1E3A8A;">
                                 <span class="material-symbols-outlined" style="font-size:2rem;">info</span>
-                                <div>Google blokuje nowe darmowe klucze w Unii Europejskiej. Dlatego zmieniliśmy silnik na najlepszy na świecie model <strong>OpenAI ChatGPT (GPT-4o-mini)</strong>. Działa on zawsze w 100%.</div>
+                                <div>Wykorzystujemy najpotężniejszy model <strong>OpenAI ChatGPT (GPT-4o-mini)</strong> do czytania zdjęć i pdfów, potrafi on m.in. czytać pismo odręczne.</div>
                             </div>
                             <p style="color: var(--text-dark); font-size: 0.95rem; margin-bottom: 1.5rem; line-height: 1.6;">
-                                Załóż konto na <strong>platform.openai.com</strong> (wymaga doładowania salda za $5, co starczy na ponad rok używania) i wygeneruj klucz. Zaczyna się on od liter <strong>sk-...</strong>
-                                <br><br><span style="color: var(--text-light); font-size: 0.85rem;">Klucz jest bezpiecznie szyfrowany i zapisywany wyłącznie w pamięci Twojego urządzenia.</span>
+                                Aby korzystać ze skanera, załóż konto na <strong>platform.openai.com</strong>, zasil konto minimalną kwotą ($5) i wygeneruj klucz zaczynający się od liter <strong>sk-...</strong>
+                                <br><br><span style="color: var(--text-light); font-size: 0.85rem;">Klucz jest bezpiecznie zapisywany wyłącznie w pamięci Twojego urządzenia.</span>
                             </p>
                             <div class="form-group">
                                 <label>Twój Klucz API OpenAI (ChatGPT)</label>
@@ -786,48 +785,65 @@
 
             const btn = document.getElementById('ai-scan-btn');
             const originalText = btn.innerHTML;
-            btn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">autorenew</span> ChatGPT czyta...';
+            btn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">autorenew</span> ChatGPT analizuje dokument...';
             btn.disabled = true;
 
             try {
                 let messagesContent = [];
                 const today = new Date().toISOString().split('T')[0];
-                const promptText = `Jesteś systemem automatyzacji magazynu. Przeanalizuj ofertę/fakturę i zwróć dane jako JEDEN, poprawny obiekt JSON.
+                
+                const promptText = `Jesteś systemem automatyzacji magazynu. Przeanalizuj załączone obrazy (dokumenty).
+                Zwróć dane jako JEDEN, poprawny obiekt JSON. Uważnie wypatruj tekstu napisanego odręcznie długopisem!
+                
                 Instrukcje:
-                1. "ship_city": Szukaj frazy "Sklep nr:". Zazwyczaj NAD tym napisem znajduje się miejscowość (np. Kalisz, Mieroszyno). Jeśli nie potrafisz jej wyciągnąć, zostaw puste pole "".
-                2. "ship_street": Zostaw puste pole "".
-                3. "ship_target": Wpisz "ROSSMANN Sklep nr " oraz numer sklepu znaleziony obok "Sklep nr:". Jeśli nie ma, zostaw puste pole "".
-                4. "date": Poszukaj daty dopisanej odręcznie długopisem na górze kartki (format YYYY-MM-DD). Jeśli absolutnie nie ma żadnej ręcznej daty dostawy, wymuś i wpisz w to miejsce datę dzisiejszą, czyli: ${today}
-                5. "company": Poszukaj odręcznie dopisanego spedytora. Jeśli brak, wpisz twardo: "Do ustalenia".
-                6. Oprawy: Szukaj w kolumnie ilości dla opraw zawierających "VIGO". Zignoruj inne oprawy (np. ML OLITE, ONTEC, CZUJNIK RUCHU).
-                   - "p1": ilość sztuk dla opraw VIGO 22° 15W (jeśli brak to 0)
-                   - "p2": ilość sztuk dla opraw VIGO 37° 15W (jeśli brak to 0)
-                   - "p3": ilość sztuk dla opraw VIGO 58° 15W (jeśli brak to 0)
-                   - "p4": ilość sztuk dla opraw VIGO 37° 20W, a także 26W i 33W (jeśli brak to 0)
-                   - "p5": ilość sztuk dla opraw VIGO 58° 20W, a także 26W i 33W (jeśli brak to 0)
-                Musisz zwrócić dokładnie taką strukturę JSON:
+                1. "ship_city": Zlokalizuj napis "Sklep nr:". Miejscowość (np. Kalisz, Mieroszyno) znajduje się zazwyczaj tuż nad nim, albo w bloku informacji o Nabywcy. Jeśli jej tam nie ma, zostaw "".
+                2. "ship_street": Zostaw "".
+                3. "ship_target": Wpisz "ROSSMANN Sklep nr " oraz numer sklepu znaleziony na dokumencie. Jeśli brak, zostaw "".
+                4. "date": Poszukaj daty dopisanej ODRĘCZNIE długopisem (często na górze lub na boku). Jeśli znajdziesz odręczną datę, sformatuj ją na YYYY-MM-DD. Zignoruj drukowane daty. Jeśli brak odręcznej daty, wpisz twardo: ${today}
+                5. "company": Poszukaj odręcznie dopisanego spedytora lub kuriera. Jeśli brak, wpisz: "Do ustalenia".
+                6. Oprawy: Szukaj w tabeli ofertowej TYLKO opraw ze słowem "VIGO". Zignoruj inne oprawy (np. ML OLITE, ONTEC, CZUJNIKI).
+                   - "p1": suma ilości opraw VIGO o kącie 22° i mocy 15W
+                   - "p2": suma ilości opraw VIGO o kącie 37° i mocy 15W
+                   - "p3": suma ilości opraw VIGO o kącie 58° i mocy 15W
+                   - "p4": suma ilości opraw VIGO o kącie 37° i mocy 20W (oraz mocniejszych np. 26W, 33W)
+                   - "p5": suma ilości opraw VIGO o kącie 58° i mocy 20W (oraz mocniejszych np. 26W, 33W)
+                
+                Struktura JSON:
                 {"ship_city":"","ship_street":"","ship_target":"","date":"","company":"","p1":0,"p2":0,"p3":0,"p4":0,"p5":0}`;
 
+                messagesContent.push({ type: "text", text: promptText });
+
+                // Jeśli to PDF, renderujemy go do wysokiej jakości obrazków by ChatGPT widział długopis
                 if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
-                    btn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">autorenew</span> Ekstrakcja PDF...';
+                    btn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">autorenew</span> Rysowanie PDF...';
                     const arrayBuffer = await file.arrayBuffer();
                     const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
-                    let extractedText = "";
-                    for (let i = 1; i <= pdf.numPages; i++) {
+                    
+                    // Maksymalnie 3 pierwsze strony żeby nie przekroczyć limitów API
+                    const maxPages = Math.min(pdf.numPages, 3); 
+                    for (let i = 1; i <= maxPages; i++) {
                         const page = await pdf.getPage(i);
-                        const content = await page.getTextContent();
-                        const strings = content.items.map(item => item.str);
-                        extractedText += strings.join(' ') + '\n';
+                        const viewport = page.getViewport({scale: 1.5});
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        canvas.height = viewport.height;
+                        canvas.width = viewport.width;
+                        await page.render({canvasContext: ctx, viewport: viewport}).promise;
+                        const base64Image = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+                        
+                        messagesContent.push({ 
+                            type: "image_url", 
+                            image_url: { url: `data:image/jpeg;base64,${base64Image}` } 
+                        });
                     }
-                    messagesContent.push({ type: "text", text: promptText + "\n\nOto wyciągnięta treść dokumentu:\n" + extractedText });
                 } else {
+                    // Zwykłe zdjęcie (np. zrobione telefonem)
                     const base64Data = await new Promise((resolve) => {
                         const reader = new FileReader();
                         reader.onloadend = () => resolve(reader.result.split(',')[1]);
                         reader.readAsDataURL(file);
                     });
                     let mimeType = file.type || 'image/jpeg';
-                    messagesContent.push({ type: "text", text: promptText });
                     messagesContent.push({ 
                         type: "image_url", 
                         image_url: { url: `data:${mimeType};base64,${base64Data}` } 
@@ -876,11 +892,11 @@
                 if(data.p4 !== undefined) form.elements['p4'].value = data.p4;
                 if(data.p5 !== undefined) form.elements['p5'].value = data.p5;
 
-                showToast('Sukces! AI przeanalizowało dokument.', 'success');
+                showToast('Sukces! AI przeanalizowało dokument i odnalazło długopis.', 'success');
 
             } catch (error) {
                 console.error("Szczegóły błędu AI:", error);
-                showModal('Błąd analizy AI', `<p style="color:var(--accent-red); font-weight:500;">${error.message}</p><p style="margin-top:1rem; font-size:0.85rem;">Możliwe przyczyny to np. brak doładowania salda ($5) na nowym koncie platform.openai.com, lub błąd serwera. Spróbuj ponownie lub wgraj wyraźniejszy plik.</p>`);
+                showModal('Błąd analizy AI', `<p style="color:var(--accent-red); font-weight:500;">${error.message}</p><p style="margin-top:1rem; font-size:0.85rem;">Możliwe przyczyny to np. brak doładowania salda ($5) na nowym koncie platform.openai.com, lub błąd serwera. Spróbuj ponownie lub wgraj wyraźniejsze zdjęcie.</p>`);
             } finally {
                 btn.innerHTML = originalText;
                 btn.disabled = false;
@@ -1856,6 +1872,7 @@
 
             let pending = window.inventory.shipments.filter(s => s.status !== 'completed');
             
+            // PRIORYTET 1: Potwierdzone, PRIORYTET 2: Data
             pending.sort((a, b) => {
                 if (a.is_confirmed && !b.is_confirmed) return -1;
                 if (!a.is_confirmed && b.is_confirmed) return 1;
@@ -1963,6 +1980,7 @@
                 
                 const activeShipments = window.inventory.shipments.filter(s => s.status !== 'completed');
                 
+                // PRIORYTET: 1. Potwierdzone, 2. Data
                 activeShipments.sort((a, b) => {
                     if (a.is_confirmed && !b.is_confirmed) return -1;
                     if (!a.is_confirmed && b.is_confirmed) return 1;
