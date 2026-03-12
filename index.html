@@ -16,6 +16,12 @@
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <script>
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+    </script>
     
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -349,18 +355,6 @@
         </div>
     </div>
 
-    <div id="api-key-modal" class="modal">
-        <div class="modal-dialog">
-            <div class="modal-header">
-                <h2 style="color: var(--primary-dark); font-size: 1.3rem;"><span class="material-symbols-outlined">smart_toy</span> Aktywacja Skanera AI</h2>
-                <span class="close" onclick="document.getElementById('api-key-modal').style.display='none'"><span class="material-symbols-outlined">close</span></span>
-            </div>
-            <p style="margin-bottom: 1.5rem; color: var(--text-light); font-size: 0.95rem; line-height: 1.6;">Wprowadź swój darmowy klucz API Google Gemini. Zostanie on bezpiecznie zaszyfrowany i zapisany <strong>tylko w pamięci tej przeglądarki</strong>.</p>
-            <input type="text" id="api-key-input" placeholder="Wklej klucz (np. AIzaSy...)" style="margin-bottom: 1.5rem;">
-            <button onclick="saveApiKey()" class="btn-primary" style="width: 100%; padding: 1rem;"><span class="material-symbols-outlined">save</span> Zapisz i Wybierz Plik</button>
-        </div>
-    </div>
-
     <div id="mobile-overlay" class="mobile-overlay" onclick="toggleSidebar()"></div>
 
     <div id="app-container" class="hidden" style="display: flex; width: 100%; height: 100vh;">
@@ -378,7 +372,6 @@
                     <li id="nav-history"><a href="#" onclick="switchTab('tab-history')" class="nav-item"><span class="material-symbols-outlined">receipt_long</span> Historia Zmian</a></li>
                     <li><a href="#" onclick="switchTab('tab-components')" class="nav-item"><span class="material-symbols-outlined">electrical_services</span> Komponenty</a></li>
                     <li id="nav-reports"><a href="#" onclick="switchTab('tab-reports')" class="nav-item"><span class="material-symbols-outlined">precision_manufacturing</span> Panel Produkcji</a></li>
-                    <li id="nav-settings"><a href="#" onclick="switchTab('tab-settings')" class="nav-item"><span class="material-symbols-outlined">settings_suggest</span> Ustawienia Systemu (AI)</a></li>
                     
                     <li class="mobile-only-logout" style="margin-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1rem;">
                         <a href="#" onclick="logoutUser()" class="nav-item" style="color: #FECACA;"><span class="material-symbols-outlined">logout</span> Wyloguj się</a>
@@ -538,29 +531,29 @@
                         <div class="section-header">
                             <h2><span class="material-symbols-outlined">add_location_alt</span> Dodaj Nowe Zamówienie / Plan Wysyłki</h2>
                             <div style="display:flex; align-items:center; gap:10px;">
-                                <input type="file" id="ai-image-input" accept="image/*,application/pdf" style="display: none;" onchange="scanOfferWithAI(this.files[0])">
-                                <button type="button" id="ai-scan-btn" class="btn-primary btn-small" onclick="triggerAiScan()" style="background-color: #3B82F6; margin: 0; padding: 0.5rem 1rem;">
-                                    <span class="material-symbols-outlined">document_scanner</span> Skanuj Ofertę (AI)
+                                <input type="file" id="ai-image-input" accept="image/*,application/pdf" style="display: none;" onchange="scanOfferLocally(this.files[0])">
+                                <button type="button" id="ai-scan-btn" class="btn-primary btn-small" onclick="document.getElementById('ai-image-input').click()" style="background-color: #3B82F6; margin: 0; padding: 0.5rem 1rem;">
+                                    <span class="material-symbols-outlined">document_scanner</span> Skanuj Dokument (OCR)
                                 </button>
                             </div>
                         </div>
                         <div class="section-content">
                             <form id="shipmentForm">
                                 <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.25rem;">
-                                    <div class="form-group"><label>Miejscowość *</label><input type="text" name="ship_city" required placeholder="np. Warszawa"></div>
-                                    <div class="form-group"><label>Ulica i nr (opcjonalnie)</label><input type="text" name="ship_street" placeholder="np. Złota 44"></div>
-                                    <div class="form-group"><label>Obiekt / Inwestycja (opcjonalnie)</label><input type="text" name="ship_target" placeholder="np. Biurowiec Skylight"></div>
+                                    <div class="form-group"><label>Miejscowość *</label><input type="text" name="ship_city" id="form-city" required placeholder="np. Warszawa"></div>
+                                    <div class="form-group"><label>Ulica i nr (opcjonalnie)</label><input type="text" name="ship_street" id="form-street" placeholder="np. Złota 44"></div>
+                                    <div class="form-group"><label>Obiekt / Inwestycja (opcjonalnie)</label><input type="text" name="ship_target" id="form-target" placeholder="np. Biurowiec Skylight"></div>
                                 </div>
                                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-top: 0.5rem;">
-                                    <div class="form-group"><label>Data Wstępna</label><input type="date" name="date" required></div>
-                                    <div class="form-group"><label>Spedytor / Odbiór</label><input type="text" name="company" placeholder="np. DPD, Własny" required></div>
+                                    <div class="form-group"><label>Data Wstępna</label><input type="date" name="date" id="form-date" required></div>
+                                    <div class="form-group"><label>Spedytor / Odbiór</label><input type="text" name="company" id="form-company" placeholder="np. DPD, Własny" required></div>
                                 </div>
                                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 1.25rem; margin-top: 0.5rem; background-color: var(--background); padding: 1.25rem; border-radius: 12px; border: 1px solid var(--border-color);">
-                                    <div class="form-group" style="margin:0;"><label>22°-15W (szt)</label><input type="number" name="p1" value="0" min="0"></div>
-                                    <div class="form-group" style="margin:0;"><label>37°-15W (szt)</label><input type="number" name="p2" value="0" min="0"></div>
-                                    <div class="form-group" style="margin:0;"><label>58°-15W (szt)</label><input type="number" name="p3" value="0" min="0"></div>
-                                    <div class="form-group" style="margin:0;"><label>37°-20W (szt)</label><input type="number" name="p4" value="0" min="0"></div>
-                                    <div class="form-group" style="margin:0;"><label>58°-20W (szt)</label><input type="number" name="p5" value="0" min="0"></div>
+                                    <div class="form-group" style="margin:0;"><label>22°-15W (szt)</label><input type="number" name="p1" id="form-p1" value="0" min="0"></div>
+                                    <div class="form-group" style="margin:0;"><label>37°-15W (szt)</label><input type="number" name="p2" id="form-p2" value="0" min="0"></div>
+                                    <div class="form-group" style="margin:0;"><label>58°-15W (szt)</label><input type="number" name="p3" id="form-p3" value="0" min="0"></div>
+                                    <div class="form-group" style="margin:0;"><label>37°-20W (szt)</label><input type="number" name="p4" id="form-p4" value="0" min="0"></div>
+                                    <div class="form-group" style="margin:0;"><label>58°-20W (szt)</label><input type="number" name="p5" id="form-p5" value="0" min="0"></div>
                                 </div>
                                 <div style="margin-top: 1.5rem; text-align: right;">
                                     <button type="submit" class="btn-primary" style="padding: 0.9rem 2rem;"><span class="material-symbols-outlined">save</span> Zapisz i Dodaj do Kolejki</button>
@@ -692,26 +685,6 @@
                     </div>
                 </div>
 
-                <div id="tab-settings" class="tab-content">
-                    <div class="section" style="max-width: 700px;">
-                        <div class="section-header"><h2><span class="material-symbols-outlined">settings_suggest</span> Konfiguracja Skanera AI (Gemini)</h2></div>
-                        <div class="section-content">
-                            <p style="color: var(--text-dark); font-size: 0.95rem; margin-bottom: 1.5rem; line-height: 1.6;">
-                                Aby korzystać z funkcji automatycznego odczytywania ofert ze zdjęć i plików PDF, musisz wprowadzić prywatny klucz API Google. 
-                                <br><br><span style="color: var(--text-light); font-size: 0.85rem;">Klucz jest bezpiecznie szyfrowany i zapisywany wyłącznie w pamięci podręcznej (Local Storage) Twojego urządzenia. Nie jest on widoczny w kodzie źródłowym ani przesyłany do innych pracowników.</span>
-                            </p>
-                            <div class="form-group">
-                                <label>Twój Klucz API Google Gemini</label>
-                                <input type="password" id="settings-api-key" placeholder="Wklej klucz (np. AIzaSy...)">
-                            </div>
-                            <div style="margin-top: 1.5rem; display: flex; flex-wrap: wrap; gap: 15px;">
-                                <button class="btn-primary" onclick="saveSettingsApiKey()"><span class="material-symbols-outlined">save</span> Zapisz Klucz</button>
-                                <button class="btn-secondary" onclick="deleteSettingsApiKey()"><span class="material-symbols-outlined">delete</span> Usuń Klucz z urządzenia</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
                 <footer class="footer">
                     <p>© 2026 Masterlight Sp. z o.o. - Wszelkie prawa zastrzeżone</p>
                     <p style="font-size: 0.75rem; color: var(--text-light); margin-top: 5px;">Cloud WMS Engine v2.1 | Zalogowano jako: <span id="footer-user">...</span></p>
@@ -747,132 +720,121 @@
 
         const db = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-        // --- SKANER AI GEMINI (SECURE LOCAL STORAGE) ---
-        function saveSettingsApiKey() {
-            const key = document.getElementById('settings-api-key').value.trim();
-            if(key) {
-                localStorage.setItem('gemini_api_key', key);
-                showToast('Klucz API został pomyślnie zapisany w pamięci.', 'success');
-            } else {
-                showToast('Pole klucza nie może być puste.', 'warning');
-            }
-        }
-
-        function deleteSettingsApiKey() {
-            localStorage.removeItem('gemini_api_key');
-            document.getElementById('settings-api-key').value = '';
-            showToast('Klucz API został usunięty z tego urządzenia.', 'warning');
-        }
-
-        function triggerAiScan() {
-            let apiKey = localStorage.getItem('gemini_api_key');
-            if (!apiKey) {
-                showToast('Brak klucza API! Przejdź do zakładki "Ustawienia Systemu" i dodaj swój klucz.', 'error');
-                switchTab('tab-settings');
-                return;
-            }
-            document.getElementById('ai-image-input').click();
-        }
-
-        async function scanOfferWithAI(file) {
+        // --- SKANER BEZ API (Lokalny OCR i odczyt PDF) ---
+        async function scanOfferLocally(file) {
             if (!file) return;
-
-            if (file.size > 15 * 1024 * 1024) {
-                showToast('Plik jest za duży (max 15MB). Wgraj mniejsze zdjęcie lub PDF.', 'error');
-                document.getElementById('ai-image-input').value = '';
-                return;
-            }
-
-            let apiKey = localStorage.getItem('gemini_api_key');
-            if (!apiKey) return;
 
             const btn = document.getElementById('ai-scan-btn');
             const originalText = btn.innerHTML;
-            btn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">autorenew</span> AI analizuje dokument...';
             btn.disabled = true;
 
             try {
-                const base64Data = await new Promise((resolve) => {
-                    const reader = new FileReader();
-                    reader.onloadend = () => resolve(reader.result.split(',')[1]);
-                    reader.readAsDataURL(file);
-                });
+                let text = "";
 
-                let mimeType = file.type;
-                if (!mimeType) {
-                    if (file.name.toLowerCase().endsWith('.pdf')) mimeType = 'application/pdf';
-                    else mimeType = 'image/jpeg';
-                }
-
-                // DOKŁADNY PROMPT DLA OFERTY ROSSMANN / MASTERLIGHT
-                const promptText = `Jesteś asystentem wprowadzania danych z zamówień. Przeanalizuj ofertę/fakturę (obraz lub PDF). Zwróć TYLKO czysty obiekt JSON. Żadnego tekstu wstępu ani formatowania markdown.
-                Struktura JSON:
-                {
-                    "ship_city": "Miejscowość dostawy (szukaj nazwy miasta obok lub nad słowami 'Sklep nr:', np. 'Kalisz' lub 'Mieroszyno'. Wpisz puste pole jeśli brak)",
-                    "ship_street": "Ulica i numer z adresu dostawy/nabywcy",
-                    "ship_target": "Nazwa nabywcy oraz numer sklepu, np. 'ROSSMANN Sklep nr 105'",
-                    "date": "Data z dokumentu (np. z nagłówka 'dnia ...') w formacie YYYY-MM-DD",
-                    "company": "Spedytor (jeśli brak na kartce, wpisz 'Do ustalenia')",
-                    "p1": Ilość sztuk dla opraw 'VIGO MINI MOVE' z kątem '22' i mocą '15W' (np. 'G3 22 15W', liczba całkowita, 0 jeśli brak),
-                    "p2": Ilość sztuk dla opraw 'VIGO MINI MOVE' z kątem '37' i mocą '15W' (liczba całkowita, 0 jeśli brak),
-                    "p3": Ilość sztuk dla opraw 'VIGO MINI MOVE' z kątem '58' i mocą '15W' (liczba całkowita, 0 jeśli brak),
-                    "p4": Ilość sztuk dla opraw 'VIGO MINI MOVE' z kątem '37' i mocą '20W' (liczba całkowita, 0 jeśli brak),
-                    "p5": Ilość sztuk dla opraw 'VIGO MINI MOVE' z kątem '58' i mocą '20W' (liczba całkowita, 0 jeśli brak)
-                }`;
-
-                // Używamy starszego, super stabilnego endpointa API, żeby ominąć błędy "v1beta is not supported"
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{
-                            parts: [
-                                { text: promptText },
-                                { inline_data: { mime_type: mimeType, data: base64Data } }
-                            ]
-                        }]
-                    })
-                });
-
-                const result = await response.json();
-                
-                if(result.error) {
-                    if (result.error.code === 400 && result.error.message.includes('API key')) {
-                        localStorage.removeItem('gemini_api_key');
-                        throw new Error("Wprowadzono zły klucz API. Przejdź do 'Ustawień' i wpisz poprawny.");
+                // Jeśli to PDF: Błyskawiczny odczyt przez pdf.js
+                if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+                    btn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">autorenew</span> Czytam plik PDF...';
+                    const arrayBuffer = await file.arrayBuffer();
+                    const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
+                    for (let i = 1; i <= pdf.numPages; i++) {
+                        const page = await pdf.getPage(i);
+                        const content = await page.getTextContent();
+                        const strings = content.items.map(item => item.str);
+                        text += strings.join(' ') + '\n';
                     }
-                    throw new Error("Błąd usługi Google: " + result.error.message);
+                } 
+                // Jeśli to zdjęcie: Analiza OCR przez tesseract.js
+                else {
+                    btn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">autorenew</span> Analizuję zdjęcie OCR (może potrwać do 15 sek)...';
+                    const worker = await Tesseract.createWorker('pol');
+                    const ret = await worker.recognize(file);
+                    text = ret.data.text;
+                    await worker.terminate();
                 }
 
-                // Bezpieczne wydobycie JSONa w razie gdyby AI "gadało"
-                let textResponse = result.candidates[0].content.parts[0].text;
-                let jsonString = textResponse.replace(/```json/g, '').replace(/```/g, '').trim();
-                let data = JSON.parse(jsonString);
+                btn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">autorenew</span> Wyciągam dane z tabeli...';
 
-                const form = document.getElementById('shipmentForm');
-                if(data.ship_city) form.elements['ship_city'].value = data.ship_city;
-                if(data.ship_street) form.elements['ship_street'].value = data.ship_street;
-                if(data.ship_target) form.elements['ship_target'].value = data.ship_target;
-                if(data.date) form.elements['date'].value = data.date;
-                if(data.company) form.elements['company'].value = data.company;
+                // --- INTELIGENTNE PARSOWANIE DLA MASTERLIGHT ---
+                let data = { ship_city: "", ship_target: "", date: "", company: "Do ustalenia", p1: 0, p2: 0, p3: 0, p4: 0, p5: 0 };
                 
-                if(data.p1 !== undefined) form.elements['p1'].value = data.p1;
-                if(data.p2 !== undefined) form.elements['p2'].value = data.p2;
-                if(data.p3 !== undefined) form.elements['p3'].value = data.p3;
-                if(data.p4 !== undefined) form.elements['p4'].value = data.p4;
-                if(data.p5 !== undefined) form.elements['p5'].value = data.p5;
+                // 1. Wyciąganie daty
+                let dateMatch = text.match(/dnia\s+(\d{2})\.(\d{2})\.(\d{4})/i) || text.match(/(\d{4})-(\d{2})-(\d{2})/);
+                if(dateMatch && dateMatch[3] && dateMatch[3].length === 4) {
+                    data.date = `${dateMatch[3]}-${dateMatch[2]}-${dateMatch[1]}`;
+                } else if (dateMatch && dateMatch[1] && dateMatch[1].length === 4) {
+                    data.date = dateMatch[0];
+                } else {
+                    const today = new Date();
+                    data.date = today.toISOString().split('T')[0];
+                }
 
-                showToast('Sukces! AI przeanalizowało dokument.', 'success');
+                // 2. Sklep i Miasto (Mieroszyno / Kalisz)
+                let shopMatch = text.match(/([A-ZĄĆĘŁŃÓŚŹŻa-ząćęłńóśźż\s]+)Sklep nr:?\s*(\d+)/i);
+                if(shopMatch) {
+                    data.ship_target = "ROSSMANN Sklep nr " + shopMatch[2];
+                    
+                    let rawCity = shopMatch[1].replace(/727-001-91-83/g, '').replace(/Łódź/g, '').replace(/NIP/g, '').trim();
+                    let cityLines = rawCity.split('\n').filter(l => l.trim().length > 0);
+                    if(cityLines.length > 0) {
+                        let lastLine = cityLines[cityLines.length - 1];
+                        let words = lastLine.split(/\s+/).filter(w => w.length > 2);
+                        if(words.length > 0) data.ship_city = words[words.length - 1].replace(/,/g, '');
+                    }
+                }
+
+                // 3. Ilości opraw z tabeli (VIGO / VIGO MINI MOVE)
+                let t = text.replace(/\n/g, ' ').replace(/\r/g, ' ').replace(/,/g, '.');
+                let vigoBlocks = t.match(/VIGO.*?zł/gi);
+                
+                if(vigoBlocks) {
+                    vigoBlocks.forEach(block => {
+                        let qtyMatch = block.match(/(\d+)\s+[\d\.]+\s*zł/i);
+                        let qty = qtyMatch ? parseInt(qtyMatch[1]) : 0;
+                        
+                        if(qty > 0) {
+                            let is22 = block.includes('22 ') || block.includes('22°') || block.includes('G3 22');
+                            let is37 = block.includes('37 ') || block.includes('37°') || block.includes('G2 37') || block.includes('140') || block.includes('185'); 
+                            let is58 = block.includes('58 ') || block.includes('58°') || block.includes('G1 58') || block.includes('235');
+
+                            let is15W = block.includes('15W');
+                            let is20W_plus = block.includes('20W') || block.includes('26W') || block.includes('33W');
+
+                            if (is15W) {
+                                if(is22) data.p1 += qty;
+                                else if(is58) data.p3 += qty;
+                                else data.p2 += qty; 
+                            } else if (is20W_plus) {
+                                if(is58) data.p5 += qty;
+                                else data.p4 += qty;
+                            }
+                        }
+                    });
+                }
+
+                // Wypełnianie formularza na ekranie
+                document.getElementById('form-city').value = data.ship_city;
+                document.getElementById('form-target').value = data.ship_target;
+                document.getElementById('form-date').value = data.date;
+                document.getElementById('form-company').value = data.company;
+                
+                document.getElementById('form-p1').value = data.p1;
+                document.getElementById('form-p2').value = data.p2;
+                document.getElementById('form-p3').value = data.p3;
+                document.getElementById('form-p4').value = data.p4;
+                document.getElementById('form-p5').value = data.p5;
+
+                showToast('Sukces! Pomyślnie odczytano dokument ze skanera.', 'success');
 
             } catch (error) {
-                console.error("Szczegóły błędu AI:", error);
-                showToast(error.message, 'error'); 
+                console.error("Lokalny Skaner Error:", error);
+                showToast('Dokument nieczytelny. Wpisz dane ręcznie.', 'error');
             } finally {
                 btn.innerHTML = originalText;
                 btn.disabled = false;
                 document.getElementById('ai-image-input').value = ''; 
             }
         }
+
 
         // --- AUTO-LOGOUT (5 MINUT BEZCZYNNOŚCI) ---
         let inactivityTimer;
@@ -1155,7 +1117,7 @@
                 const elsToHide = [
                     'form-shipment-container', 'form-incoming-container', 
                     'form-components-container', 'form-production-container', 
-                    'form-adjustments-container', 'nav-history', 'nav-reports', 'nav-settings'
+                    'form-adjustments-container', 'nav-history', 'nav-reports'
                 ];
                 elsToHide.forEach(id => {
                     const el = document.getElementById(id);
@@ -1165,11 +1127,8 @@
                 document.querySelectorAll('.admin-only-col').forEach(el => el.style.display = 'none');
             }
             if (currentRole === 'worker') {
-                const elsToHide = ['nav-history', 'nav-settings'];
-                elsToHide.forEach(id => {
-                    const el = document.getElementById(id);
-                    if (el) el.style.display = 'none';
-                });
+                const navHistory = document.getElementById('nav-history');
+                if (navHistory) navHistory.style.display = 'none';
             }
         }
 
@@ -1213,15 +1172,6 @@
                     if (mapAdj) mapAdj.invalidateSize(); 
                     if(window.inventory) updateAdjMapMarkers(window.inventory.adjustments);
                 }, 150);
-            }
-            
-            if (tabId === 'tab-settings') {
-                const savedKey = localStorage.getItem('gemini_api_key');
-                if (savedKey) {
-                    document.getElementById('settings-api-key').value = savedKey;
-                } else {
-                    document.getElementById('settings-api-key').value = '';
-                }
             }
         }
 
@@ -1824,6 +1774,7 @@
             }
         }
 
+        // --- SYMULACJA WIRTUALNEGO MAGAZYNU ---
         function getShipmentsReadinessMap() {
             const readinessMap = {};
             if (!window.inventory) return readinessMap;
@@ -1841,6 +1792,7 @@
 
             let pending = window.inventory.shipments.filter(s => s.status !== 'completed');
             
+            // PRIORYTET 1: Potwierdzone, PRIORYTET 2: Data
             pending.sort((a, b) => {
                 if (a.is_confirmed && !b.is_confirmed) return -1;
                 if (!a.is_confirmed && b.is_confirmed) return 1;
@@ -1885,6 +1837,7 @@
             return readinessMap;
         }
 
+        // --- RENDEROWANIE TABEL ---
         function getStatusClass(productId) {
             const status = window.inventory.getStatus(productId);
             return status === 'ok' ? 'status-ok' : status === 'warning' ? 'status-warning' : 'status-error';
