@@ -354,6 +354,18 @@
         </div>
     </div>
 
+    <div id="api-key-modal" class="modal">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h2 style="color: var(--primary-dark); font-size: 1.3rem;"><span class="material-symbols-outlined">smart_toy</span> Aktywacja Skanera AI</h2>
+                <span class="close" onclick="document.getElementById('api-key-modal').style.display='none'"><span class="material-symbols-outlined">close</span></span>
+            </div>
+            <p style="margin-bottom: 1.5rem; color: var(--text-light); font-size: 0.95rem; line-height: 1.6;">Wprowadź swój darmowy klucz API Google Gemini. Zostanie on bezpiecznie zaszyfrowany i zapisany <strong>tylko w pamięci tej przeglądarki</strong>.</p>
+            <input type="text" id="api-key-input" placeholder="Wklej klucz (np. AIzaSy...)" style="margin-bottom: 1.5rem;">
+            <button onclick="saveApiKey()" class="btn-primary" style="width: 100%; padding: 1rem;"><span class="material-symbols-outlined">save</span> Zapisz i Wybierz Plik</button>
+        </div>
+    </div>
+
     <div id="mobile-overlay" class="mobile-overlay" onclick="toggleSidebar()"></div>
 
     <div id="app-container" class="hidden" style="display: flex; width: 100%; height: 100vh;">
@@ -793,7 +805,7 @@
                 let messagesContent = [];
                 const today = new Date().toISOString().split('T')[0];
                 
-                // MISTRZOWSKI PROMPT (usunięto symbol stopnia i doprecyzowano kolumnę)
+                // Uproszczony prompt łapiący tylko liczby na podstawie 22, 37, 58
                 const promptText = `Jesteś systemem automatyzacji magazynu. Przeanalizuj załączone obrazy (dokumenty).
                 Zwróć dane jako JEDEN, poprawny obiekt JSON. Uważnie wypatruj tekstu napisanego odręcznie długopisem!
                 
@@ -803,16 +815,17 @@
                 3. "ship_target": Wpisz "ROSSMANN Sklep nr " oraz numer sklepu znaleziony na dokumencie. Jeśli brak, zostaw "".
                 4. "date": Na samej górze kartki, często w prawym górnym rogu, dopisana DŁUGOPISEM data (np. 10.03). Zamień ją na format YYYY-MM-DD (użyj bieżącego roku, np. ${new Date().getFullYear()}-03-10). Jeśli brak odręcznej daty, wpisz twardo: ${today}.
                 5. "company": Odręcznie dopisana długopisem nazwa firmy/kuriera na samej górze (np. BUDPOL). Jeśli brak, wpisz "Do ustalenia".
-                6. Oprawy w tabeli (patrz na pierwszą kolumnę L.p./ozn. proj. oraz kolumnę "Ilość"):
-                   Szukaj wierszy zawierających słowo VIGO (zignoruj panele ML OLITE, ONTEC, CZUJNIKI).
-                   Dopasuj wartości do kluczy:
-                   - "p1": Ilość z kolumny, w której pierwszej kolumnie widnieje "G3 22" (kąt 22) i "15W"
-                   - "p2": Ilość z kolumny, w której pierwszej kolumnie widnieje "G2 37" (kąt 37) i "15W"
-                   - "p3": Ilość z kolumny, w której pierwszej kolumnie widnieje "G1 58" (kąt 58) i "15W"
-                   - "p4": Ilość z kolumny, w której pierwszej kolumnie widnieje "G4 37" (kąt 37) i "20W"
-                   - "p5": Ilość z kolumny, w której pierwszej kolumnie widnieje "G5 58" (kąt 58) i "20W"
+                6. Oprawy w tabeli (patrz na kolumnę z ilościami sztuk, oznaczaną np. "Ilość", "Ilość towaru"):
+                   Znajdź wiersze dotyczące opraw z rodziny "VIGO" (np. ML VIGO MINI MOVE). Zignoruj panele ML OLITE, ONTEC, ITECH, CZUJNIKI.
+                   Na podstawie parametrów kąta (liczby 22, 37, 58) oraz mocy (15W, 20W, 26W, 33W) widocznych w wierszu, dopasuj ich ILOŚĆ SZTUK (np. 13, 20, 150) do odpowiednich kluczy:
+                   - "p1": ilość opraw VIGO mających 22 i 15W
+                   - "p2": ilość opraw VIGO mających 37 i 15W
+                   - "p3": ilość opraw VIGO mających 58 i 15W
+                   - "p4": ilość opraw VIGO mających 37 i moc 20W (lub mocniejsze 26W, 33W)
+                   - "p5": ilość opraw VIGO mających 58 i moc 20W (lub mocniejsze 26W, 33W)
+                   W przypadku braku danego wariantu wpisz 0.
                    
-                Zwróć dokładnie taki JSON:
+                Zwróć dokładnie taki JSON (liczby to liczby całkowite, nie stringi):
                 {"ship_city":"","ship_street":"","ship_target":"","date":"","company":"","p1":0,"p2":0,"p3":0,"p4":0,"p5":0}`;
 
                 messagesContent.push({ type: "text", text: promptText });
@@ -887,14 +900,14 @@
                 if(data.date) form.elements['date'].value = data.date;
                 if(data.company) form.elements['company'].value = data.company;
                 
-                // Zabezpieczenie przed tekstem w polach liczbowych (wymusza parseInt)
+                // Twarde wymuszenie liczb całkowitych z wyłapanych wartości
                 if(data.p1 !== undefined) form.elements['p1'].value = parseInt(data.p1) || 0;
                 if(data.p2 !== undefined) form.elements['p2'].value = parseInt(data.p2) || 0;
                 if(data.p3 !== undefined) form.elements['p3'].value = parseInt(data.p3) || 0;
                 if(data.p4 !== undefined) form.elements['p4'].value = parseInt(data.p4) || 0;
                 if(data.p5 !== undefined) form.elements['p5'].value = parseInt(data.p5) || 0;
 
-                showToast('Sukces! AI odczytało dokument.', 'success');
+                showToast('Sukces! AI odczytało wszystkie dane z dokumentu.', 'success');
 
             } catch (error) {
                 console.error("Szczegóły błędu AI:", error);
