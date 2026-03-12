@@ -13,9 +13,14 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <script>
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+    </script>
     
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -367,8 +372,6 @@
                     <li><a href="#" onclick="switchTab('tab-components')" class="nav-item"><span class="material-symbols-outlined">electrical_services</span> Komponenty</a></li>
                     <li id="nav-reports"><a href="#" onclick="switchTab('tab-reports')" class="nav-item"><span class="material-symbols-outlined">precision_manufacturing</span> Panel Produkcji</a></li>
                     
-                    <li id="nav-settings"><a href="#" onclick="switchTab('tab-settings')" class="nav-item"><span class="material-symbols-outlined">settings_suggest</span> Ustawienia Systemu (AI)</a></li>
-                    
                     <li class="mobile-only-logout" style="margin-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1rem;">
                         <a href="#" onclick="logoutUser()" class="nav-item" style="color: #FECACA;"><span class="material-symbols-outlined">logout</span> Wyloguj się</a>
                     </li>
@@ -527,29 +530,29 @@
                         <div class="section-header">
                             <h2><span class="material-symbols-outlined">add_location_alt</span> Dodaj Nowe Zamówienie / Plan Wysyłki</h2>
                             <div style="display:flex; align-items:center; gap:10px;">
-                                <input type="file" id="ai-image-input" accept="image/*,application/pdf" style="display: none;" onchange="scanOfferWithAI(this.files[0])">
-                                <button type="button" id="ai-scan-btn" class="btn-primary btn-small" onclick="triggerAiScan()" style="background-color: #3B82F6; margin: 0; padding: 0.5rem 1rem;">
-                                    <span class="material-symbols-outlined">document_scanner</span> Skanuj Ofertę (AI)
+                                <input type="file" id="ai-image-input" accept="image/*,application/pdf" style="display: none;" onchange="scanOfferLocally(this.files[0])">
+                                <button type="button" id="ai-scan-btn" class="btn-primary btn-small" onclick="document.getElementById('ai-image-input').click()" style="background-color: #3B82F6; margin: 0; padding: 0.5rem 1rem;">
+                                    <span class="material-symbols-outlined">document_scanner</span> Skanuj Ofertę (PDF/Zdjęcie)
                                 </button>
                             </div>
                         </div>
                         <div class="section-content">
                             <form id="shipmentForm">
                                 <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.25rem;">
-                                    <div class="form-group"><label>Miejscowość *</label><input type="text" name="ship_city" required placeholder="np. Warszawa"></div>
-                                    <div class="form-group"><label>Ulica i nr (opcjonalnie)</label><input type="text" name="ship_street" placeholder="np. Złota 44"></div>
-                                    <div class="form-group"><label>Obiekt / Inwestycja (opcjonalnie)</label><input type="text" name="ship_target" placeholder="np. Biurowiec Skylight"></div>
+                                    <div class="form-group"><label>Miejscowość *</label><input type="text" name="ship_city" id="form-city" required placeholder="np. Warszawa"></div>
+                                    <div class="form-group"><label>Ulica i nr (opcjonalnie)</label><input type="text" name="ship_street" id="form-street" placeholder="np. Złota 44"></div>
+                                    <div class="form-group"><label>Obiekt / Inwestycja (opcjonalnie)</label><input type="text" name="ship_target" id="form-target" placeholder="np. Biurowiec Skylight"></div>
                                 </div>
                                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-top: 0.5rem;">
-                                    <div class="form-group"><label>Data Wstępna</label><input type="date" name="date" required></div>
-                                    <div class="form-group"><label>Spedytor / Odbiór</label><input type="text" name="company" placeholder="np. DPD, Własny" required></div>
+                                    <div class="form-group"><label>Data Wstępna</label><input type="date" name="date" id="form-date" required></div>
+                                    <div class="form-group"><label>Spedytor / Odbiór</label><input type="text" name="company" id="form-company" placeholder="np. DPD, Własny" required></div>
                                 </div>
                                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 1.25rem; margin-top: 0.5rem; background-color: var(--background); padding: 1.25rem; border-radius: 12px; border: 1px solid var(--border-color);">
-                                    <div class="form-group" style="margin:0;"><label>22°-15W (szt)</label><input type="number" name="p1" value="0" min="0"></div>
-                                    <div class="form-group" style="margin:0;"><label>37°-15W (szt)</label><input type="number" name="p2" value="0" min="0"></div>
-                                    <div class="form-group" style="margin:0;"><label>58°-15W (szt)</label><input type="number" name="p3" value="0" min="0"></div>
-                                    <div class="form-group" style="margin:0;"><label>37°-20W (szt)</label><input type="number" name="p4" value="0" min="0"></div>
-                                    <div class="form-group" style="margin:0;"><label>58°-20W (szt)</label><input type="number" name="p5" value="0" min="0"></div>
+                                    <div class="form-group" style="margin:0;"><label>22°-15W (szt)</label><input type="number" name="p1" id="form-p1" value="0" min="0"></div>
+                                    <div class="form-group" style="margin:0;"><label>37°-15W (szt)</label><input type="number" name="p2" id="form-p2" value="0" min="0"></div>
+                                    <div class="form-group" style="margin:0;"><label>58°-15W (szt)</label><input type="number" name="p3" id="form-p3" value="0" min="0"></div>
+                                    <div class="form-group" style="margin:0;"><label>37°-20W (szt)</label><input type="number" name="p4" id="form-p4" value="0" min="0"></div>
+                                    <div class="form-group" style="margin:0;"><label>58°-20W (szt)</label><input type="number" name="p5" id="form-p5" value="0" min="0"></div>
                                 </div>
                                 <div style="margin-top: 1.5rem; text-align: right;">
                                     <button type="submit" class="btn-primary" style="padding: 0.9rem 2rem;"><span class="material-symbols-outlined">save</span> Zapisz i Dodaj do Kolejki</button>
@@ -681,26 +684,6 @@
                     </div>
                 </div>
 
-                <div id="tab-settings" class="tab-content">
-                    <div class="section" style="max-width: 700px;">
-                        <div class="section-header"><h2><span class="material-symbols-outlined">settings_suggest</span> Konfiguracja Skanera AI (Gemini)</h2></div>
-                        <div class="section-content">
-                            <p style="color: var(--text-dark); font-size: 0.95rem; margin-bottom: 1.5rem; line-height: 1.6;">
-                                Aby korzystać z funkcji automatycznego odczytywania ofert ze zdjęć i plików PDF, musisz wprowadzić prywatny klucz API Google. 
-                                <br><br><span style="color: var(--text-light); font-size: 0.85rem;">Klucz jest bezpiecznie szyfrowany i zapisywany wyłącznie w pamięci podręcznej (Local Storage) Twojego urządzenia. Nie jest on widoczny w kodzie źródłowym ani przesyłany do innych pracowników.</span>
-                            </p>
-                            <div class="form-group">
-                                <label>Twój Klucz API Google Gemini</label>
-                                <input type="password" id="settings-api-key" placeholder="Wklej klucz (np. AIzaSy...)">
-                            </div>
-                            <div style="margin-top: 1.5rem; display: flex; flex-wrap: wrap; gap: 15px;">
-                                <button class="btn-primary" onclick="saveSettingsApiKey()"><span class="material-symbols-outlined">save</span> Zapisz Klucz</button>
-                                <button class="btn-secondary" onclick="deleteSettingsApiKey()"><span class="material-symbols-outlined">delete</span> Usuń Klucz z urządzenia</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
                 <footer class="footer">
                     <p>© 2026 Masterlight Sp. z o.o. - Wszelkie prawa zastrzeżone</p>
                     <p style="font-size: 0.75rem; color: var(--text-light); margin-top: 5px;">Cloud WMS Engine v2.1 | Zalogowano jako: <span id="footer-user">...</span></p>
@@ -736,133 +719,128 @@
 
         const db = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-        // --- SKANER AI GEMINI (SECURE LOCAL STORAGE) ---
-        function saveSettingsApiKey() {
-            const key = document.getElementById('settings-api-key').value.trim();
-            if(key) {
-                localStorage.setItem('gemini_api_key', key);
-                showToast('Klucz API został pomyślnie zapisany w pamięci.', 'success');
-            } else {
-                showToast('Pole klucza nie może być puste.', 'warning');
-            }
-        }
-
-        function deleteSettingsApiKey() {
-            localStorage.removeItem('gemini_api_key');
-            document.getElementById('settings-api-key').value = '';
-            showToast('Klucz API został usunięty z tego urządzenia.', 'warning');
-        }
-
-        function triggerAiScan() {
-            let apiKey = localStorage.getItem('gemini_api_key');
-            if (!apiKey) {
-                showToast('Brak klucza API! Przejdź do zakładki "Ustawienia Systemu" i dodaj swój klucz.', 'error');
-                switchTab('tab-settings');
-                return;
-            }
-            document.getElementById('ai-image-input').click();
-        }
-
-        async function scanOfferWithAI(file) {
+        // --- SKANER BEZ API (Lokalny OCR i odczyt PDF) ---
+        async function scanOfferLocally(file) {
             if (!file) return;
-
-            if (file.size > 15 * 1024 * 1024) {
-                showToast('Plik jest za duży (max 15MB). Wgraj mniejsze zdjęcie lub PDF.', 'error');
-                document.getElementById('ai-image-input').value = '';
-                return;
-            }
-
-            let apiKey = localStorage.getItem('gemini_api_key');
-            if (!apiKey) return;
 
             const btn = document.getElementById('ai-scan-btn');
             const originalText = btn.innerHTML;
-            btn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">autorenew</span> AI analizuje dokument...';
             btn.disabled = true;
 
             try {
-                const base64Data = await new Promise((resolve) => {
-                    const reader = new FileReader();
-                    reader.onloadend = () => resolve(reader.result.split(',')[1]);
-                    reader.readAsDataURL(file);
-                });
+                let text = "";
 
-                let mimeType = file.type;
-                if (!mimeType) {
-                    if (file.name.toLowerCase().endsWith('.pdf')) mimeType = 'application/pdf';
-                    else mimeType = 'image/jpeg';
-                }
-
-                // DOKŁADNY PROMPT DLA OFERTY ROSSMANN
-                const today = new Date().toISOString().split('T')[0];
-                const promptText = `Przeanalizuj załączony dokument (zdjęcie, skan oferty lub faktury).
-                Zwróć TYLKO czysty obiekt JSON. Żadnego tekstu wstępu ani formatowania markdown (bez \`\`\`json).
-                Instrukcje wydobycia danych:
-                1. "ship_city": Szukaj frazy "Sklep nr:". Zazwyczaj NAD tym napisem znajduje się miejscowość (np. Kalisz, Mieroszyno itp.). Jeśli nie potrafisz jej wyciągnąć, zostaw puste pole "".
-                2. "ship_street": Zostaw puste pole "" (nie szukaj adresu na tej ofercie).
-                3. "ship_target": Wpisz "ROSSMANN Sklep nr " oraz numer sklepu znaleziony obok "Sklep nr:". Jeśli nie ma, zostaw puste pole "".
-                4. "date": Poszukaj daty dopisanej odręcznie długopisem na górze kartki (format YYYY-MM-DD). Jeśli absolutnie nie ma żadnej ręcznej daty dostawy, wymuś i wpisz w to miejsce datę dzisiejszą, czyli: ${today}
-                5. "company": Poszukaj odręcznie dopisanego spedytora. Jeśli brak, wpisz twardo: "Do ustalenia".
-                6. Oprawy: Szukaj w kolumnie ilości dla opraw zawierających "VIGO". Zignoruj inne oprawy (np. ML OLITE, ONTEC, CZUJNIK RUCHU).
-                   - "p1": ilość sztuk dla opraw VIGO 22° 15W (jeśli brak to 0)
-                   - "p2": ilość sztuk dla opraw VIGO 37° 15W (jeśli brak to 0)
-                   - "p3": ilość sztuk dla opraw VIGO 58° 15W (jeśli brak to 0)
-                   - "p4": ilość sztuk dla opraw VIGO 37° 20W, a także 26W i 33W (jeśli brak to 0)
-                   - "p5": ilość sztuk dla opraw VIGO 58° 20W, a także 26W i 33W (jeśli brak to 0)
-                Zwróć dokładnie taki JSON:
-                {"ship_city":"","ship_street":"","ship_target":"","date":"","company":"","p1":0,"p2":0,"p3":0,"p4":0,"p5":0}`;
-
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{
-                            parts: [
-                                { text: promptText },
-                                { inline_data: { mime_type: mimeType, data: base64Data } }
-                            ]
-                        }]
-                    })
-                });
-
-                const result = await response.json();
-                
-                if(result.error) {
-                    if (result.error.code === 400 && result.error.message.includes('API key')) {
-                        localStorage.removeItem('gemini_api_key');
-                        throw new Error("Wprowadzono zły klucz API. Przejdź do 'Ustawień' i wpisz poprawny.");
+                if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+                    btn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">autorenew</span> Czytam plik PDF...';
+                    const arrayBuffer = await file.arrayBuffer();
+                    const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
+                    for (let i = 1; i <= pdf.numPages; i++) {
+                        const page = await pdf.getPage(i);
+                        const content = await page.getTextContent();
+                        const strings = content.items.map(item => item.str);
+                        text += strings.join(' ') + '\n';
                     }
-                    throw new Error("Błąd usługi Google: " + result.error.message);
+                } 
+                else {
+                    btn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">autorenew</span> Analizuję zdjęcie (może to zająć chwilę)...';
+                    const worker = await Tesseract.createWorker('pol');
+                    const ret = await worker.recognize(file);
+                    text = ret.data.text;
+                    await worker.terminate();
                 }
 
-                let textResponse = result.candidates[0].content.parts[0].text;
-                let jsonString = textResponse.replace(/```json/gi, '').replace(/```/g, '').trim();
-                let data = JSON.parse(jsonString);
+                btn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">autorenew</span> Szukam danych...';
 
-                const form = document.getElementById('shipmentForm');
-                if(data.ship_city) form.elements['ship_city'].value = data.ship_city;
-                if(data.ship_street) form.elements['ship_street'].value = data.ship_street;
-                if(data.ship_target) form.elements['ship_target'].value = data.ship_target;
-                if(data.date) form.elements['date'].value = data.date;
-                if(data.company) form.elements['company'].value = data.company;
+                // --- INTELIGENTNE PARSOWANIE DLA MASTERLIGHT ---
+                let data = { ship_city: "", ship_target: "", date: "", company: "Do ustalenia", p1: 0, p2: 0, p3: 0, p4: 0, p5: 0 };
                 
-                if(data.p1 !== undefined) form.elements['p1'].value = data.p1;
-                if(data.p2 !== undefined) form.elements['p2'].value = data.p2;
-                if(data.p3 !== undefined) form.elements['p3'].value = data.p3;
-                if(data.p4 !== undefined) form.elements['p4'].value = data.p4;
-                if(data.p5 !== undefined) form.elements['p5'].value = data.p5;
+                // 1. Data
+                let dateMatch = text.match(/dnia\s+(\d{2})[\.\/](\d{2})[\.\/](\d{4})/i) || text.match(/(\d{4})-(\d{2})-(\d{2})/);
+                if(dateMatch && dateMatch[3] && dateMatch[3].length === 4) {
+                    data.date = `${dateMatch[3]}-${dateMatch[2]}-${dateMatch[1]}`;
+                } else if (dateMatch && dateMatch[1] && dateMatch[1].length === 4) {
+                    data.date = dateMatch[0];
+                } else {
+                    const today = new Date();
+                    data.date = today.toISOString().split('T')[0];
+                }
 
-                showToast('Sukces! AI przeanalizowało dokument.', 'success');
+                // 2. Sklep i Miasto
+                let lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+                for (let i = 0; i < lines.length; i++) {
+                    let line = lines[i];
+                    let shopMatch = line.match(/Sklep nr:?\s*(\d+)/i);
+                    if (shopMatch) {
+                        data.ship_target = "ROSSMANN Sklep nr " + shopMatch[1];
+                        if (i > 0) {
+                            let prevLine = lines[i-1];
+                            let cityClean = prevLine.replace(/727-001-91-83/g, '').replace(/NIP/gi, '').replace(/Łódź/gi, '').trim();
+                            if (cityClean.length > 2) {
+                                data.ship_city = cityClean;
+                            } else if (i > 1) {
+                                data.ship_city = lines[i-2].trim();
+                            }
+                        }
+                        break;
+                    }
+                }
+
+                // 3. Ilości opraw VIGO (niezależnie od tego czy to PDF czy marne OCR)
+                let vigoRegex = /VIGO[\s\S]*?(?:szt\.?|kpl\.?|521|5z1|sz1)\s*(\d+)\s+[\d\.,]+\s*(?:zł|zi|z\||PLN)/gi;
+                let matches = [...text.matchAll(vigoRegex)];
+                
+                if (matches.length === 0) {
+                    vigoRegex = /VIGO(?:(?!zł|zi|PLN).)*?\s+(\d+)\s+[\d\.,]{3,}\s*(?:zł|zi|z\||PLN)/gi;
+                    matches = [...text.matchAll(vigoRegex)];
+                }
+
+                matches.forEach(m => {
+                    let block = m[0].toUpperCase();
+                    let qty = parseInt(m[1]);
+                    
+                    if (qty > 0) {
+                        let is22 = block.includes('22'); 
+                        let is58 = block.includes('58') || block.includes('235');
+                        let is37 = block.includes('37') || block.includes('140') || block.includes('185') || (!is22 && !is58); 
+
+                        let is15W = block.includes('15W');
+                        let is20W_plus = block.includes('20W') || block.includes('26W') || block.includes('33W');
+
+                        if (is15W) {
+                            if (is22) data.p1 += qty;
+                            else if (is58) data.p3 += qty;
+                            else data.p2 += qty; 
+                        } else if (is20W_plus) {
+                            if (is58) data.p5 += qty;
+                            else data.p4 += qty;
+                        }
+                    }
+                });
+
+                // Wypełnianie formularza na ekranie
+                document.getElementById('form-city').value = data.ship_city;
+                document.getElementById('form-target').value = data.ship_target;
+                document.getElementById('form-date').value = data.date;
+                document.getElementById('form-company').value = data.company;
+                
+                document.getElementById('form-p1').value = data.p1;
+                document.getElementById('form-p2').value = data.p2;
+                document.getElementById('form-p3').value = data.p3;
+                document.getElementById('form-p4').value = data.p4;
+                document.getElementById('form-p5').value = data.p5;
+
+                showToast('Sukces! Pomyślnie odczytano dokument.', 'success');
 
             } catch (error) {
-                console.error("Szczegóły błędu AI:", error);
-                showToast(error.message, 'error'); 
+                console.error("Lokalny Skaner Error:", error);
+                showToast('Dokument nieczytelny. Wpisz dane ręcznie.', 'error');
             } finally {
                 btn.innerHTML = originalText;
                 btn.disabled = false;
                 document.getElementById('ai-image-input').value = ''; 
             }
         }
+
 
         // --- AUTO-LOGOUT (5 MINUT BEZCZYNNOŚCI) ---
         let inactivityTimer;
@@ -1145,7 +1123,7 @@
                 const elsToHide = [
                     'form-shipment-container', 'form-incoming-container', 
                     'form-components-container', 'form-production-container', 
-                    'form-adjustments-container', 'nav-history', 'nav-reports', 'nav-settings'
+                    'form-adjustments-container', 'nav-history'
                 ];
                 elsToHide.forEach(id => {
                     const el = document.getElementById(id);
@@ -1155,7 +1133,7 @@
                 document.querySelectorAll('.admin-only-col').forEach(el => el.style.display = 'none');
             }
             if (currentRole === 'worker') {
-                const elsToHide = ['nav-history', 'nav-settings'];
+                const elsToHide = ['nav-history'];
                 elsToHide.forEach(id => {
                     const el = document.getElementById(id);
                     if (el) el.style.display = 'none';
@@ -1204,15 +1182,6 @@
                     if(window.inventory) updateAdjMapMarkers(window.inventory.adjustments);
                 }, 150);
             }
-            
-            if (tabId === 'tab-settings') {
-                const savedKey = localStorage.getItem('gemini_api_key');
-                if (savedKey) {
-                    document.getElementById('settings-api-key').value = savedKey;
-                } else {
-                    document.getElementById('settings-api-key').value = '';
-                }
-            }
         }
 
         function showModal(title, content) {
@@ -1222,6 +1191,155 @@
         }
 
         function closeModal() { document.getElementById('modal').style.display = 'none'; }
+
+        function printInventoryPdf() {
+            if(!window.inventory || window.inventory.products.length === 0) return;
+            
+            const dateStr = new Date().toLocaleDateString('pl-PL');
+            const totals = window.inventory.getTotals();
+            
+            let html = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <title>Raport Inwentaryzacji Masterlight</title>
+                <style>
+                    body { font-family: 'Inter', sans-serif; margin: 40px; color: #1F2937; }
+                    h1 { color: #C4704B; border-bottom: 3px solid #C4704B; padding-bottom: 10px; font-size: 20pt; }
+                    .info-box { background-color: #F3F4F6; padding: 15px; border-radius: 8px; margin: 20px 0; border: 1px solid #E5E7EB; line-height: 1.6; font-size: 11pt; }
+                    table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 10pt; }
+                    th { background-color: #C4704B; color: white; padding: 10px; text-align: left; text-transform: uppercase; font-size: 9pt; }
+                    td { padding: 10px; border-bottom: 1px solid #E5E7EB; }
+                    .totals { background: #fdf2ee; font-weight: bold; }
+                </style>
+            </head>
+            <body>
+                <h1>RAPORT STANU MAGAZYNU (WMS)</h1>
+                <div class="info-box">
+                    <strong>Firma:</strong> Masterlight Sp. z o.o.<br>
+                    <strong>Data wygenerowania:</strong> ${dateStr}<br>
+                    <strong>Wygenerował użytkownik:</strong> ${currentUserEmail.split('@')[0]}
+                </div>
+                
+                <h2>1. Oprawy Downlight</h2>
+                <table>
+                    <thead><tr><th>Model Oprawy</th><th>SKU</th><th>Gotowe</th><th>W Montażu</th><th>Serwis</th><th>Łącznie</th></tr></thead>
+                    <tbody>
+            `;
+            
+            window.inventory.products.forEach(p => {
+                const total = (p.ready || 0) + (p.assembly || 0) + (p.service || 0);
+                html += `<tr>
+                    <td>${escapeHTML(p.name)}</td>
+                    <td>${escapeHTML(p.sku)}</td>
+                    <td>${p.ready || 0}</td>
+                    <td>${p.assembly || 0}</td>
+                    <td>${p.service || 0}</td>
+                    <td><strong>${total}</strong></td>
+                </tr>`;
+            });
+            
+            html += `
+                    <tr class="totals">
+                        <td colspan="2" style="text-align:right;">SUMA CAŁKOWITA:</td>
+                        <td>${totals.totalReady}</td>
+                        <td>${totals.totalAssembly}</td>
+                        <td>${totals.totalService}</td>
+                        <td>${totals.totalAll}</td>
+                    </tr>
+                    </tbody>
+                </table>
+                
+                <h2 style="margin-top: 40px;">2. Komponenty Zapasowe</h2>
+                <table style="width: 50%;">
+                    <thead><tr><th>Typ Komponentu</th><th>Stan (szt.)</th></tr></thead>
+                    <tbody>
+                        <tr><td>Zasilacze LED</td><td>${window.inventory.components.ps_raw || 0}</td></tr>
+                        <tr><td>Klapki Montażowe Zwykłe</td><td>${window.inventory.components.clips_normal || 0}</td></tr>
+                        <tr><td>Klapki Montażowe Przelotowe</td><td>${window.inventory.components.clips_pass || 0}</td></tr>
+                    </tbody>
+                </table>
+                
+                <div style="margin-top: 60px; border-top: 1px solid #ccc; padding-top: 10px; color: #6B7280; font-size: 0.9em; text-align: right;">
+                    Podpis magazyniera: .......................................................
+                </div>
+            </body>
+            </html>
+            `;
+            
+            const printWin = window.open('', '', 'width=800,height=600');
+            printWin.document.write(html);
+            printWin.document.close();
+            printWin.focus();
+            setTimeout(() => { printWin.print(); printWin.close(); }, 300);
+        }
+
+        function printMissingPdf(id) {
+            const shipment = window.inventory.shipments.find(s => String(s.id) === String(id));
+            if (!shipment || !shipment.partial_missing) {
+                showToast('Brak danych o brakach dla tego zamówienia.', 'error');
+                return;
+            }
+            
+            const dateStr = new Date().toLocaleDateString('pl-PL');
+            
+            let html = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <title>Lista Braków - ${escapeHTML(shipment.location)}</title>
+                <style>
+                    body { font-family: 'Inter', sans-serif; margin: 40px; color: #1F2937; }
+                    h1 { color: #C4704B; border-bottom: 3px solid #C4704B; padding-bottom: 10px; font-size: 20pt; }
+                    .info-box { background-color: #F3F4F6; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #E5E7EB; line-height: 1.7; font-size: 11pt; }
+                    table { width: 100%; border-collapse: collapse; margin: 30px 0; font-size: 11pt; }
+                    th { background-color: #C4704B; color: white; padding: 12px; text-align: left; text-transform: uppercase; font-size: 9pt; letter-spacing: 1px; }
+                    td { padding: 12px; border-bottom: 1px solid #E5E7EB; }
+                    .missing-qty { color: #DC2626; font-weight: bold; font-size: 1.2em; }
+                    @media print { body { margin: 0; } }
+                </style>
+            </head>
+            <body>
+                <h1>LISTA BRAKÓW DO DOSTARCZENIA (Dokończenie)</h1>
+                <div class="info-box">
+                    <strong>Miejsce docelowe:</strong> ${escapeHTML(shipment.location)}<br>
+                    <strong>Spedytor:</strong> ${escapeHTML(shipment.company || '-')}<br>
+                    <strong>Data pierwszej wysyłki:</strong> ${escapeHTML(shipment.date)}<br>
+                    <strong>Wygenerowano:</strong> ${dateStr}
+                </div>
+                <table>
+                    <thead><tr><th>Model Oprawy (Downlight)</th><th>Kod SKU</th><th>Ilość do dosłania</th></tr></thead>
+                    <tbody>
+            `;
+            
+            let total = 0;
+            Object.entries(shipment.partial_missing).forEach(([pid, qty]) => {
+                const prod = window.inventory.products.find(p => String(p.id) === String(pid));
+                if (prod) {
+                    html += `<tr><td>${escapeHTML(prod.name)}</td><td>${escapeHTML(prod.sku)}</td><td class="missing-qty">${qty} szt.</td></tr>`;
+                    total += qty;
+                }
+            });
+            
+            html += `
+                    </tbody>
+                </table>
+                <p style="text-align: right; font-size: 1.2em;"><strong>Łącznie do dosłania: <span class="missing-qty">${total} szt.</span></strong></p>
+                <div style="margin-top: 50px; border-top: 1px solid #ccc; padding-top: 10px; color: #6B7280; font-size: 0.9em;">
+                    Podpis magazyniera: .......................................................
+                </div>
+            </body>
+            </html>
+            `;
+            
+            const printWin = window.open('', '', 'width=800,height=600');
+            printWin.document.write(html);
+            printWin.document.close();
+            printWin.focus();
+            setTimeout(() => { printWin.print(); printWin.close(); }, 300);
+        }
 
         class CloudInventoryManager {
             constructor() {
@@ -1682,6 +1800,7 @@
 
             let pending = window.inventory.shipments.filter(s => s.status !== 'completed');
             
+            // PRIORYTET 1: Potwierdzone, PRIORYTET 2: Data
             pending.sort((a, b) => {
                 if (a.is_confirmed && !b.is_confirmed) return -1;
                 if (!a.is_confirmed && b.is_confirmed) return 1;
