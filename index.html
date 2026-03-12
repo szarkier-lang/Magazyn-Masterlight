@@ -788,7 +788,7 @@
 
             const btn = document.getElementById('ai-scan-btn');
             const originalText = btn.innerHTML;
-            btn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">autorenew</span> Sztuczna Inteligencja czyta...';
+            btn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">autorenew</span> AI analizuje dokument...';
             btn.disabled = true;
 
             try {
@@ -804,24 +804,24 @@
                     else mimeType = 'image/jpeg';
                 }
 
-                // Uproszczony i twardy format wymuszający tylko JSON dla modelu PRO
-                const promptText = `Przeanalizuj załączony dokument (zdjęcie, skan oferty lub faktury).
-                Wyciągnij z niego dane i zwróć TYLKO czysty kod JSON. Nie pisz żadnych słów wstępu, użyj tylko poniższych kluczy:
+                // DOKŁADNY PROMPT DLA OFERTY ROSSMANN / MASTERLIGHT
+                const promptText = `Jesteś asystentem wprowadzania danych z zamówień. Przeanalizuj ofertę/fakturę (obraz lub PDF). Zwróć TYLKO czysty obiekt JSON. Żadnego tekstu wstępu ani formatowania markdown.
+                Struktura JSON:
                 {
-                    "ship_city": "(Miejscowość dostawy. Szukaj jej w okolicy słowa 'Sklep nr:', np. 'Mieroszyno'. Wpisz puste pole jeśli brak)",
-                    "ship_street": "(Ulica i numer obiektu, wpisz puste pole jeśli brak)",
-                    "ship_target": "(Nabywca lub nazwa obiektu, np. 'ROSSMANN Sklep nr 2672', wpisz puste pole jeśli brak)",
-                    "date": "(Odręcznie dopisana data wysyłki w formacie YYYY-MM-DD. Jeśli nie znajdziesz odręcznej daty, zostaw puste pole)",
-                    "company": "(Odręcznie dopisana firma odbierająca. Jeśli brak, wpisz 'Do ustalenia')",
-                    "p1": (ilość sztuk dla opraw powiązanych z VIGO 15W omijając inne typy, wpisz 0 jeśli brak),
-                    "p2": (ilość sztuk dla opraw powiązanych z VIGO 15W omijając inne typy, wpisz 0 jeśli brak),
-                    "p3": (ilość sztuk dla opraw powiązanych z VIGO 15W omijając inne typy, wpisz 0 jeśli brak),
-                    "p4": (ilość sztuk dla opraw powiązanych z VIGO 20W/26W/33W omijając inne typy, wpisz 0 jeśli brak),
-                    "p5": (ilość sztuk dla opraw powiązanych z VIGO 20W/26W/33W omijając inne typy, wpisz 0 jeśli brak)
-                }
-                Ważne: Wymagane jest zwrócenie TYLKO sformatowanego obiektu JSON. Wyszukaj na dokumencie oprawy 'ML VIGO'. Jeżeli znajdziesz VIGO 15W, przypisz sumę do 'p1'. Jeżeli znajdziesz VIGO 20W, 26W lub 33W, przypisz sumę do 'p4'. Wszystkie inne pola p dla opraw ustaw na 0. Zignoruj ML CAMPO, ONTEC, ML OLITE itp.`;
+                    "ship_city": "Miejscowość dostawy (szukaj nazwy miasta obok lub nad słowami 'Sklep nr:', np. 'Kalisz' lub 'Mieroszyno'. Wpisz puste pole jeśli brak)",
+                    "ship_street": "Ulica i numer z adresu dostawy/nabywcy",
+                    "ship_target": "Nazwa nabywcy oraz numer sklepu, np. 'ROSSMANN Sklep nr 105'",
+                    "date": "Data z dokumentu (np. z nagłówka 'dnia ...') w formacie YYYY-MM-DD",
+                    "company": "Spedytor (jeśli brak na kartce, wpisz 'Do ustalenia')",
+                    "p1": Ilość sztuk dla opraw 'VIGO MINI MOVE' z kątem '22' i mocą '15W' (np. 'G3 22 15W', liczba całkowita, 0 jeśli brak),
+                    "p2": Ilość sztuk dla opraw 'VIGO MINI MOVE' z kątem '37' i mocą '15W' (liczba całkowita, 0 jeśli brak),
+                    "p3": Ilość sztuk dla opraw 'VIGO MINI MOVE' z kątem '58' i mocą '15W' (liczba całkowita, 0 jeśli brak),
+                    "p4": Ilość sztuk dla opraw 'VIGO MINI MOVE' z kątem '37' i mocą '20W' (liczba całkowita, 0 jeśli brak),
+                    "p5": Ilość sztuk dla opraw 'VIGO MINI MOVE' z kątem '58' i mocą '20W' (liczba całkowita, 0 jeśli brak)
+                }`;
 
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+                // Używamy starszego, super stabilnego endpointa API, żeby ominąć błędy "v1beta is not supported"
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -844,7 +844,7 @@
                     throw new Error("Błąd usługi Google: " + result.error.message);
                 }
 
-                // Odczytywanie i filtrowanie tekstu by zostawić sam JSON
+                // Bezpieczne wydobycie JSONa w razie gdyby AI "gadało"
                 let textResponse = result.candidates[0].content.parts[0].text;
                 let jsonString = textResponse.replace(/```json/g, '').replace(/```/g, '').trim();
                 let data = JSON.parse(jsonString);
@@ -1232,6 +1232,155 @@
         }
 
         function closeModal() { document.getElementById('modal').style.display = 'none'; }
+
+        function printInventoryPdf() {
+            if(!window.inventory || window.inventory.products.length === 0) return;
+            
+            const dateStr = new Date().toLocaleDateString('pl-PL');
+            const totals = window.inventory.getTotals();
+            
+            let html = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <title>Raport Inwentaryzacji Masterlight</title>
+                <style>
+                    body { font-family: 'Inter', sans-serif; margin: 40px; color: #1F2937; }
+                    h1 { color: #C4704B; border-bottom: 3px solid #C4704B; padding-bottom: 10px; font-size: 20pt; }
+                    .info-box { background-color: #F3F4F6; padding: 15px; border-radius: 8px; margin: 20px 0; border: 1px solid #E5E7EB; line-height: 1.6; font-size: 11pt; }
+                    table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 10pt; }
+                    th { background-color: #C4704B; color: white; padding: 10px; text-align: left; text-transform: uppercase; font-size: 9pt; }
+                    td { padding: 10px; border-bottom: 1px solid #E5E7EB; }
+                    .totals { background: #fdf2ee; font-weight: bold; }
+                </style>
+            </head>
+            <body>
+                <h1>RAPORT STANU MAGAZYNU (WMS)</h1>
+                <div class="info-box">
+                    <strong>Firma:</strong> Masterlight Sp. z o.o.<br>
+                    <strong>Data wygenerowania:</strong> ${dateStr}<br>
+                    <strong>Wygenerował użytkownik:</strong> ${currentUserEmail.split('@')[0]}
+                </div>
+                
+                <h2>1. Oprawy Downlight</h2>
+                <table>
+                    <thead><tr><th>Model Oprawy</th><th>SKU</th><th>Gotowe</th><th>W Montażu</th><th>Serwis</th><th>Łącznie</th></tr></thead>
+                    <tbody>
+            `;
+            
+            window.inventory.products.forEach(p => {
+                const total = (p.ready || 0) + (p.assembly || 0) + (p.service || 0);
+                html += `<tr>
+                    <td>${escapeHTML(p.name)}</td>
+                    <td>${escapeHTML(p.sku)}</td>
+                    <td>${p.ready || 0}</td>
+                    <td>${p.assembly || 0}</td>
+                    <td>${p.service || 0}</td>
+                    <td><strong>${total}</strong></td>
+                </tr>`;
+            });
+            
+            html += `
+                    <tr class="totals">
+                        <td colspan="2" style="text-align:right;">SUMA CAŁKOWITA:</td>
+                        <td>${totals.totalReady}</td>
+                        <td>${totals.totalAssembly}</td>
+                        <td>${totals.totalService}</td>
+                        <td>${totals.totalAll}</td>
+                    </tr>
+                    </tbody>
+                </table>
+                
+                <h2 style="margin-top: 40px;">2. Komponenty Zapasowe</h2>
+                <table style="width: 50%;">
+                    <thead><tr><th>Typ Komponentu</th><th>Stan (szt.)</th></tr></thead>
+                    <tbody>
+                        <tr><td>Zasilacze LED</td><td>${window.inventory.components.ps_raw || 0}</td></tr>
+                        <tr><td>Klapki Montażowe Zwykłe</td><td>${window.inventory.components.clips_normal || 0}</td></tr>
+                        <tr><td>Klapki Montażowe Przelotowe</td><td>${window.inventory.components.clips_pass || 0}</td></tr>
+                    </tbody>
+                </table>
+                
+                <div style="margin-top: 60px; border-top: 1px solid #ccc; padding-top: 10px; color: #6B7280; font-size: 0.9em; text-align: right;">
+                    Podpis magazyniera: .......................................................
+                </div>
+            </body>
+            </html>
+            `;
+            
+            const printWin = window.open('', '', 'width=800,height=600');
+            printWin.document.write(html);
+            printWin.document.close();
+            printWin.focus();
+            setTimeout(() => { printWin.print(); printWin.close(); }, 300);
+        }
+
+        function printMissingPdf(id) {
+            const shipment = window.inventory.shipments.find(s => String(s.id) === String(id));
+            if (!shipment || !shipment.partial_missing) {
+                showToast('Brak danych o brakach dla tego zamówienia.', 'error');
+                return;
+            }
+            
+            const dateStr = new Date().toLocaleDateString('pl-PL');
+            
+            let html = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <title>Lista Braków - ${escapeHTML(shipment.location)}</title>
+                <style>
+                    body { font-family: 'Inter', sans-serif; margin: 40px; color: #1F2937; }
+                    h1 { color: #C4704B; border-bottom: 3px solid #C4704B; padding-bottom: 10px; font-size: 20pt; }
+                    .info-box { background-color: #F3F4F6; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #E5E7EB; line-height: 1.7; font-size: 11pt; }
+                    table { width: 100%; border-collapse: collapse; margin: 30px 0; font-size: 11pt; }
+                    th { background-color: #C4704B; color: white; padding: 12px; text-align: left; text-transform: uppercase; font-size: 9pt; letter-spacing: 1px; }
+                    td { padding: 12px; border-bottom: 1px solid #E5E7EB; }
+                    .missing-qty { color: #DC2626; font-weight: bold; font-size: 1.2em; }
+                    @media print { body { margin: 0; } }
+                </style>
+            </head>
+            <body>
+                <h1>LISTA BRAKÓW DO DOSTARCZENIA (Dokończenie)</h1>
+                <div class="info-box">
+                    <strong>Miejsce docelowe:</strong> ${escapeHTML(shipment.location)}<br>
+                    <strong>Spedytor:</strong> ${escapeHTML(shipment.company || '-')}<br>
+                    <strong>Data pierwszej wysyłki:</strong> ${escapeHTML(shipment.date)}<br>
+                    <strong>Wygenerowano:</strong> ${dateStr}
+                </div>
+                <table>
+                    <thead><tr><th>Model Oprawy (Downlight)</th><th>Kod SKU</th><th>Ilość do dosłania</th></tr></thead>
+                    <tbody>
+            `;
+            
+            let total = 0;
+            Object.entries(shipment.partial_missing).forEach(([pid, qty]) => {
+                const prod = window.inventory.products.find(p => String(p.id) === String(pid));
+                if (prod) {
+                    html += `<tr><td>${escapeHTML(prod.name)}</td><td>${escapeHTML(prod.sku)}</td><td class="missing-qty">${qty} szt.</td></tr>`;
+                    total += qty;
+                }
+            });
+            
+            html += `
+                    </tbody>
+                </table>
+                <p style="text-align: right; font-size: 1.2em;"><strong>Łącznie do dosłania: <span class="missing-qty">${total} szt.</span></strong></p>
+                <div style="margin-top: 50px; border-top: 1px solid #ccc; padding-top: 10px; color: #6B7280; font-size: 0.9em;">
+                    Podpis magazyniera: .......................................................
+                </div>
+            </body>
+            </html>
+            `;
+            
+            const printWin = window.open('', '', 'width=800,height=600');
+            printWin.document.write(html);
+            printWin.document.close();
+            printWin.focus();
+            setTimeout(() => { printWin.print(); printWin.close(); }, 300);
+        }
 
         class CloudInventoryManager {
             constructor() {
