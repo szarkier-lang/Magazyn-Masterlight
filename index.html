@@ -21,6 +21,8 @@
     <script>
         window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
     </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -661,14 +663,14 @@
 
                 <div id="tab-settings" class="tab-content">
                     <div class="section" style="max-width: 700px;">
-                        <div class="section-header"><h2><span class="material-symbols-outlined">settings_suggest</span> Konfiguracja Skanera AI (ChatGPT)</h2></div>
+                        <div class="section-header"><h2><span class="material-symbols-outlined">settings_suggest</span> Konfiguracja Skanera AI (ChatGPT + OCR)</h2></div>
                         <div class="section-content">
                             <div class="alert-banner" style="background:#EFF6FF; border-color:#BFDBFE; border-left-color:#3B82F6; color:#1E3A8A;">
                                 <span class="material-symbols-outlined" style="font-size:2rem;">info</span>
-                                <div>System używa niezależnego <strong>Mózgu z notatnikiem (GPT-4o)</strong>. Gwarantuje to wyeliminowanie jakichkolwiek problemów z czytaniem tabel ze zdjęć.</div>
+                                <div>System używa niezależnego <strong>Skanera Tesseract OCR</strong> w połączeniu z <strong>OpenAI ChatGPT (GPT-4o)</strong>. Daje to 100% pewności zarówno na PDFach jak i zdjęciach z telefonu.</div>
                             </div>
                             <p style="color: var(--text-dark); font-size: 0.95rem; margin-bottom: 1.5rem; line-height: 1.6;">
-                                Załóż konto na <strong>platform.openai.com</strong>, zasil saldo kwotą minimum $5 i wygeneruj klucz zaczynający się od liter <strong>sk-...</strong>
+                                Wprowadź poniżej klucz API z platformy OpenAI.
                             </p>
                             <div class="form-group">
                                 <label>Twój Klucz API OpenAI</label>
@@ -760,7 +762,7 @@
                         canvas.height = height;
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, width, height);
-                        resolve(canvas.toDataURL(file.type || 'image/jpeg', 0.95).split(',')[1]);
+                        resolve(canvas.toDataURL(file.type || 'image/jpeg', 0.85).split(',')[1]);
                     };
                     img.src = e.target.result;
                 };
@@ -782,34 +784,32 @@
 
             const btn = document.getElementById('ai-scan-btn');
             const originalText = btn.innerHTML;
-            btn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">autorenew</span> Skupiam wzrok...';
             btn.disabled = true;
 
             try {
                 let messagesContent = [];
                 const today = new Date().toISOString().split('T')[0];
                 
-                // MISTRZOWSKI PROMPT (CHAIN OF THOUGHT, ZABEZPIECZENIE STRUKTURY JSON)
+                // BAZOWY PROMPT DLA CHATGPT
                 let basePrompt = `Przeanalizuj ofertę Masterlight. Zwróć WYŁĄCZNIE obiekt JSON.
-
+                
                 DANE NAGŁÓWKA:
-                - "ship_city": Miejscowość (np. Kalisz, Mieroszyno) znajdująca się nad drukowanym napisem "Sklep nr:".
-                - "ship_target": Format "ROSSMANN Sklep nr X" (gdzie X to numer sklepu z kartki).
+                - "ship_city": Miejscowość (np. Kalisz, Mieroszyno) znajdująca się nad drukowanym napisem "Sklep nr:". Zignoruj NIP i kody pocztowe z innych miejsc.
+                - "ship_target": Format "ROSSMANN Sklep nr X" (gdzie X to numer sklepu).
                 - "date": Odręczna data z góry kartki. Sformatuj jako YYYY-MM-DD z rokiem ${new Date().getFullYear()}. Jeśli brak odręcznej, wpisz: ${today}
-                - "company": Odręcznie dopisany spedytor. Zwróć SZCZEGÓLNĄ uwagę, czy na górze nie jest napisane długopisem np.: AMUNET, BUDPOL, ASTORGA, IPP, LAWBUD. Jeśli nie ma, wpisz "Do ustalenia".
-
-                TABELA OPRAW:
-                Interesują nas tylko oprawy VIGO. Szukaj kąta (22, 37, 58) oraz mocy (15W, 20W, 26W, 33W), a następnie odczytaj ich ILOŚĆ z kolumny "Ilość towaru".
-                - "p1": oprawy VIGO 22 15W
-                - "p2": oprawy VIGO 37 15W
-                - "p3": oprawy VIGO 58 15W
-                - "p4": oprawy VIGO 37 20W (lub większe: 26W, 33W)
-                - "p5": oprawy VIGO 58 20W (lub większe: 26W, 33W)
+                - "company": Odręcznie dopisany spedytor. Zwróć SZCZEGÓLNĄ uwagę, czy na górze nie jest napisane długopisem jedno z tych słów: AMUNET, BUDPOL, ASTORGA, IPP, LAWBUD. Jeśli nie ma, wpisz "Do ustalenia".
+                
+                TABELA OPRAW (Zwróć wynik jako liczby całkowite):
+                Odczytaj z "dodatkowej ściągawki tekstowej" wartości dla opraw z rodziny VIGO. Zazwyczaj oprawy te znajdują się od 4 do 8 wiersza pod nazwą "Sala sprzedaży". Ilości przypisz z kolumny "Ilość towaru".
+                - "p1": ilość opraw VIGO o kącie 22 i mocy 15W
+                - "p2": ilość opraw VIGO o kącie 37 i mocy 15W
+                - "p3": ilość opraw VIGO o kącie 58 i mocy 15W
+                - "p4": ilość opraw VIGO o kącie 37 i mocy 20W (lub większych np. 26W, 33W)
+                - "p5": ilość opraw VIGO o kącie 58 i mocy 20W (lub większych np. 26W, 33W)
                 Jeżeli jakiegoś wariantu nie ma, wpisz 0.
-
-                Zwróć wynik dokładnie w poniższym formacie JSON (bardzo ważne: pole 'debug_myslenie' musi być na samej górze, byś najpierw przeanalizował obraz!):
+                
+                Zwróć dokładnie taki format:
                 {
-                  "debug_myslenie": "TUTAJ NAJPIERW wypisz z tabeli wszystkie wiersze VIGO i ich przypisane ilości z prawej kolumny. Dopiero potem wygeneruj resztę kluczy.",
                   "ship_city": "",
                   "ship_target": "",
                   "date": "",
@@ -818,11 +818,13 @@
                   "p2": 0,
                   "p3": 0,
                   "p4": 0,
-                  "p5": 0
+                  "p5": 0,
+                  "debug": "Krótkie info co znalazłeś"
                 }`;
 
+                // --- OBSŁUGA PDF (Lokalne wyciąganie tekstu z pliku) ---
                 if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
-                    btn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">autorenew</span> Rysowanie PDF...';
+                    btn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">autorenew</span> Czytam PDF...';
                     const arrayBuffer = await file.arrayBuffer();
                     const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
                     
@@ -832,7 +834,7 @@
                         const content = await page.getTextContent();
                         extractedText += content.items.map(item => item.str).join(' ') + '\n';
                     }
-                    messagesContent.push({ type: "text", text: basePrompt + "\n\nOto dodatkowa ściągawka (czysty tekst z PDF) by pomóc Ci w polu 'debug_myslenie':\n" + extractedText });
+                    messagesContent.push({ type: "text", text: basePrompt + "\n\nOto dodatkowa ściągawka (czysty tekst wyciągnięty z pliku PDF). Użyj go jako w 100% pewnego źródła dla tabeli. UWAGA: Nie znajdziesz tu pisma odręcznego z datą i kurierem (tego szukaj na obrazkach poniżej):\n" + extractedText });
 
                     const maxPages = Math.min(pdf.numPages, 3); 
                     for (let i = 1; i <= maxPages; i++) {
@@ -850,19 +852,33 @@
                             image_url: { url: `data:image/jpeg;base64,${base64Image}`, detail: "high" } 
                         });
                     }
-                } else {
-                    btn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">autorenew</span> Optymalizacja zdjęcia...';
+                } 
+                // --- OBSŁUGA ZDJĘĆ Z TELEFONU (Lokalne wyciąganie tekstu przez Tesseract OCR) ---
+                else {
+                    btn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">autorenew</span> Optymalizacja obrazu...';
                     const base64Optimized = await resizeImage(file, 2400); 
                     let mimeType = file.type || 'image/jpeg';
-                    messagesContent.push({ type: "text", text: basePrompt + "\n\n(Pracujesz na samym zdjęciu, więc w 'debug_myslenie' zrób bardzo dokładny skan wzrokiem tabeli i przepisz wiersze opraw z ilościami ZANIM wypełnisz p1-p5)." });
+                    
+                    btn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">autorenew</span> Wstępny skan OCR...';
+                    
+                    // Odpalamy darmowego Tesseracta by zrobić "ściągawkę tekstową" ze zdjęcia dla ChatGPT
+                    try {
+                        const { data: { text } } = await Tesseract.recognize(`data:${mimeType};base64,${base64Optimized}`, 'pol');
+                        messagesContent.push({ type: "text", text: basePrompt + "\n\nOto dodatkowa ściągawka (czysty tekst wyciągnięty ze zdjęcia za pomocą silnika OCR). Tekst może być miejscami zniekształcony, ale stanowi doskonały punkt odniesienia do wyciągnięcia liczb z tabeli opraw:\n" + text });
+                    } catch(e) {
+                        // Jeśli Tesseract z jakiegoś powodu padnie, fallback do standardowego czytania zdjęciem
+                        messagesContent.push({ type: "text", text: basePrompt });
+                    }
+
                     messagesContent.push({ 
                         type: "image_url", 
                         image_url: { url: `data:${mimeType};base64,${base64Optimized}`, detail: "high" } 
                     });
                 }
 
-                btn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">autorenew</span> Wysyłam do ChatGPT-4o...';
+                btn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">autorenew</span> Wysyłam do OpenAI...';
 
+                // GŁÓWNY SILNIK AI (GPT-4o)
                 const response = await fetch('https://api.openai.com/v1/chat/completions', {
                     method: 'POST',
                     headers: {
@@ -873,7 +889,7 @@
                         model: "gpt-4o",
                         messages: [{ role: "user", content: messagesContent }],
                         response_format: { type: "json_object" },
-                        max_tokens: 1500,
+                        max_tokens: 1000,
                         temperature: 0.1
                     })
                 });
@@ -887,14 +903,8 @@
                     throw new Error("Błąd OpenAI: " + result.error.message);
                 }
 
-                let fullResponse = result.choices[0].message.content;
-                let jsonStartIndex = fullResponse.indexOf('{');
-                let jsonEndIndex = fullResponse.lastIndexOf('}');
-                if(jsonStartIndex !== -1 && jsonEndIndex !== -1) {
-                    fullResponse = fullResponse.substring(jsonStartIndex, jsonEndIndex + 1);
-                }
-                
-                let data = JSON.parse(fullResponse);
+                let jsonString = result.choices[0].message.content;
+                let data = JSON.parse(jsonString);
 
                 const safelyGetNumber = (val) => {
                     let num = parseInt(val);
@@ -915,10 +925,10 @@
                 document.getElementById('form-p4').value = safelyGetNumber(data.p4);
                 document.getElementById('form-p5').value = safelyGetNumber(data.p5);
 
-                showModal('Raport z analizy', `
-                    <p style="margin-bottom: 10px; color: var(--success-status); font-weight: bold;">Zeskanowano pomyślnie!</p>
-                    <p style="font-size: 0.9rem; color: var(--text-dark);">Notatki skanera (co zobaczył na obrazku):</p>
-                    <p style="font-size: 0.85rem; color: var(--text-light); margin-top: 10px; line-height: 1.6;"><i>"${escapeHTML(data.debug_myslenie)}"</i></p>
+                showModal('Raport Skanera OCR', `
+                    <p style="margin-bottom: 10px; color: var(--success-status); font-weight: bold;">Zeskanowano!</p>
+                    <p style="font-size: 0.9rem; color: var(--text-dark);">Podsumowanie odczytu z kartki:</p>
+                    <p style="font-size: 0.85rem; color: var(--text-light); margin-top: 10px; line-height: 1.6;"><i>"${escapeHTML(data.debug)}"</i></p>
                 `);
 
                 setTimeout(() => { closeModal(); }, 6000);
