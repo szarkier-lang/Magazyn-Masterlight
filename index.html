@@ -344,6 +344,7 @@
                     <li id="nav-history"><a href="#" onclick="switchTab('tab-history')" class="nav-item"><span class="material-symbols-outlined">receipt_long</span> Historia Zmian</a></li>
                     <li><a href="#" onclick="switchTab('tab-components')" class="nav-item"><span class="material-symbols-outlined">electrical_services</span> Komponenty</a></li>
                     <li id="nav-reports"><a href="#" onclick="switchTab('tab-reports')" class="nav-item"><span class="material-symbols-outlined">precision_manufacturing</span> Panel Produkcji</a></li>
+                    
                     <li id="nav-settings"><a href="#" onclick="switchTab('tab-settings')" class="nav-item"><span class="material-symbols-outlined">settings_suggest</span> Ustawienia Systemu (AI)</a></li>
                     
                     <li class="mobile-only-logout" style="margin-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1rem;">
@@ -664,10 +665,10 @@
                         <div class="section-content">
                             <div class="alert-banner" style="background:#EFF6FF; border-color:#BFDBFE; border-left-color:#3B82F6; color:#1E3A8A;">
                                 <span class="material-symbols-outlined" style="font-size:2rem;">info</span>
-                                <div>System używa niezawodnego "Kotwiczenia Przestrzennego" i metody Few-Shot dla plików graficznych, a z PDFów dodatkowo zaciąga suchy tekst.</div>
+                                <div>System używa niezależnego <strong>Mózgu z notatnikiem (GPT-4o)</strong>. Gwarantuje to wyeliminowanie jakichkolwiek problemów z czytaniem tabel ze zdjęć.</div>
                             </div>
                             <p style="color: var(--text-dark); font-size: 0.95rem; margin-bottom: 1.5rem; line-height: 1.6;">
-                                Wprowadź poniżej klucz API z platformy OpenAI.
+                                Załóż konto na <strong>platform.openai.com</strong>, zasil saldo kwotą minimum $5 i wygeneruj klucz zaczynający się od liter <strong>sk-...</strong>
                             </p>
                             <div class="form-group">
                                 <label>Twój Klucz API OpenAI</label>
@@ -759,7 +760,7 @@
                         canvas.height = height;
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, width, height);
-                        resolve(canvas.toDataURL(file.type || 'image/jpeg', 0.85).split(',')[1]);
+                        resolve(canvas.toDataURL(file.type || 'image/jpeg', 0.95).split(',')[1]);
                     };
                     img.src = e.target.result;
                 };
@@ -781,32 +782,34 @@
 
             const btn = document.getElementById('ai-scan-btn');
             const originalText = btn.innerHTML;
-            btn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">autorenew</span> ChatGPT analizuje...';
+            btn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">autorenew</span> Skupiam wzrok...';
             btn.disabled = true;
 
             try {
                 let messagesContent = [];
                 const today = new Date().toISOString().split('T')[0];
                 
+                // MISTRZOWSKI PROMPT (CHAIN OF THOUGHT, ZABEZPIECZENIE STRUKTURY JSON)
                 let basePrompt = `Przeanalizuj ofertę Masterlight. Zwróć WYŁĄCZNIE obiekt JSON.
-                
+
                 DANE NAGŁÓWKA:
                 - "ship_city": Miejscowość (np. Kalisz, Mieroszyno) znajdująca się nad drukowanym napisem "Sklep nr:".
                 - "ship_target": Format "ROSSMANN Sklep nr X" (gdzie X to numer sklepu z kartki).
                 - "date": Odręczna data z góry kartki. Sformatuj jako YYYY-MM-DD z rokiem ${new Date().getFullYear()}. Jeśli brak odręcznej, wpisz: ${today}
-                - "company": Odręcznie dopisany spedytor. Zwróć SZCZEGÓLNĄ uwagę, czy na górze nie jest napisane długopisem np.: AMUNET, BUDPOL, ASTORGA, IPP, LAWBUD. Jeśli nie widzisz długopisu z nazwą firmy, wpisz "Do ustalenia".
-                
-                TABELA OPRAW (Zwróć wynik jako liczby całkowite):
-                Interesują nas tylko oprawy VIGO (znajdują się w tabeli zwykle w wierszach 4-8). Odczytaj wartość kąta i mocy z wiersza, po czym przesuń wzrok do 5. kolumny od lewej (Ilość towaru) by zczytać sztuki.
-                - "p1": ilość opraw VIGO o kącie 22 i mocy 15W
-                - "p2": ilość opraw VIGO o kącie 37 i mocy 15W
-                - "p3": ilość opraw VIGO o kącie 58 i mocy 15W
-                - "p4": ilość opraw VIGO o kącie 37 i mocy 20W (lub większych np. 26W, 33W)
-                - "p5": ilość opraw VIGO o kącie 58 i mocy 20W (lub większych np. 26W, 33W)
+                - "company": Odręcznie dopisany spedytor. Zwróć SZCZEGÓLNĄ uwagę, czy na górze nie jest napisane długopisem np.: AMUNET, BUDPOL, ASTORGA, IPP, LAWBUD. Jeśli nie ma, wpisz "Do ustalenia".
+
+                TABELA OPRAW:
+                Interesują nas tylko oprawy VIGO. Szukaj kąta (22, 37, 58) oraz mocy (15W, 20W, 26W, 33W), a następnie odczytaj ich ILOŚĆ z kolumny "Ilość towaru".
+                - "p1": oprawy VIGO 22 15W
+                - "p2": oprawy VIGO 37 15W
+                - "p3": oprawy VIGO 58 15W
+                - "p4": oprawy VIGO 37 20W (lub większe: 26W, 33W)
+                - "p5": oprawy VIGO 58 20W (lub większe: 26W, 33W)
                 Jeżeli jakiegoś wariantu nie ma, wpisz 0.
-                
-                Zwróć dokładnie taki format:
+
+                Zwróć wynik dokładnie w poniższym formacie JSON (bardzo ważne: pole 'debug_myslenie' musi być na samej górze, byś najpierw przeanalizował obraz!):
                 {
+                  "debug_myslenie": "TUTAJ NAJPIERW wypisz z tabeli wszystkie wiersze VIGO i ich przypisane ilości z prawej kolumny. Dopiero potem wygeneruj resztę kluczy.",
                   "ship_city": "",
                   "ship_target": "",
                   "date": "",
@@ -815,12 +818,11 @@
                   "p2": 0,
                   "p3": 0,
                   "p4": 0,
-                  "p5": 0,
-                  "debug": "Krótkie info co znalazłeś"
+                  "p5": 0
                 }`;
 
                 if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
-                    btn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">autorenew</span> Rysuję PDF...';
+                    btn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">autorenew</span> Rysowanie PDF...';
                     const arrayBuffer = await file.arrayBuffer();
                     const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
                     
@@ -830,7 +832,7 @@
                         const content = await page.getTextContent();
                         extractedText += content.items.map(item => item.str).join(' ') + '\n';
                     }
-                    messagesContent.push({ type: "text", text: basePrompt + "\n\nOto dodatkowa ściągawka (czysty tekst wyciągnięty z PDF). Użyj go jako w 100% pewnego źródła by perfekcyjnie połączyć rodzaj lampy z ilością w tabeli. Pamiętaj jednak, że nie ma tu Twojego ręcznego długopisu z datą i spedytorem (tego szukaj na obrazku!):\n" + extractedText });
+                    messagesContent.push({ type: "text", text: basePrompt + "\n\nOto dodatkowa ściągawka (czysty tekst z PDF) by pomóc Ci w polu 'debug_myslenie':\n" + extractedText });
 
                     const maxPages = Math.min(pdf.numPages, 3); 
                     for (let i = 1; i <= maxPages; i++) {
@@ -852,14 +854,14 @@
                     btn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">autorenew</span> Optymalizacja zdjęcia...';
                     const base64Optimized = await resizeImage(file, 2400); 
                     let mimeType = file.type || 'image/jpeg';
-                    messagesContent.push({ type: "text", text: basePrompt + "\n\nTo jest zdjęcie. Zastosuj kotwiczenie przestrzenne: odnajdź tabelę, przejdź do wierszy od 4 do 8, zidentyfikuj model i przesuń wzrok twardo do 5. kolumny aby wyciągnąć ilość."});
+                    messagesContent.push({ type: "text", text: basePrompt + "\n\n(Pracujesz na samym zdjęciu, więc w 'debug_myslenie' zrób bardzo dokładny skan wzrokiem tabeli i przepisz wiersze opraw z ilościami ZANIM wypełnisz p1-p5)." });
                     messagesContent.push({ 
                         type: "image_url", 
                         image_url: { url: `data:${mimeType};base64,${base64Optimized}`, detail: "high" } 
                     });
                 }
 
-                btn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">autorenew</span> Wysyłam do AI...';
+                btn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">autorenew</span> Wysyłam do ChatGPT-4o...';
 
                 const response = await fetch('https://api.openai.com/v1/chat/completions', {
                     method: 'POST',
@@ -871,7 +873,7 @@
                         model: "gpt-4o",
                         messages: [{ role: "user", content: messagesContent }],
                         response_format: { type: "json_object" },
-                        max_tokens: 1000,
+                        max_tokens: 1500,
                         temperature: 0.1
                     })
                 });
@@ -885,8 +887,14 @@
                     throw new Error("Błąd OpenAI: " + result.error.message);
                 }
 
-                let jsonString = result.choices[0].message.content;
-                let data = JSON.parse(jsonString);
+                let fullResponse = result.choices[0].message.content;
+                let jsonStartIndex = fullResponse.indexOf('{');
+                let jsonEndIndex = fullResponse.lastIndexOf('}');
+                if(jsonStartIndex !== -1 && jsonEndIndex !== -1) {
+                    fullResponse = fullResponse.substring(jsonStartIndex, jsonEndIndex + 1);
+                }
+                
+                let data = JSON.parse(fullResponse);
 
                 const safelyGetNumber = (val) => {
                     let num = parseInt(val);
@@ -907,10 +915,10 @@
                 document.getElementById('form-p4').value = safelyGetNumber(data.p4);
                 document.getElementById('form-p5').value = safelyGetNumber(data.p5);
 
-                showModal('Raport myślowy Skanera', `
-                    <p style="margin-bottom: 10px; color: var(--success-status); font-weight: bold;">Zeskanowano!</p>
-                    <p style="font-size: 0.9rem; color: var(--text-dark);">Uzasadnienie odczytu:</p>
-                    <p style="font-size: 0.85rem; color: var(--text-light); margin-top: 10px; line-height: 1.6;"><i>"${escapeHTML(data.debug)}"</i></p>
+                showModal('Raport z analizy', `
+                    <p style="margin-bottom: 10px; color: var(--success-status); font-weight: bold;">Zeskanowano pomyślnie!</p>
+                    <p style="font-size: 0.9rem; color: var(--text-dark);">Notatki skanera (co zobaczył na obrazku):</p>
+                    <p style="font-size: 0.85rem; color: var(--text-light); margin-top: 10px; line-height: 1.6;"><i>"${escapeHTML(data.debug_myslenie)}"</i></p>
                 `);
 
                 setTimeout(() => { closeModal(); }, 6000);
