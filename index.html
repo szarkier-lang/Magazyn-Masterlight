@@ -677,7 +677,7 @@
                         <div class="section-content">
                             <div class="alert-banner" style="background:#EFF6FF; border-color:#BFDBFE; border-left-color:#3B82F6; color:#1E3A8A;">
                                 <span class="material-symbols-outlined" style="font-size:2rem;">info</span>
-                                <div>Wykorzystujemy technologię <strong>Multi-Agent Workflow</strong> z GPT-4o. System wysyła 2 niezależne zapytania i sam łączy ich wyniki, zapewniając bezbłędny odczyt z dokumentu.</div>
+                                <div>Aplikacja korzysta teraz z <strong>Architektury Wielu Agentów AI</strong>. To najskuteczniejsza metoda radzenia sobie z gęstymi tabelami i dopiskami ręcznymi.</div>
                             </div>
                             <p style="color: var(--text-dark); font-size: 0.95rem; margin-bottom: 1.5rem; line-height: 1.6;">
                                 Wprowadź poniżej klucz API z platformy OpenAI.
@@ -772,7 +772,7 @@
                         canvas.height = height;
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, width, height);
-                        resolve(canvas.toDataURL(file.type || 'image/jpeg', 0.9).split(',')[1]);
+                        resolve(canvas.toDataURL(file.type || 'image/jpeg', 0.85).split(',')[1]);
                     };
                     img.src = e.target.result;
                 };
@@ -1918,19 +1918,22 @@
             let vReady = {};
             let vAssembly = {};
             
+            // Zainicjuj wirtualne magazyny bezpiecznie
             window.inventory.products.forEach(p => {
-                vReady[p.id] = p.ready || 0;
-                const groupKey = p.assembly_group || `single_${p.id}`;
+                vReady[String(p.id)] = parseInt(p.ready) || 0;
+                const groupKey = p.assembly_group ? String(p.assembly_group) : `single_${p.id}`;
                 if (vAssembly[groupKey] === undefined) {
-                    vAssembly[groupKey] = p.assembly || 0;
+                    vAssembly[groupKey] = parseInt(p.assembly) || 0;
                 }
             });
 
             let pending = window.inventory.shipments.filter(s => s.status !== 'completed');
             
             pending.sort((a, b) => {
-                if (a.is_confirmed && !b.is_confirmed) return -1;
-                if (!a.is_confirmed && b.is_confirmed) return 1;
+                const aConf = a.is_confirmed === true || a.is_confirmed === 'true'; 
+                const bConf = b.is_confirmed === true || b.is_confirmed === 'true';
+                if (aConf && !bConf) return -1;
+                if (!aConf && bConf) return 1;
                 return (a.date || '').localeCompare(b.date || '');
             });
 
@@ -1940,22 +1943,23 @@
                 
                 if (reqs && typeof reqs === 'object') {
                     for (const [pId, qty] of Object.entries(reqs)) {
-                        if (qty > 0) {
-                            const prod = window.inventory.products.find(p => String(p.id) == pId);
+                        let needed = parseInt(qty) || 0;
+                        if (needed > 0) {
+                            const prod = window.inventory.products.find(p => String(p.id) === String(pId));
                             if (!prod) { isReady = false; continue; }
                             
-                            let needed = qty;
+                            const pIdStr = String(prod.id);
                             
-                            if (vReady[pId] >= needed) {
-                                vReady[pId] -= needed;
+                            if (vReady[pIdStr] >= needed) {
+                                vReady[pIdStr] -= needed;
                                 needed = 0;
                             } else {
-                                needed -= vReady[pId];
-                                vReady[pId] = 0;
+                                needed -= vReady[pIdStr];
+                                vReady[pIdStr] = 0;
                             }
                             
                             if (needed > 0) {
-                                const poolKey = prod.assembly_group || `single_${prod.id}`;
+                                const poolKey = prod.assembly_group ? String(prod.assembly_group) : `single_${prod.id}`;
                                 if (vAssembly[poolKey] >= needed) {
                                     vAssembly[poolKey] -= needed;
                                 } else {
