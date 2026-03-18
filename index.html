@@ -679,7 +679,7 @@
                         <div class="section-content">
                             <div class="alert-banner" style="background:#EFF6FF; border-color:#BFDBFE; border-left-color:#3B82F6; color:#1E3A8A;">
                                 <span class="material-symbols-outlined" style="font-size:2rem;">info</span>
-                                <div>Wykorzystujemy technologię <strong>Multi-Agent Workflow</strong> z GPT-4o. System wysyła 2 niezależne zapytania i sam łączy ich wyniki, zapewniając bezbłędny odczyt z dokumentu.</div>
+                                <div>System używa niezależnego <strong>Interpretera AI</strong> opartego na modelu GPT-4o. Kod strony sam kategoryzuje produkty, dzięki czemu unikamy pomyłek.</div>
                             </div>
                             <p style="color: var(--text-dark); font-size: 0.95rem; margin-bottom: 1.5rem; line-height: 1.6;">
                                 Wprowadź poniżej klucz API z platformy OpenAI.
@@ -774,7 +774,7 @@
                         canvas.height = height;
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, width, height);
-                        resolve(canvas.toDataURL(file.type || 'image/jpeg', 0.9).split(',')[1]);
+                        resolve(canvas.toDataURL(file.type || 'image/jpeg', 0.85).split(',')[1]);
                     };
                     img.src = e.target.result;
                 };
@@ -796,133 +796,131 @@
 
             const btn = document.getElementById('ai-scan-btn');
             const originalText = btn.innerHTML;
-            btn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">autorenew</span> Rozdzielam zadania dla AI...';
+            btn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">autorenew</span> Skupiam wzrok...';
             btn.disabled = true;
 
             try {
+                let messagesContent = [];
                 const today = new Date().toISOString().split('T')[0];
-                let base64Images = [];
-                let pdfText = "";
+                
+                // CZYSTY PROMPT OD UŻYTKOWNIKA (Ograniczony do surowego JSONa)
+                const promptText = `Przeanalizuj dokument oferty ze zdjęcia (język polski).
+                
+                Twoim zadaniem jest wyciągnięcie następujących informacji:
+                1. Numer sklepu (pole "Sklep nr")
+                2. Miejscowość sklepu
+                3. Data napisana ręcznie na górze dokumentu
+                4. Spedytor napisany ręcznie obok daty
+                5. Ilości opraw "VIGO MINI MOVE WO 145" z podziałem na:
+                   - kąt świecenia
+                   - moc (W)
+
+                Interesują nas wyłącznie pozycje zawierające "VIGO". Zignoruj wszystkie inne produkty (np. OLITE, ONTEC, CZUJNIKI).
+                Z nazwy produktu odczytaj kąt (np. 37°, 58°) i moc (np. 15W, 20W). Następnie przypisz do nich ilość sztuk z kolumny "Ilość towaru".
+
+                Zwróć wynik WYŁĄCZNIE w formacie JSON:
+                {
+                  "sklep_nr": "",
+                  "miejscowosc": "",
+                  "data_reczna": "",
+                  "spedytor": "",
+                  "vigo_145": [
+                    {
+                      "kat": "",
+                      "moc": "",
+                      "ilosc": 0
+                    }
+                  ]
+                }
+
+                Zasady:
+                - Jeśli data lub spedytor są napisane ręcznie – odczytaj je z notatek na dokumencie. (Części spedytorzy to: AMUNET, BUDPOL, ASTORGA, IPP, LAWBUD).
+                - Jeśli któryś element nie jest czytelny zwróć null.
+                - Nie dodawaj żadnego tekstu poza JSON.`;
+
+                messagesContent.push({ type: "text", text: promptText });
 
                 if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+                    btn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">autorenew</span> Renderowanie PDF...';
                     const arrayBuffer = await file.arrayBuffer();
                     const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
                     
-                    for (let i = 1; i <= pdf.numPages; i++) {
-                        const page = await pdf.getPage(i);
-                        const content = await page.getTextContent();
-                        pdfText += content.items.map(item => item.str).join(' ') + '\n';
-                    }
-
                     const maxPages = Math.min(pdf.numPages, 3); 
                     for (let i = 1; i <= maxPages; i++) {
                         const page = await pdf.getPage(i);
-                        const viewport = page.getViewport({scale: 2.0}); 
+                        const viewport = page.getViewport({scale: 1.5}); 
                         const canvas = document.createElement('canvas');
                         const ctx = canvas.getContext('2d');
                         canvas.height = viewport.height;
                         canvas.width = viewport.width;
                         await page.render({canvasContext: ctx, viewport: viewport}).promise;
-                        base64Images.push(canvas.toDataURL('image/jpeg', 0.8).split(',')[1]);
+                        const base64Image = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+                        
+                        messagesContent.push({ 
+                            type: "image_url", 
+                            image_url: { url: `data:image/jpeg;base64,${base64Image}`, detail: "high" } 
+                        });
                     }
                 } else {
+                    btn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">autorenew</span> Optymalizacja zdjęcia...';
                     const base64Optimized = await resizeImage(file, 2400); 
-                    base64Images.push(base64Optimized);
+                    let mimeType = file.type || 'image/jpeg';
+                    messagesContent.push({ 
+                        type: "image_url", 
+                        image_url: { url: `data:${mimeType};base64,${base64Optimized}`, detail: "high" } 
+                    });
                 }
 
-                btn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">autorenew</span> Agent 1/2 skanuje nagłówek...';
+                btn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">autorenew</span> Czekam na serwer OpenAI...';
 
-                // --- AGENT 1: DETEKTYW OD NAGŁÓWKÓW ---
-                const headerPrompt = `Jesteś detektywem analizującym TYLKO i wyłącznie górną część oferty. IGNORUJ całkowicie wszelkie tabele i ceny. Szukaj długopisu.
-                
-                Wypełnij 4 zmienne:
-                1. 'ship_city': Miejscowość (np. Kalisz) znajdująca się dokładnie nad tekstem 'Sklep nr:'.
-                2. 'ship_target': Numer sklepu. Wpisz go w formacie 'ROSSMANN Sklep nr X'.
-                3. 'date': Data dopisana ODRĘCZNIE na górze dokumentu. Sformatuj ją jako YYYY-MM-DD z rokiem ${new Date().getFullYear()}. Zignoruj datę wydruku z komputera. Jeżeli nie ma na zdjęciu odręcznej daty z długopisu, wpisz: ${today}
-                4. 'company': Odręcznie dopisany długopisem spedytor (szukaj słów: AMUNET, BUDPOL, ASTORGA, IPP, LAWBUD). Jeśli brak długopisu, wpisz: Do ustalenia.
-
-                Zwróć dokładnie taki JSON:
-                {"ship_city":"","ship_target":"","date":"","company":""}`;
-
-                let headerMessages = [{ type: "text", text: headerPrompt }];
-                base64Images.forEach(img => {
-                    headerMessages.push({ type: "image_url", image_url: { url: `data:image/jpeg;base64,${img}`, detail: "high" } });
-                });
-
-                const headerPromise = fetch('https://api.openai.com/v1/chat/completions', {
+                const response = await fetch('https://api.openai.com/v1/chat/completions', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
                     body: JSON.stringify({
                         model: "gpt-4o",
-                        messages: [{ role: "user", content: headerMessages }],
+                        messages: [{ role: "user", content: messagesContent }],
                         response_format: { type: "json_object" },
+                        max_tokens: 1500,
                         temperature: 0.1
                     })
                 });
 
-                // --- AGENT 2: KSIĘGOWY OD TABEL ---
-                btn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">autorenew</span> Agent 2/2 analizuje tabelę...';
+                const result = await response.json();
                 
-                const tablePrompt = `Jesteś księgowym analizującym WYŁĄCZNIE i tylko tabelę pod hasłem 'Sala sprzedaży'. Ignorujesz nagłówki i daty.
-                Twoim zadaniem jest wyciągnięcie z tabeli ilości dla opraw z rodziny VIGO. Zignoruj panele ML OLITE, ONTEC, CZUJNIKI.
-                
-                Instrukcja:
-                1. Znajdź wiersze od 4 do 8 tabeli.
-                2. Spójrz w pierwszą kolumnę tego wiersza ('L.p. / ozn. proj.') i odczytaj tekst (np. G1 58 15W, G3 22, itp.).
-                3. Przesuń wzrok do prawej strony tabeli, do kolumny nazwanej 'Ilość towaru' lub 'Ilość' (to zazwyczaj 5. kolumna) i odczytaj wartość liczbową.
+                if (result.error) {
+                    if (result.error.code === 'invalid_api_key' || result.error.type === 'invalid_request_error') {
+                        localStorage.removeItem('openai_api_key');
+                    }
+                    throw new Error("Błąd OpenAI: " + result.error.message);
+                }
 
-                Zwróć wynik jako obiekt JSON zawierający tablicę 'oprawy':
-                {
-                  "oprawy": [
-                    { "oznaczenie": "G3 22 15W", "ilosc": 13 },
-                    { "oznaczenie": "G2 37 15W", "ilosc": 150 }
-                  ]
-                }`;
+                let jsonString = result.choices[0].message.content;
+                let data = JSON.parse(jsonString);
 
-                let tableMessages = [{ type: "text", text: tablePrompt }];
-                if (pdfText) tableMessages[0].text += `\n\nOto suchy tekst z PDFa, użyj go jako gwarancji przy łączeniu oprawy z ilością:\n${pdfText}`;
-                base64Images.forEach(img => {
-                    tableMessages.push({ type: "image_url", image_url: { url: `data:image/jpeg;base64,${img}`, detail: "high" } });
-                });
-
-                const tablePromise = fetch('https://api.openai.com/v1/chat/completions', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-                    body: JSON.stringify({
-                        model: "gpt-4o",
-                        messages: [{ role: "user", content: tableMessages }],
-                        response_format: { type: "json_object" },
-                        temperature: 0.1
-                    })
-                });
-
-                btn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">autorenew</span> Łączenie wyników AI...';
-
-                const [headerRes, tableRes] = await Promise.all([headerPromise, tablePromise]);
-                const headerData = await headerRes.json();
-                const tableData = await tableRes.json();
-
-                if (headerData.error) throw new Error("Błąd OpenAI (Nagłówek): " + headerData.error.message);
-                if (tableData.error) throw new Error("Błąd OpenAI (Tabela): " + tableData.error.message);
-
-                const headerJson = JSON.parse(headerData.choices[0].message.content);
-                const tableJson = JSON.parse(tableData.choices[0].message.content);
-
-                // --- NASZ JAVASCRIPT INTERPRETER ---
+                // --- NASZ KOD INTERPRETUJĄCY ---
                 let p1 = 0, p2 = 0, p3 = 0, p4 = 0, p5 = 0;
-                
-                if (tableJson.oprawy && Array.isArray(tableJson.oprawy)) {
-                    tableJson.oprawy.forEach(op => {
-                        let text = (op.oznaczenie || "").toUpperCase();
-                        let qty = parseInt(op.ilosc) || 0;
+                let insightText = ""; 
+
+                if (data.vigo_145 && Array.isArray(data.vigo_145)) {
+                    data.vigo_145.forEach(item => {
+                        let katStr = String(item.kat || "");
+                        let mocStr = String(item.moc || "").toUpperCase();
+                        let qty = parseInt(item.ilosc) || 0;
                         
-                        let is15W = text.includes("15W") || text.includes("15 W");
-                        let is20WPlus = text.includes("20W") || text.includes("26W") || text.includes("33W");
+                        insightText += `<li><strong>${qty} szt</strong> - Kąt: ${escapeHTML(katStr)}, Moc: ${escapeHTML(mocStr)}</li>`;
 
-                        let is22 = text.includes("22") || text.includes("G3");
-                        let is58 = text.includes("58") || text.includes("235") || text.includes("G1") || text.includes("G5");
-                        let is37 = text.includes("37") || text.includes("140") || text.includes("185") || text.includes("G2") || text.includes("G4") || (!is22 && !is58);
+                        // Analiza wyłapanego wariantu
+                        let is15W = mocStr.includes("15");
+                        let is20WPlus = mocStr.includes("20") || mocStr.includes("26") || mocStr.includes("33");
 
+                        let is22 = katStr.includes("22");
+                        let is58 = katStr.includes("58");
+                        let is37 = katStr.includes("37") || (!is22 && !is58); // Domyślnie 37 jak nie jest to ani 22 ani 58
+
+                        // Przypisanie do okienek formularza
                         if (is15W) {
                             if (is22) p1 += qty;
                             else if (is58) p3 += qty;
@@ -934,12 +932,32 @@
                     });
                 }
 
+                // Formatowanie danych tekstowych
+                let finalDate = data.data_reczna;
+                if (finalDate && finalDate !== "null") {
+                    if (finalDate.match(/^\d{1,2}\.\d{1,2}$/)) {
+                         let parts = finalDate.split('.');
+                         finalDate = `${new Date().getFullYear()}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+                    }
+                } else {
+                    finalDate = today;
+                }
+
+                let finalTarget = "";
+                if (data.sklep_nr && data.sklep_nr !== "null") {
+                    finalTarget = "ROSSMANN Sklep nr " + String(data.sklep_nr).replace(/[^0-9]/g, '');
+                }
+
+                let finalCompany = data.spedytor && data.spedytor !== "null" && data.spedytor.trim() !== "" ? data.spedytor : "Do ustalenia";
+                let finalCity = data.miejscowosc && data.miejscowosc !== "null" ? data.miejscowosc : "";
+
+                // Wrzucanie do formularza
                 const form = document.getElementById('shipmentForm');
-                document.getElementById('form-city').value = headerJson.ship_city || '';
-                document.getElementById('form-street').value = ''; 
-                document.getElementById('form-target').value = headerJson.ship_target || '';
-                document.getElementById('form-date').value = headerJson.date || today;
-                document.getElementById('form-company').value = headerJson.company || 'Do ustalenia';
+                document.getElementById('form-city').value = finalCity;
+                document.getElementById('form-street').value = '';
+                document.getElementById('form-target').value = finalTarget;
+                document.getElementById('form-date').value = finalDate;
+                document.getElementById('form-company').value = finalCompany;
                 
                 document.getElementById('form-p1').value = p1;
                 document.getElementById('form-p2').value = p2;
@@ -947,11 +965,18 @@
                 document.getElementById('form-p4').value = p4;
                 document.getElementById('form-p5').value = p5;
 
-                showToast('Sukces! Agenci AI przeanalizowali dokument.', 'success');
+                // Pokazujemy ładne podsumowanie co odczytał AI
+                showModal('Raport Odczytu ze Skanera', `
+                    <p style="margin-bottom: 10px; color: var(--success-status); font-weight: bold;">Skanowanie zakończone pomyślnie!</p>
+                    <p style="font-size: 0.9rem; color: var(--text-dark);">Poniżej to co Skaner odnalazł w tabeli przed posortowaniem:</p>
+                    <ul style="font-size: 0.85rem; color: var(--text-light); margin-top: 10px; padding-left: 20px; line-height: 1.6;">
+                        ${insightText || "<li>Brak znalezionych opraw VIGO w dokumencie.</li>"}
+                    </ul>
+                `);
 
             } catch (error) {
                 console.error("Szczegóły błędu AI:", error);
-                showModal('Błąd analizy AI', `<p style="color:var(--accent-red); font-weight:500;">${error.message}</p><p style="margin-top:1rem; font-size:0.85rem;">Spróbuj wykonać zdjęcie jeszcze raz.</p>`);
+                showModal('Błąd analizy AI', `<p style="color:var(--accent-red); font-weight:500;">${error.message}</p><p style="margin-top:1rem; font-size:0.85rem;">Spróbuj przesłać plik ponownie.</p>`);
             } finally {
                 btn.innerHTML = originalText;
                 btn.disabled = false;
@@ -959,45 +984,7 @@
             }
         }
 
-        async function addIncomingShipment(supplier, newProducts) {
-            if (currentRole === 'viewer') return;
-            let totalAdded = 0;
-            const dbUpdates = [];
-            
-            for (const [id, qty] of Object.entries(newProducts)) {
-                if (qty > 0) {
-                    const product = this.products.find(p => String(p.id) === String(id));
-                    if (product) {
-                        const newAssembly = (product.assembly || 0) + qty;
-                        if (product.assembly_group) {
-                            dbUpdates.push(db.from('products').update({ assembly: newAssembly }).eq('assembly_group', product.assembly_group));
-                            this.products.filter(p => p.assembly_group === product.assembly_group).forEach(p => p.assembly = newAssembly);
-                        } else {
-                            dbUpdates.push(db.from('products').update({ assembly: newAssembly }).eq('id', product.id));
-                            product.assembly = newAssembly;
-                        }
-                        totalAdded += qty;
-                    }
-                }
-            }
-            
-            updateDashboard();
-
-            if (dbUpdates.length > 0) await Promise.all(dbUpdates);
-
-            if (totalAdded > 0) {
-                const p1 = newProducts[1] || 0;
-                const p2 = newProducts[2] || 0;
-                const p3 = newProducts[3] || 0;
-                const detailStr = `${supplier} | 22°:${p1} | 37°:${p2} | 58°:${p3}`;
-                
-                await this.addHistory('Dostawa obudów (Huta)', detailStr);
-                await this.fetchData();
-            }
-        }
-
-        CloudInventoryManager.prototype.addIncomingShipment = addIncomingShipment;
-        
+        // --- AUTO-LOGOUT (5 MINUT BEZCZYNNOŚCI) ---
         let inactivityTimer;
         const INACTIVITY_TIME_MS = 5 * 60 * 1000; 
 
@@ -1026,6 +1013,7 @@
                 .replace(/'/g, "&#039;");
         }
 
+        // --- MAPY LEAFLET LOGIKA ---
         let map = null;
         let mapMarkers = [];
         let mapAdj = null;
@@ -1503,6 +1491,536 @@
             setTimeout(() => { printWin.print(); printWin.close(); }, 300);
         }
 
+        class CloudInventoryManager {
+            constructor() {
+                this.products = [];
+                this.shipments = [];
+                this.history = [];
+                this.adjustments = [];
+                this.components = { ps_raw: 0, clips_normal: 0, clips_pass: 0 };
+                this.realtimeTimeout = null;
+                this.isFirstLoad = true;
+            }
+
+            async init() {
+                showLoading();
+                await this.fetchData();
+                this.setupRealtime();
+                hideLoading();
+                if (this.isFirstLoad) {
+                    showToast(`Zalogowano jako ${currentUserEmail.split('@')[0]}`, 'success');
+                    this.isFirstLoad = false;
+                }
+            }
+
+            async fetchData() {
+                try {
+                    const [prodsRes, compsRes, shipsRes, adjsRes, histRes] = await Promise.all([
+                        db.from('products').select('*').order('id'),
+                        db.from('components').select('*').eq('id', 1).single(),
+                        db.from('shipments').select('*').order('date'),
+                        db.from('adjustments').select('*').order('date'),
+                        db.from('history').select('*').order('created_at', { ascending: false }).limit(40)
+                    ]);
+
+                    if (prodsRes.data) this.products = prodsRes.data;
+                    if (compsRes.data) this.components = compsRes.data;
+                    if (shipsRes.data) this.shipments = shipsRes.data;
+                    if (adjsRes.data) this.adjustments = adjsRes.data;
+                    if (histRes.data) {
+                        this.history = histRes.data.map(h => ({ 
+                            timestamp: new Date(h.created_at).toLocaleString('pl-PL'), 
+                            action: h.action, details: h.details 
+                        }));
+                    }
+
+                    const todayFormatted = new Date().toISOString().split('T')[0];
+                    const dbUpdates = [];
+                    for (let s of this.shipments) {
+                        if (s.status !== 'completed' && (s.date || '') < todayFormatted) {
+                            if (currentRole === 'admin' || currentRole === 'worker') {
+                                dbUpdates.push(db.from('shipments').update({ date: todayFormatted }).eq('id', s.id));
+                            }
+                            s.date = todayFormatted;
+                        }
+                    }
+                    if (dbUpdates.length > 0) await Promise.all(dbUpdates);
+
+                    updateDashboard();
+                    
+                    if (document.getElementById('tab-dashboard').classList.contains('active')) {
+                        updateMapMarkers(this.shipments);
+                    }
+                    if (document.getElementById('tab-adjustments').classList.contains('active')) {
+                        updateAdjMapMarkers(this.adjustments);
+                    }
+
+                } catch (err) {
+                    console.error("Błąd pobierania danych:", err);
+                    showToast('Błąd odczytu z bazy danych.', 'error');
+                }
+            }
+
+            setupRealtime() {
+                db.channel('public:all')
+                    .on('postgres_changes', { event: '*', schema: 'public' }, payload => {
+                        clearTimeout(this.realtimeTimeout);
+                        this.realtimeTimeout = setTimeout(() => { this.fetchData(); }, 500); 
+                    }).subscribe();
+            }
+
+            async addHistory(action, details) {
+                const userName = currentUserEmail.split('@')[0];
+                const detailWithUser = `${details} (przez: ${userName})`;
+                
+                this.history.unshift({
+                    timestamp: new Date().toLocaleString('pl-PL'),
+                    action: action,
+                    details: detailWithUser
+                });
+                
+                await db.from('history').insert([{ action, details: detailWithUser }]);
+            }
+
+            getStatus(productId) {
+                const product = this.products.find(p => String(p.id) === String(productId));
+                if (!product) return 'unknown';
+                const total = (product.ready || 0) + (product.assembly || 0) + (product.service || 0);
+                if (total === 0) return 'error';
+                if (total >= 50) return 'ok';
+                return 'warning';
+            }
+
+            async updateProduct(id, updates) {
+                if (currentRole === 'viewer') return; 
+                const product = this.products.find(p => String(p.id) === String(id));
+                if (product) {
+                    Object.assign(product, updates);
+                    updateDashboard();
+
+                    await db.from('products').update(updates).eq('id', id);
+                    if (updates.assembly !== undefined && product.assembly_group) {
+                        await db.from('products').update({ assembly: updates.assembly }).eq('assembly_group', product.assembly_group);
+                    }
+                    await this.addHistory('Ręczna edycja stanu', `${product.name} (SKU: ${product.sku})`);
+                    await this.fetchData();
+                }
+            }
+
+            async addAdjustment(date, location) {
+                if (currentRole === 'viewer') return;
+                await db.from('adjustments').insert([{ date, location }]);
+                await this.addHistory('Planowanie regulacji', `${location} - ${date}`);
+                await this.fetchData();
+            }
+
+            async deleteAdjustment(id) {
+                if (currentRole !== 'admin') return;
+                this.adjustments = this.adjustments.filter(a => String(a.id) !== String(id));
+                updateDashboard();
+
+                await db.from('adjustments').delete().eq('id', id);
+                await this.addHistory('Usunięcie regulacji', `Rekord wykasowany`);
+                await this.fetchData();
+            }
+
+            async addShipment(shipment) {
+                if (currentRole === 'viewer') return;
+                await db.from('shipments').insert([{ 
+                    date: shipment.date, 
+                    location: shipment.location, 
+                    company: shipment.company,
+                    products: shipment.products, 
+                    status: 'planned',
+                    is_confirmed: false
+                }]);
+                await this.addHistory('Nowe zamówienie', `${shipment.location}`);
+                await this.fetchData();
+            }
+
+            async confirmShipment(id) {
+                if (currentRole === 'viewer') return;
+                const shipment = this.shipments.find(s => String(s.id) === String(id));
+                if (shipment) {
+                    shipment.is_confirmed = true;
+                    updateDashboard();
+
+                    await db.from('shipments').update({ is_confirmed: true }).eq('id', id);
+                    await this.addHistory('Potwierdzenie terminu', `Cel: ${shipment.location}`);
+                    await this.fetchData();
+                }
+            }
+
+            async deleteShipment(id) {
+                if (currentRole !== 'admin') return;
+                this.shipments = this.shipments.filter(s => String(s.id) !== String(id));
+                updateDashboard();
+
+                await db.from('shipments').delete().eq('id', id);
+                await this.addHistory('Anulowanie zamówienia', `Rekord usunięto`);
+                await this.fetchData();
+            }
+
+            async updateShipmentInDB(id, data) {
+                if (currentRole === 'viewer') return;
+                const shipment = this.shipments.find(s => String(s.id) === String(id));
+                if (shipment) {
+                    Object.assign(shipment, data);
+                    updateDashboard();
+
+                    await db.from('shipments').update(data).eq('id', id);
+                    await this.addHistory('Edycja zamówienia', `${data.location || shipment.location}`);
+                    await this.fetchData();
+                }
+            }
+
+            async completeShipment(id) {
+                if (currentRole === 'viewer') return;
+                const shipment = this.shipments.find(s => String(s.id) === String(id));
+                if (!shipment) return;
+
+                const missing = {};
+                const updates = []; 
+
+                for (const productId of Object.keys(shipment.products || {})) {
+                    const quantity = shipment.products[productId];
+                    if (quantity > 0) {
+                        const product = this.products.find(p => String(p.id) === String(productId));
+                        if (product) {
+                            const toDeduct = Math.min(quantity, product.ready || 0);
+                            
+                            product.ready = (product.ready || 0) - toDeduct;
+                            
+                            const lack = quantity - toDeduct;
+                            if (lack > 0) missing[productId] = lack;
+                            
+                            if (toDeduct > 0) updates.push(db.from('products').update({ ready: product.ready }).eq('id', product.id));
+                        }
+                    }
+                }
+
+                let newStatus = 'completed';
+                let partialMissing = null;
+                let historyMsg = '';
+
+                if (Object.keys(missing).length > 0) {
+                    newStatus = 'partial';
+                    partialMissing = missing;
+                    historyMsg = `Wysyłka niepełna (braki)`;
+                } else {
+                    historyMsg = `Wysyłka zrealizowana`;
+                }
+
+                shipment.status = newStatus;
+                shipment.partial_missing = partialMissing;
+                shipment.is_confirmed = true;
+                updateDashboard();
+
+                if (updates.length > 0) await Promise.all(updates);
+                await db.from('shipments').update({ status: newStatus, partial_missing: partialMissing, is_confirmed: true }).eq('id', id);
+                await this.addHistory(historyMsg, `Cel: ${shipment.location}`);
+                await this.fetchData();
+            }
+
+            async completeRemainingShipment(id) {
+                if (currentRole === 'viewer') return;
+                const shipment = this.shipments.find(s => String(s.id) === String(id));
+                if (!shipment || shipment.status !== 'partial' || !shipment.partial_missing) return;
+
+                const missing = shipment.partial_missing;
+                const stillMissing = {};
+                const updates = [];
+
+                for (const productId of Object.keys(missing)) {
+                    const need = missing[productId];
+                    const product = this.products.find(p => String(p.id) === String(productId));
+                    if (product) {
+                        const toDeduct = Math.min(need, product.ready || 0);
+                        
+                        product.ready = (product.ready || 0) - toDeduct;
+                        
+                        const left = need - toDeduct;
+                        if (left > 0) stillMissing[productId] = left;
+                        
+                        if (toDeduct > 0) updates.push(db.from('products').update({ ready: product.ready }).eq('id', product.id));
+                    }
+                }
+
+                if (updates.length > 0) await Promise.all(updates);
+
+                let newStatus = 'completed';
+                let newPartialMissing = null;
+                let historyMsg = '';
+
+                if (Object.keys(stillMissing).length > 0) {
+                    newStatus = 'partial';
+                    newPartialMissing = stillMissing;
+                    historyMsg = `Dokończenie wysyłki (wciąż braki)`;
+                } else {
+                    historyMsg = `Dokończenie wysyłki (komplet)`;
+                }
+
+                shipment.status = newStatus;
+                shipment.partial_missing = newPartialMissing;
+                updateDashboard();
+
+                if (updates.length > 0) await Promise.all(updates);
+                await db.from('shipments').update({ status: newStatus, partial_missing: newPartialMissing }).eq('id', id);
+                await this.addHistory(historyMsg, `Cel: ${shipment.location}`);
+                await this.fetchData();
+            }
+
+            async addIncomingShipment(supplier, newProducts) {
+                if (currentRole === 'viewer') return;
+                let totalAdded = 0;
+                const dbUpdates = [];
+                
+                for (const [id, qty] of Object.entries(newProducts)) {
+                    if (qty > 0) {
+                        const product = this.products.find(p => String(p.id) === String(id));
+                        if (product) {
+                            const newAssembly = (product.assembly || 0) + qty;
+                            if (product.assembly_group) {
+                                dbUpdates.push(db.from('products').update({ assembly: newAssembly }).eq('assembly_group', product.assembly_group));
+                                this.products.filter(p => p.assembly_group === product.assembly_group).forEach(p => p.assembly = newAssembly);
+                            } else {
+                                dbUpdates.push(db.from('products').update({ assembly: newAssembly }).eq('id', product.id));
+                                product.assembly = newAssembly;
+                            }
+                            totalAdded += qty;
+                        }
+                    }
+                }
+                
+                updateDashboard();
+
+                if (dbUpdates.length > 0) await Promise.all(dbUpdates);
+
+                if (totalAdded > 0) {
+                    const p1 = newProducts[1] || 0;
+                    const p2 = newProducts[2] || 0;
+                    const p3 = newProducts[3] || 0;
+                    const detailStr = `${supplier} | 22°:${p1} | 37°:${p2} | 58°:${p3}`;
+                    
+                    await this.addHistory('Dostawa obudów (Huta)', detailStr);
+                    await this.fetchData();
+                }
+            }
+
+            async registerProduction(produced) {
+                if (currentRole === 'viewer') return;
+                
+                const totalToProduce = Object.values(produced).reduce((sum, val) => sum + val, 0);
+                if (totalToProduce === 0) return;
+
+                const { ps_raw, clips_normal, clips_pass } = this.components;
+                const componentsAvailable = Math.min(ps_raw || 0, clips_normal || 0, clips_pass || 0);
+
+                if (totalToProduce > componentsAvailable) {
+                    showToast(`Brak komponentów! Masz zestawy tylko na ${componentsAvailable} szt.`, 'error');
+                    return; 
+                }
+
+                const groupReq = {};
+                for (const [id, qty] of Object.entries(produced)) {
+                    if (qty > 0) {
+                        const product = this.products.find(p => String(p.id) === String(id));
+                        if (product) {
+                            const key = product.assembly_group || `single_${product.id}`;
+                            groupReq[key] = (groupReq[key] || 0) + qty;
+                        }
+                    }
+                }
+
+                for (const [key, qtyReq] of Object.entries(groupReq)) {
+                    let available = 0;
+                    if (key.startsWith('single_')) {
+                        const pid = parseInt(key.replace('single_', ''));
+                        const p = this.products.find(x => String(x.id) === String(pid));
+                        available = p ? (p.assembly || 0) : 0;
+                    } else {
+                        const p = this.products.find(x => x.assembly_group === key);
+                        available = p ? (p.assembly || 0) : 0;
+                    }
+                    
+                    if (qtyReq > available) {
+                        showToast(`Brak obudów "W Montażu" dla ${key === '37' || key === '58' ? key + '°' : key}. Potrzeba ${qtyReq}, jest ${available}.`, 'error');
+                        return; 
+                    }
+                }
+
+                let totalProduced = 0;
+                const dbUpdates = [];
+
+                for (const [id, qty] of Object.entries(produced)) {
+                    if (qty > 0) {
+                        const product = this.products.find(p => String(p.id) === String(id));
+                        if (product) {
+                            product.ready = (product.ready || 0) + qty;
+                            product.assembly = (product.assembly || 0) - qty;
+                            
+                            dbUpdates.push(db.from('products').update({ ready: product.ready }).eq('id', product.id));
+
+                            if (product.assembly_group) {
+                                dbUpdates.push(db.from('products').update({ assembly: product.assembly }).eq('assembly_group', product.assembly_group));
+                                this.products.filter(p => p.assembly_group === product.assembly_group).forEach(p => p.assembly = product.assembly);
+                            } else {
+                                dbUpdates.push(db.from('products').update({ assembly: product.assembly }).eq('id', product.id));
+                            }
+
+                            totalProduced += qty;
+                        }
+                    }
+                }
+
+                if (totalProduced > 0) {
+                    this.components.ps_raw -= totalProduced;
+                    this.components.clips_normal -= totalProduced;
+                    this.components.clips_pass -= totalProduced;
+
+                    updateDashboard();
+
+                    dbUpdates.push(db.from('components').update({
+                        ps_raw: this.components.ps_raw,
+                        clips_normal: this.components.clips_normal,
+                        clips_pass: this.components.clips_pass
+                    }).eq('id', 1));
+
+                    await Promise.all(dbUpdates);
+                    await this.addHistory('Rejestracja produkcji', `Zmontowano łącznie: ${totalProduced} szt.`);
+                    showToast(`Zarejestrowano produkcję ${totalProduced} sztuk.`, 'success');
+                    await this.fetchData();
+                }
+            }
+
+            getTotals() {
+                const processedGroups = new Set();
+                let totalAssembly = 0;
+                this.products.forEach(p => {
+                    if (p.assembly_group) {
+                        if (!processedGroups.has(p.assembly_group)) { totalAssembly += (p.assembly || 0); processedGroups.add(p.assembly_group); }
+                    } else { totalAssembly += (p.assembly || 0); }
+                });
+                const totalReady = this.products.reduce((s, p) => s + (p.ready || 0), 0);
+                const totalService = this.products.reduce((s, p) => s + (p.service || 0), 0);
+                return { totalReady, totalAssembly, totalService, totalAll: totalReady + totalAssembly + totalService };
+            }
+
+            async addComponentsShipment(supplier, newComps) {
+                if (currentRole === 'viewer') return;
+                const { data: current, error } = await db.from('components').select('*').eq('id', 1).single();
+                if (error || !current) {
+                    showToast('Błąd krytyczny odczytu komponentów.', 'error');
+                    return;
+                }
+                const updated = {
+                    ps_raw: (current.ps_raw || 0) + (newComps.ps_raw || 0),
+                    clips_normal: (current.clips_normal || 0) + (newComps.clips_normal || 0),
+                    clips_pass: (current.clips_pass || 0) + (newComps.clips_pass || 0)
+                };
+                
+                this.components = updated;
+                updateDashboard();
+
+                await db.from('components').update(updated).eq('id', 1);
+                await this.addHistory('Dostawa komponentów', supplier);
+                await this.fetchData();
+            }
+
+            async updateComponent(field, value) {
+                if (currentRole === 'viewer') return;
+                this.components[field] = value; 
+                updateDashboard();
+                
+                await db.from('components').update({ [field]: value }).eq('id', 1);
+                await this.addHistory('Korekta komponentów', `Zaktualizowano stan zasilaczy/klapek`);
+                await this.fetchData();
+            }
+        }
+
+        function getShipmentsReadinessMap() {
+            const readinessMap = {};
+            if (!window.inventory) return readinessMap;
+
+            let vReady = {};
+            let vAssembly = {};
+            
+            window.inventory.products.forEach(p => {
+                vReady[String(p.id)] = parseInt(p.ready) || 0;
+                const groupKey = p.assembly_group ? String(p.assembly_group) : `single_${p.id}`;
+                if (vAssembly[groupKey] === undefined) {
+                    vAssembly[groupKey] = parseInt(p.assembly) || 0;
+                }
+            });
+
+            let pending = window.inventory.shipments.filter(s => s.status !== 'completed');
+            
+            pending.sort((a, b) => {
+                const aConf = a.is_confirmed === true || a.is_confirmed === 'true'; 
+                const bConf = b.is_confirmed === true || b.is_confirmed === 'true';
+                if (aConf && !bConf) return -1;
+                if (!aConf && bConf) return 1;
+                return (a.date || '').localeCompare(b.date || '');
+            });
+
+            pending.forEach(s => {
+                let isReady = true;
+                let reqs = s.status === 'partial' ? s.partial_missing : s.products;
+                
+                if (reqs && typeof reqs === 'object') {
+                    for (const [pId, qty] of Object.entries(reqs)) {
+                        let needed = parseInt(qty) || 0;
+                        if (needed > 0) {
+                            const prod = window.inventory.products.find(p => String(p.id) === String(pId));
+                            if (!prod) { isReady = false; continue; }
+                            
+                            const pIdStr = String(prod.id);
+                            
+                            if (vReady[pIdStr] >= needed) {
+                                vReady[pIdStr] -= needed;
+                                needed = 0;
+                            } else {
+                                needed -= vReady[pIdStr];
+                                vReady[pIdStr] = 0;
+                            }
+                            
+                            if (needed > 0) {
+                                const poolKey = prod.assembly_group ? String(prod.assembly_group) : `single_${prod.id}`;
+                                if (vAssembly[poolKey] >= needed) {
+                                    vAssembly[poolKey] -= needed;
+                                } else {
+                                    vAssembly[poolKey] -= needed; 
+                                    isReady = false;
+                                }
+                            }
+                        }
+                    }
+                }
+                readinessMap[s.id] = isReady;
+            });
+
+            return readinessMap;
+        }
+
+        function getStatusClass(productId) {
+            const status = window.inventory.getStatus(productId);
+            return status === 'ok' ? 'status-ok' : status === 'warning' ? 'status-warning' : 'status-error';
+        }
+
+        function getStatusText(productId) {
+            const status = window.inventory.getStatus(productId);
+            return status === 'ok' ? '<span class="material-symbols-outlined">check_circle</span> OK' : status === 'warning' ? '<span class="material-symbols-outlined">warning</span> Mało' : '<span class="material-symbols-outlined">error</span> Brak';
+        }
+
+        function getReadinessBadge(shipment, readinessMap) {
+            if (shipment.status === 'completed') return '<span style="color: var(--text-light); font-size: 0.85em;">-</span>';
+            if (readinessMap[shipment.id]) {
+                return '<span class="status-badge status-ok" style="background:#ECFDF5; color:#059669; border: 1px solid #10B981;"><span class="material-symbols-outlined">inventory_2</span> Komplet</span>';
+            } else {
+                return '<span class="status-badge status-error" style="background:#FEF2F2; color:#DC2626; border: 1px solid #EF4444;"><span class="material-symbols-outlined">production_quantity_limits</span> Braki</span>';
+            }
+        }
+
         function updateDashboard() {
             try {
                 if(!window.inventory || window.inventory.products.length === 0) return;
@@ -1548,8 +2066,10 @@
                 const activeShipments = window.inventory.shipments.filter(s => s.status !== 'completed');
                 
                 activeShipments.sort((a, b) => {
-                    if (a.is_confirmed && !b.is_confirmed) return -1;
-                    if (!a.is_confirmed && b.is_confirmed) return 1;
+                    const aConf = a.is_confirmed === true || a.is_confirmed === 'true'; 
+                    const bConf = b.is_confirmed === true || b.is_confirmed === 'true';
+                    if (aConf && !bConf) return -1;
+                    if (!aConf && bConf) return 1;
                     return (a.date || '').localeCompare(b.date || '');
                 });
 
@@ -1584,9 +2104,9 @@
                     document.getElementById('upcoming-total-badge').textContent = `Zapotrzebowanie: ${upcomingTotalLamps} szt.`;
                 }
 
-                // OSTATNIE DOSTAWY OBUDÓW
+                // OSTATNIE DOSTAWY OBUDÓW (Zabezpieczone)
                 const incomingTbody = document.getElementById('dashboard-recent-incoming');
-                if (incomingTbody) {
+                if (incomingTbody && window.inventory.history) {
                     incomingTbody.innerHTML = '';
                     const recentIncoming = window.inventory.history.filter(h => h.action === 'Dostawa obudów (Huta)').slice(0, 2);
                     
@@ -1594,6 +2114,8 @@
                         incomingTbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 2rem !important; color:var(--text-light); border:none;">Brak historii dostaw.</td></tr>';
                     } else {
                         recentIncoming.forEach(entry => {
+                            if (!entry || !entry.details) return; // Zabezpieczenie przed pustymi wpisami w bazie
+                            
                             let supplier = "-";
                             let p1 = "-", p2 = "-", p3 = "-";
                             let total = 0;
@@ -1624,7 +2146,7 @@
 
                             const row = document.createElement('tr');
                             row.innerHTML = `
-                                <td data-label="Data Przyjęcia"><strong>${escapeHTML(entry.timestamp.split(',')[0])}</strong></td>
+                                <td data-label="Data Przyjęcia"><strong>${escapeHTML((entry.timestamp || '').split(',')[0])}</strong></td>
                                 <td data-label="Dostawca / Huta">${escapeHTML(supplier)}</td>
                                 <td data-label="22°">${p1 !== '?' ? `<strong>${p1}</strong> szt` : '?'}</td>
                                 <td data-label="37°">${p2 !== '?' ? `<strong>${p2}</strong> szt` : '?'}</td>
@@ -1644,6 +2166,341 @@
             } catch (error) {
                 console.error("Błąd podczas renderowania Dashboardu:", error);
             }
+        }
+
+        function updateInventoryTable() {
+            const tbody = document.getElementById('products-table');
+            const tbodyService = document.getElementById('service-table');
+            tbody.innerHTML = ''; tbodyService.innerHTML = '';
+            const isViewer = currentRole === 'viewer';
+            
+            window.inventory.products.forEach(p => {
+                const total = (parseInt(p.ready) || 0) + (parseInt(p.assembly) || 0) + (parseInt(p.service) || 0);
+                
+                const readyCell = isViewer ? `<strong>${p.ready || 0}</strong>` : `<td data-label="Gotowe" onclick="editCell(this, 'ready', '${p.id}')" class="editable"><strong>${p.ready || 0}</strong></td>`;
+                const assemblyCell = isViewer ? (p.assembly || 0) : `<td data-label="W Montażu" onclick="editCell(this, 'assembly', '${p.id}')" class="editable">${p.assembly || 0}</td>`;
+
+                const rowHTML = `
+                    <td data-label="Model Oprawy">${escapeHTML(p.name)}</td>
+                    <td data-label="Kod SKU" style="color:var(--text-light); font-size:0.85em;">${escapeHTML(p.sku)}</td>
+                    ${isViewer ? `<td data-label="Gotowe">${readyCell}</td>` : readyCell}
+                    ${isViewer ? `<td data-label="W Montażu">${assemblyCell}</td>` : assemblyCell}
+                    <td data-label="Łącznie"><strong>${total}</strong></td>
+                    <td data-label="Dostępność"><span class="status-badge ${getStatusClass(p.id)}">${getStatusText(p.id)}</span></td>
+                `;
+                const tr = document.createElement('tr'); tr.innerHTML = rowHTML; tbody.appendChild(tr);
+
+                const serviceCell = isViewer ? (p.service || 0) : `<td data-label="Ilość (szt)" onclick="editCell(this, 'service', '${p.id}')" class="editable">${p.service || 0}</td>`;
+                const serviceRowHTML = `<td data-label="Model Oprawy">${escapeHTML(p.name)}</td>${isViewer ? `<td data-label="Ilość (szt)">${serviceCell}</td>` : serviceCell}`;
+                const trS = document.createElement('tr'); trS.innerHTML = serviceRowHTML; tbodyService.appendChild(trS);
+            });
+        }
+
+        function renderShipmentRow(s, readinessMap) {
+            let total = s.products ? Object.values(s.products).reduce((a, b) => parseInt(a) + parseInt(b), 0) : 0;
+            let statusBadge = s.status === 'completed' ? '<span class="status-badge status-ok"><span class="material-symbols-outlined">check_circle</span> Zrealizowana</span>' :
+                              s.status === 'partial' ? '<span class="status-badge status-warning"><span class="material-symbols-outlined">warning</span> Niepełna</span>' :
+                              s.is_confirmed ? '<span class="status-badge status-neutral"><span class="material-symbols-outlined">event_available</span> Potwierdzona</span>' :
+                              '<span class="status-badge status-warning"><span class="material-symbols-outlined">pending_actions</span> Oczekująca</span>';
+
+            const readinessBadge = getReadinessBadge(s, readinessMap);
+
+            let actionButtons = '';
+            if (currentRole !== 'viewer') {
+                actionButtons += `<button class="btn-small btn-secondary" onclick="editShipment('${s.id}')" title="Edytuj dane"><span class="material-symbols-outlined">edit</span></button>`;
+                if (currentRole === 'admin') actionButtons += `<button class="btn-small btn-secondary" onclick="deleteShipment('${s.id}')" title="Usuń trwale"><span class="material-symbols-outlined" style="color:var(--accent-red);">delete</span></button>`;
+                
+                if (s.status === 'planned' && !s.is_confirmed) {
+                    actionButtons = `<button class="btn-small btn-primary" onclick="confirmShipmentDateUI('${s.id}')"><span class="material-symbols-outlined">event_available</span> Zatwierdź</button>` + actionButtons;
+                } else if (s.status === 'planned' && s.is_confirmed) {
+                    actionButtons = `<button class="btn-small btn-primary" onclick="completeShipmentUI('${s.id}')"><span class="material-symbols-outlined">local_shipping</span> Wydaj</button>` + actionButtons;
+                } else if (s.status === 'partial') {
+                    actionButtons = `<button class="btn-small btn-primary" onclick="completeRemainingShipmentUI('${s.id}')"><span class="material-symbols-outlined">done_all</span> Wydaj braki</button>` + actionButtons;
+                }
+            }
+            if (s.status === 'partial') {
+                actionButtons += `<button class="btn-small btn-secondary" onclick="printMissingPdf('${s.id}')" title="Drukuj listę braków"><span class="material-symbols-outlined">picture_as_pdf</span> Braki</button>`;
+            }
+
+            return `
+                <tr class="${s.status === 'completed' ? 'row-completed' : ''}">
+                    <td data-label="Data"><strong>${escapeHTML(s.date || '-')}</strong></td>
+                    <td data-label="Cel">${escapeHTML(s.location)}</td>
+                    <td data-label="Spedytor" style="color:var(--text-light);">${escapeHTML(s.company || '-')}</td>
+                    <td data-label="Sztuk"><strong>${total}</strong></td>
+                    <td data-label="Kąty"><button class="btn-small btn-secondary" onclick="showAnglesDemand('${s.id}')" style="margin:0;"><span class="material-symbols-outlined">visibility</span> Pokaż</button></td>
+                    <td data-label="Wirtualny Magazyn">${readinessBadge}</td>
+                    <td data-label="Status">${statusBadge}</td>
+                    ${currentRole !== 'viewer' || s.status === 'partial' ? `<td data-label="Akcja">${actionButtons}</td>` : '<td class="admin-only-col"></td>'}
+                </tr>
+            `;
+        }
+
+        function updateShipmentsTables(readinessMap) {
+            const tbodyUnconf = document.getElementById('shipments-unconfirmed-table');
+            const tbodyConf = document.getElementById('shipments-confirmed-table');
+            tbodyUnconf.innerHTML = ''; tbodyConf.innerHTML = '';
+            let confCount = 0;
+
+            const sortedShipments = [...window.inventory.shipments].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+
+            sortedShipments.forEach(s => {
+                const rowHTML = renderShipmentRow(s, readinessMap);
+                if (!s.is_confirmed && s.status === 'planned') {
+                    tbodyUnconf.innerHTML += rowHTML;
+                } else {
+                    tbodyConf.innerHTML += rowHTML;
+                    if (s.status !== 'completed') confCount++;
+                }
+            });
+            document.getElementById('shipments-count').textContent = confCount + ' rekordów';
+        }
+
+        function updateAdjustmentsTable() {
+            const tbody = document.getElementById('adjustments-table');
+            if(!tbody) return;
+            tbody.innerHTML = '';
+            window.inventory.adjustments.forEach(a => {
+                const tr = document.createElement('tr');
+                let action = currentRole === 'admin' ? `<td data-label="Akcja"><button class="btn-small btn-secondary" onclick="deleteAdjustment('${a.id}')" style="margin:0;"><span class="material-symbols-outlined" style="color:var(--accent-red);">delete</span></button></td>` : `<td class="admin-only-col"></td>`;
+                tr.innerHTML = `<td data-label="Data Wyjazdu"><strong>${escapeHTML(a.date || '-')}</strong></td><td data-label="Miejscowość / Obiekt">${escapeHTML(a.location)}</td>${action}`;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function updateHistoryTable() {
+            const tbody = document.getElementById('history-table');
+            if(!tbody) return;
+            tbody.innerHTML = '';
+            window.inventory.history.forEach(h => {
+                const tr = document.createElement('tr');
+                
+                const detailsStr = h.details || '';
+                const match = detailsStr.match(/\(przez: (.*?)\)/);
+                const worker = match ? match[1] : 'System';
+                const cleanDetails = detailsStr.replace(/\(przez:.*?\)/, '').trim();
+
+                tr.innerHTML = `<td data-label="Data i Czas" style="color:var(--text-light); font-size:0.85em;">${escapeHTML(h.timestamp)}</td><td data-label="Pracownik"><strong>${escapeHTML(worker)}</strong></td><td data-label="Typ Operacji">${escapeHTML(h.action)}</td><td data-label="Szczegóły">${escapeHTML(cleanDetails)}</td>`;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function updateComponentsDisplay() {
+            if(!window.inventory.components) return;
+            const comps = window.inventory.components;
+            
+            const elRaw = document.getElementById('ps-raw-cell');
+            const elNorm = document.getElementById('clips-normal-cell');
+            const elPass = document.getElementById('clips-pass-cell');
+            
+            if(elRaw) elRaw.innerHTML = `<strong>${comps.ps_raw || 0} szt.</strong>`;
+            if(elNorm) elNorm.innerHTML = `<strong>${comps.clips_normal || 0} szt.</strong>`;
+            if(elPass) elPass.innerHTML = `<strong>${comps.clips_pass || 0} szt.</strong>`;
+            
+            if (currentRole !== 'viewer') {
+                document.querySelectorAll('#tab-components .table-responsive td:last-child').forEach(td => td.classList.add('editable'));
+            }
+        }
+
+        function editCell(cell, field, productId) {
+            if (currentRole === 'viewer') return;
+            if (cell.querySelector('input')) return;
+            
+            const product = window.inventory.products.find(p => String(p.id) === String(productId));
+            const input = document.createElement('input');
+            input.type = 'number'; input.value = product[field] || 0; 
+            input.style.width = '100%'; input.style.textAlign = 'inherit';
+            
+            const originalHTML = cell.innerHTML;
+            cell.innerHTML = ''; cell.appendChild(input);
+            cell.classList.remove('editable');
+            input.focus(); input.select();
+
+            const save = async () => {
+                const newValue = parseInt(input.value);
+                if (!isNaN(newValue) && newValue !== (product[field]||0)) {
+                    cell.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite; color: var(--primary-terracotta);">autorenew</span>';
+                    await window.inventory.updateProduct(productId, { [field]: newValue });
+                } else {
+                    cell.innerHTML = originalHTML;
+                }
+                cell.classList.add('editable');
+            };
+
+            input.addEventListener('blur', save);
+            input.addEventListener('keypress', (e) => { if (e.key === 'Enter') input.blur(); });
+        }
+
+        function editComponentCell(cell, field) {
+            if (currentRole === 'viewer') return;
+            if (cell.querySelector('input')) return;
+            
+            const currentVal = window.inventory.components[field] || 0;
+            const input = document.createElement('input');
+            input.type = 'number'; input.value = currentVal; 
+            input.style.width = '100%'; input.style.textAlign = 'inherit';
+            
+            const originalHTML = cell.innerHTML;
+            cell.innerHTML = ''; cell.appendChild(input);
+            cell.classList.remove('editable');
+            input.focus(); input.select();
+
+            const save = async () => {
+                const newValue = parseInt(input.value);
+                if (!isNaN(newValue) && newValue !== currentVal) {
+                    cell.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite; color: var(--primary-terracotta);">autorenew</span>';
+                    await window.inventory.updateComponent(field, newValue);
+                } else {
+                    cell.innerHTML = originalHTML;
+                }
+                cell.classList.add('editable');
+            };
+
+            input.addEventListener('blur', save);
+            input.addEventListener('keypress', (e) => { if (e.key === 'Enter') input.blur(); });
+        }
+
+        async function confirmShipmentDateUI(id) {
+            if (confirm('Zatwierdzić termin wysyłki i przenieść do kolejki realizacji?')) {
+                showLoading();
+                await window.inventory.confirmShipment(id);
+                hideLoading();
+                showToast('Termin wysyłki został zatwierdzony.', 'success');
+            }
+        }
+
+        async function completeShipmentUI(id) {
+            const s = window.inventory.shipments.find(x => String(x.id) === String(id));
+            if (!s) return;
+            const total = s.products ? Object.values(s.products).reduce((a, b) => parseInt(a) + parseInt(b), 0) : 0;
+            if (confirm(`Wydano towar z magazynu (${total} szt.)? \nStany zostaną zaktualizowane.`)) {
+                showLoading();
+                await window.inventory.completeShipment(id);
+                hideLoading();
+                showToast('Towar wydany, zaktualizowano stany.', 'success');
+            }
+        }
+
+        async function completeRemainingShipmentUI(id) {
+            if (confirm('Wydano brakującą część towaru? \nZamówienie zostanie zamknięte jako kompletne.')) {
+                showLoading();
+                await window.inventory.completeRemainingShipment(id);
+                hideLoading();
+                showToast('Zamówienie sfinalizowane.', 'success');
+            }
+        }
+
+        async function deleteShipment(id) { 
+            if (currentRole === 'admin' && confirm('⚠️ Uwaga: Czy na pewno trwale usunąć to zamówienie z bazy danych? Operacji nie można cofnąć.')) { 
+                showLoading();
+                await window.inventory.deleteShipment(id); 
+                hideLoading();
+                showToast('Zamówienie usunięte z bazy.', 'warning');
+            } 
+        }
+
+        async function deleteAdjustment(id) {
+            if (currentRole === 'admin' && confirm('Usunąć ten wpis z regulacji?')) {
+                showLoading();
+                await window.inventory.deleteAdjustment(id);
+                hideLoading();
+                showToast('Termin usunięty.', 'success');
+            }
+        }
+
+        function showAnglesDemand(id) {
+            const shipment = window.inventory.shipments.find(s => String(s.id) === String(id));
+            if(!shipment) return;
+            
+            const p = shipment.products || {};
+            const a22 = parseInt(p[1]) || 0;
+            const a37 = (parseInt(p[2]) || 0) + (parseInt(p[4]) || 0);
+            const a58 = (parseInt(p[3]) || 0) + (parseInt(p[5]) || 0);
+
+            const content = `
+                <div style="text-align: center;">
+                    <p style="color: var(--text-light); margin-bottom: 1.5rem; font-size:0.95rem;">Zapotrzebowanie dla: <br><strong style="color:var(--text-dark); font-size:1.2rem;">${escapeHTML(shipment.location)}</strong></p>
+                    <div style="display:flex; justify-content: space-around; background: var(--background); padding: 2rem 1rem; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: inset 0 2px 4px rgba(0,0,0,0.03);">
+                        <div><div style="font-size: 0.8rem; color: var(--text-light); text-transform:uppercase; letter-spacing:1px; margin-bottom:5px; font-weight:600;">Kąt 22°</div><div style="font-size: 2.5rem; font-weight: 700; color:var(--primary-dark);">${a22}</div></div>
+                        <div><div style="font-size: 0.8rem; color: var(--text-light); text-transform:uppercase; letter-spacing:1px; margin-bottom:5px; font-weight:600;">Kąt 37°</div><div style="font-size: 2.5rem; font-weight: 700; color:var(--primary-dark);">${a37}</div></div>
+                        <div><div style="font-size: 0.8rem; color: var(--text-light); text-transform:uppercase; letter-spacing:1px; margin-bottom:5px; font-weight:600;">Kąt 58°</div><div style="font-size: 2.5rem; font-weight: 700; color:var(--primary-dark);">${a58}</div></div>
+                    </div>
+                </div>
+            `;
+            showModal('Zapotrzebowanie Kątowe', content);
+        }
+
+        function editShipment(id) {
+            if (currentRole === 'viewer') return;
+            const shipment = window.inventory.shipments.find(s => String(s.id) === String(id));
+            if (!shipment) return;
+
+            const p = shipment.products || {};
+            const p1 = p[1] || 0, p2 = p[2] || 0, p3 = p[3] || 0, p4 = p[4] || 0, p5 = p[5] || 0;
+
+            const isPartial = shipment.status === 'partial';
+            const disableProducts = isPartial ? 'disabled' : '';
+            
+            const formHTML = `
+                <div style="display: grid; gap: 1.25rem;">
+                    <div class="form-group">
+                        <label>Data Wysyłki</label>
+                        <input type="date" id="edit_shipment_date" value="${escapeHTML(shipment.date)}">
+                    </div>
+                    <div class="form-group">
+                        <label>Pełny Cel / Adresat</label>
+                        <input type="text" id="edit_shipment_location" value="${escapeHTML(shipment.location)}">
+                    </div>
+                    <div class="form-group">
+                        <label>Spedytor / Firma Przewozowa</label>
+                        <input type="text" id="edit_shipment_company" value="${escapeHTML(shipment.company || '')}">
+                    </div>
+                    
+                    <div style="margin-top: 0.5rem; background-color: var(--background); padding: 1.25rem; border-radius: 12px; border: 1px solid var(--border-color);">
+                        <h3 style="margin-bottom: 1rem; font-size: 0.85rem; color: var(--text-light); text-transform:uppercase; letter-spacing:1px;">Ilości Opraw (szt.)</h3>
+                        ${isPartial ? '<p style="color: var(--accent-red); font-size:0.8rem; margin-top:-10px; margin-bottom:10px; font-weight:500;">Edycja ilości zablokowana dla wysyłki częściowej.</p>' : ''}
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
+                            <div class="form-group" style="margin:0;"><label>22°-15W</label><input type="number" id="edit_p1" value="${p1}" min="0" ${disableProducts}></div>
+                            <div class="form-group" style="margin:0;"><label>37°-15W</label><input type="number" id="edit_p2" value="${p2}" min="0" ${disableProducts}></div>
+                            <div class="form-group" style="margin:0;"><label>58°-15W</label><input type="number" id="edit_p3" value="${p3}" min="0" ${disableProducts}></div>
+                            <div class="form-group" style="margin:0;"><label>37°-20W</label><input type="number" id="edit_p4" value="${p4}" min="0" ${disableProducts}></div>
+                            <div class="form-group" style="margin:0;"><label>58°-20W</label><input type="number" id="edit_p5" value="${p5}" min="0" ${disableProducts}></div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 1rem;">
+                        <button class="btn-primary" onclick="saveShipment('${id}')" style="width:100%; padding: 1rem;"><span class="material-symbols-outlined">save</span> Zapisz Zmiany w Zamówieniu</button>
+                    </div>
+                </div>
+            `;
+            showModal('Edycja Zamówienia', formHTML);
+        }
+
+        async function saveShipment(id) {
+            const newDate = document.getElementById('edit_shipment_date').value;
+            const newLocation = document.getElementById('edit_shipment_location').value;
+            const newCompany = document.getElementById('edit_shipment_company').value;
+            
+            if (!newDate || !newLocation) { showToast('Data i cel są wymagane.', 'error'); return; }
+
+            const shipment = window.inventory.shipments.find(s => String(s.id) === String(id));
+            const data = { date: newDate, location: newLocation, company: newCompany };
+
+            if (shipment.status !== 'partial') {
+                data.products = {
+                    1: parseInt(document.getElementById('edit_p1').value) || 0,
+                    2: parseInt(document.getElementById('edit_p2').value) || 0,
+                    3: parseInt(document.getElementById('edit_p3').value) || 0,
+                    4: parseInt(document.getElementById('edit_p4').value) || 0,
+                    5: parseInt(document.getElementById('edit_p5').value) || 0,
+                };
+            }
+
+            closeModal();
+            showLoading();
+            await window.inventory.updateShipmentInDB(id, data);
+            hideLoading();
+            showToast('Zmiany zostały zapisane.', 'success');
         }
 
         document.getElementById('shipmentForm').addEventListener('submit', async function(e) {
