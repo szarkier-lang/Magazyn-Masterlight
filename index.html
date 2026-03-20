@@ -1463,6 +1463,59 @@
             setTimeout(() => { printWin.print(); printWin.close(); }, 300);
         }
 
+        // Nowa funkcja wyświetlająca braki w Modalu (zamiast od razu w oknie druku)
+        function showMissingItems(id) {
+            const shipment = window.inventory.shipments.find(s => String(s.id) === String(id));
+            if (!shipment || !shipment.partial_missing) {
+                showToast('Brak danych o brakach dla tego zamówienia.', 'error');
+                return;
+            }
+
+            let content = `
+                <div style="margin-bottom: 1.5rem; background: var(--background); padding: 1rem; border-radius: 12px; border: 1px solid var(--border-color);">
+                    <p style="margin-bottom: 5px;"><strong>Cel:</strong> ${escapeHTML(shipment.location)}</p>
+                    <p style="margin-bottom: 5px;"><strong>Spedytor:</strong> ${escapeHTML(shipment.company || '-')}</p>
+                    <p style="margin-bottom: 0;"><strong>Data:</strong> ${escapeHTML(shipment.date)}</p>
+                </div>
+                <div class="table-responsive" style="margin-bottom: 1.5rem; box-shadow: none; border: 1px solid var(--border-color);">
+                    <table style="margin: 0;">
+                        <thead>
+                            <tr>
+                                <th>Model Oprawy</th>
+                                <th>Ilość do dosłania</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            
+            let totalMissing = 0;
+            Object.entries(shipment.partial_missing).forEach(([pid, qty]) => {
+                const prod = window.inventory.products.find(p => String(p.id) === String(pid));
+                if (prod) {
+                    content += `
+                        <tr>
+                            <td data-label="Model Oprawy"><strong>${escapeHTML(prod.name)}</strong><br><span style="font-size: 0.8em; color: var(--text-light);">${escapeHTML(prod.sku)}</span></td>
+                            <td data-label="Ilość do dosłania" style="color: var(--accent-red); font-weight: bold; font-size: 1.1em;">${qty} szt.</td>
+                        </tr>
+                    `;
+                    totalMissing += qty;
+                }
+            });
+            
+            content += `
+                        </tbody>
+                    </table>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); padding-top: 1.5rem;">
+                    <div style="font-size: 1.1rem;">Łącznie braków: <strong style="color: var(--accent-red);">${totalMissing} szt.</strong></div>
+                    <button class="btn-primary" onclick="printMissingPdf('${id}')"><span class="material-symbols-outlined">print</span> Drukuj PDF</button>
+                </div>
+            `;
+            
+            showModal('Szczegóły Braków', content);
+        }
+
+        // Ta funkcja jest teraz wywoływana tylko z poziomu okienka (Modala) "Szczegóły Braków"
         function printMissingPdf(id) {
             const shipment = window.inventory.shipments.find(s => String(s.id) === String(id));
             if (!shipment || !shipment.partial_missing) {
@@ -1840,7 +1893,6 @@
                     const p3 = newProducts[3] || 0;
                     const detailStr = `${supplier} | 22°:${p1} | 37°:${p2} | 58°:${p3}`;
                     
-                    // Używamy "Dostawa opraw (Huta)", co od razu pojawi się w historii i nowej tabeli na Dashboardzie
                     await this.addHistory('Dostawa opraw (Huta)', detailStr);
                     await this.fetchData();
                 }
@@ -2143,7 +2195,6 @@
                     document.getElementById('upcoming-total-badge').textContent = `Zapotrzebowanie: ${upcomingTotalLamps} szt.`;
                 }
 
-                // OSTATNIE DOSTAWY OBUDÓW -> OPRAW (Zabezpieczone, filtr na obie nazwy w razie starszych wpisów)
                 const incomingTbody = document.getElementById('dashboard-recent-incoming');
                 if (incomingTbody && window.inventory.history) {
                     incomingTbody.innerHTML = '';
@@ -2258,7 +2309,7 @@
                 }
             }
             if (s.status === 'partial') {
-                actionButtons += `<button class="btn-small btn-secondary" onclick="printMissingPdf('${s.id}')" title="Drukuj listę braków"><span class="material-symbols-outlined">picture_as_pdf</span> Braki</button>`;
+                actionButtons += `<button class="btn-small btn-secondary" onclick="showMissingItems('${s.id}')" title="Pokaż listę braków"><span class="material-symbols-outlined">list_alt</span> Braki</button>`;
             }
 
             return `
