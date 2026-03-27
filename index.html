@@ -251,6 +251,20 @@
         .marker-planned { background-color: #C4704B; }   
         .marker-adjustment { background-color: #3B82F6; } 
 
+        /* STYLE KALENDARZA */
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr) 80px; gap: 8px; }
+        .calendar-header { display: grid; grid-template-columns: repeat(7, 1fr) 80px; gap: 8px; font-weight: 700; text-align: center; margin-bottom: 8px; font-size: 0.85rem; color: var(--text-light); text-transform: uppercase;}
+        .calendar-cell { background: #fff; border: 1px solid var(--border-color); border-radius: 8px; min-height: 110px; padding: 6px; display: flex; flex-direction: column; gap: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.02);}
+        .calendar-cell.empty { background: transparent; border: none; box-shadow: none; }
+        .calendar-cell.today { border: 2px solid var(--primary-terracotta); background: #FEF6F3; }
+        .calendar-date { font-size: 0.85rem; font-weight: 700; color: var(--text-light); text-align: right; margin-bottom: 5px; }
+        .cal-item { font-size: 0.75rem; padding: 5px; border-radius: 6px; line-height: 1.3; cursor: pointer; border-left: 3px solid transparent; background: #F9FAFB; border: 1px solid #E5E7EB; overflow: hidden; text-overflow: ellipsis;}
+        .cal-item:hover { filter: brightness(0.95); }
+        .cal-item.shipment { border-left-color: var(--primary-terracotta); }
+        .cal-item.adjustment { border-left-color: var(--info-status); }
+        .cal-summary { background: var(--primary-light); display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 8px; font-weight: 700; font-size: 0.95rem; color: var(--primary-dark); text-align:center; border: 1px solid #FDE68A; padding: 5px;}
+        .cal-month-nav { display: flex; justify-content: space-between; align-items: center; }
+
         .footer { text-align: center; padding: 3rem 2rem; color: var(--text-light); font-size: 0.85rem; margin-top: 2rem; border-top: 1px solid var(--border-color); background: #fff; }
 
         /* --- MOBILE OPTYMALIZACJA --- */
@@ -270,6 +284,11 @@
             .toast { max-width: none; }
 
             .mobile-only-logout { display: block !important; }
+
+            .calendar-grid, .calendar-header { grid-template-columns: 1fr; }
+            .calendar-header { display: none; }
+            .calendar-cell.empty { display: none; }
+            .cal-summary { flex-direction: row; justify-content: space-between; min-height: 40px; font-size: 0.85rem; }
 
             .table-responsive { border: none; box-shadow: none; border-radius: 0; background: transparent; max-height: none !important; overflow: visible !important; }
             table, thead, tbody, th, td, tr { display: block; width: 100%; }
@@ -320,7 +339,7 @@
             .status-badge { border: 1px solid #666 !important; background: transparent !important; color: #000 !important; padding: 2px 6px !important; font-weight: normal !important; }
             td[data-label="Akcja"], th.admin-only-col { display: none !important; }
             .map-container { display: none !important; }
-            #map-section-container, #adj-map-section-container { display: none !important; }
+            #map-section-container, #adj-map-section-container, #logistics-section { display: none !important; }
         }
     </style>
 </head>
@@ -354,18 +373,6 @@
         </div>
     </div>
 
-    <div id="api-key-modal" class="modal">
-        <div class="modal-dialog">
-            <div class="modal-header">
-                <h2 style="color: var(--primary-dark); font-size: 1.3rem;"><span class="material-symbols-outlined">smart_toy</span> Aktywacja Skanera AI</h2>
-                <span class="close" onclick="document.getElementById('api-key-modal').style.display='none'"><span class="material-symbols-outlined">close</span></span>
-            </div>
-            <p style="margin-bottom: 1.5rem; color: var(--text-light); font-size: 0.95rem; line-height: 1.6;">Wprowadź swój darmowy klucz API OpenAI (ChatGPT). Zostanie on bezpiecznie zaszyfrowany i zapisany <strong>tylko w pamięci tej przeglądarki</strong>.</p>
-            <input type="text" id="api-key-input" placeholder="Wklej klucz (np. sk-proj-...)" style="margin-bottom: 1.5rem;">
-            <button onclick="saveApiKey()" class="btn-primary" style="width: 100%; padding: 1rem;"><span class="material-symbols-outlined">save</span> Zapisz i Wybierz Plik</button>
-        </div>
-    </div>
-
     <div id="mobile-overlay" class="mobile-overlay" onclick="toggleSidebar()"></div>
 
     <div id="app-container" class="hidden" style="display: flex; width: 100%; height: 100vh;">
@@ -383,9 +390,7 @@
                     <li id="nav-history"><a href="#" onclick="switchTab('tab-history')" class="nav-item"><span class="material-symbols-outlined">receipt_long</span> Historia Zmian</a></li>
                     <li><a href="#" onclick="switchTab('tab-components')" class="nav-item"><span class="material-symbols-outlined">electrical_services</span> Komponenty</a></li>
                     <li id="nav-reports"><a href="#" onclick="switchTab('tab-reports')" class="nav-item"><span class="material-symbols-outlined">precision_manufacturing</span> Panel Produkcji</a></li>
-                    
                     <li id="nav-settings"><a href="#" onclick="switchTab('tab-settings')" class="nav-item"><span class="material-symbols-outlined">settings_suggest</span> Ustawienia Systemu (AI)</a></li>
-                    
                     <li class="mobile-only-logout" style="margin-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1rem;">
                         <a href="#" onclick="logoutUser()" class="nav-item" style="color: #FECACA;"><span class="material-symbols-outlined">logout</span> Wyloguj się</a>
                     </li>
@@ -425,25 +430,37 @@
                         <div class="stat-card"><h3>Otwarte Zamówienia</h3><div class="value" data-stat="shipments" style="color: var(--warning-status);">0</div></div>
                         <div class="stat-card"><h3>Oprawy w Serwisie</h3><div class="value" data-stat="service" style="color: var(--error-status);">0</div></div>
                     </div>
+
+                    <div class="section" id="logistics-section">
+                        <div class="section-header">
+                            <h2><span class="material-symbols-outlined">route</span> Asystent Logistyki (AI Trasy)</h2>
+                            <button class="btn-primary btn-small" onclick="generateLogistics()"><span class="material-symbols-outlined">refresh</span> Przelicz Trasy</button>
+                        </div>
+                        <div class="section-content" id="logistics-container">
+                            <p style="color: var(--text-light); font-size: 0.95rem;">Kliknij "Przelicz Trasy", aby system wyznaczył optymalne scenariusze dla kierowcy na najbliższe dni (łączy wysyłki z regulacjami).</p>
+                        </div>
+                    </div>
                     
                     <div class="section">
                         <div class="section-header">
-                            <h2><span class="material-symbols-outlined">event_upcoming</span> Kolejka Wysyłek (Priorytety)</h2>
-                            <div class="badge" id="upcoming-total-badge">Zapotrzebowanie: 0 szt.</div>
-                        </div>
-                        <div class="section-content" style="padding:0;">
-                            <div class="table-responsive">
-                                <table>
-                                    <thead><tr><th>Priorytet / Data</th><th>Cel / Klient</th><th>Spedytor</th><th>Sztuk</th><th>Wirtualny Magazyn</th><th>Status</th></tr></thead>
-                                    <tbody id="dashboard-upcoming-shipments"></tbody>
-                                </table>
+                            <h2><span class="material-symbols-outlined">calendar_month</span> Harmonogram (Wysyłki i Regulacje)</h2>
+                            <div class="cal-month-nav">
+                                <button class="btn-secondary btn-small" onclick="changeMonth(-1)"><span class="material-symbols-outlined">chevron_left</span></button>
+                                <strong id="calendar-month-label" style="margin: 0 15px; font-size: 1.1rem; color: var(--primary-dark);">...</strong>
+                                <button class="btn-secondary btn-small" onclick="changeMonth(1)"><span class="material-symbols-outlined">chevron_right</span></button>
                             </div>
+                        </div>
+                        <div class="section-content" style="padding: 1.5rem;">
+                            <div class="calendar-header">
+                                <div>Pn</div><div>Wt</div><div>Śr</div><div>Cz</div><div>Pt</div><div>Sb</div><div>Nd</div><div style="color:var(--primary-terracotta);">Oprawy</div>
+                            </div>
+                            <div id="dashboard-calendar-container" style="display: flex; flex-direction: column; gap: 8px;"></div>
                         </div>
                     </div>
 
                     <div class="section" id="map-section-container">
                         <div class="section-header">
-                            <h2><span class="material-symbols-outlined">map</span> Trasy Dostaw (Kolejność)</h2>
+                            <h2><span class="material-symbols-outlined">map</span> Mapa Logistyczna (Dostawy i Serwis)</h2>
                             <div style="display:flex; gap:15px; align-items:center;">
                                 <span id="map-status" style="font-size:0.8rem; color:var(--text-light);"><span class="material-symbols-outlined" style="font-size:1em; animation: spin 1s linear infinite;">autorenew</span> Oczekiwanie na dane...</span>
                             </div>
@@ -576,11 +593,11 @@
                                     <div class="form-group"><label>Spedytor / Odbiór</label><input type="text" name="company" id="form-company" placeholder="np. DPD, Własny" required></div>
                                 </div>
                                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 1.25rem; margin-top: 0.5rem; background-color: var(--background); padding: 1.25rem; border-radius: 12px; border: 1px solid var(--border-color);">
-                                    <div class="form-group" style="margin:0;"><label>22°-15W (szt)</label><input type="number" name="p1" id="form-p1" value="0" min="0"></div>
-                                    <div class="form-group" style="margin:0;"><label>37°-15W (szt)</label><input type="number" name="p2" id="form-p2" value="0" min="0"></div>
-                                    <div class="form-group" style="margin:0;"><label>58°-15W (szt)</label><input type="number" name="p3" id="form-p3" value="0" min="0"></div>
-                                    <div class="form-group" style="margin:0;"><label>37°-20W (szt)</label><input type="number" name="p4" id="form-p4" value="0" min="0"></div>
-                                    <div class="form-group" style="margin:0;"><label>58°-20W (szt)</label><input type="number" name="p5" id="form-p5" value="0" min="0"></div>
+                                    <div class="form-group" style="margin:0;"><label>Oprawy 22°</label><input type="number" name="p1" id="form-p1" value="0" min="0"></div>
+                                    <div class="form-group" style="margin:0;"><label>Oprawy 37°</label><input type="number" name="p2" id="form-p2" value="0" min="0"></div>
+                                    <div class="form-group" style="margin:0;"><label>Oprawy 58°</label><input type="number" name="p3" id="form-p3" value="0" min="0"></div>
+                                    <div class="form-group" style="margin:0;"><label>37°-20W</label><input type="number" name="p4" id="form-p4" value="0" min="0"></div>
+                                    <div class="form-group" style="margin:0;"><label>58°-20W</label><input type="number" name="p5" id="form-p5" value="0" min="0"></div>
                                 </div>
                                 <div style="margin-top: 1.5rem; text-align: right;">
                                     <button type="submit" class="btn-primary" style="padding: 0.9rem 2rem;"><span class="material-symbols-outlined">save</span> Zapisz i Dodaj do Kolejki</button>
@@ -693,9 +710,9 @@
                                 <div style="background-color: var(--background); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 1.5rem;">
                                     <h3 style="font-size: 0.9rem; color: var(--text-light); text-transform:uppercase; letter-spacing:1px; margin-bottom: 1rem;">Wprowadź ilość zmontowanych opraw</h3>
                                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 1.25rem;">
-                                        <div class="form-group" style="margin:0;"><label>22°-15W</label><input type="number" name="p1" value="0" min="0"></div>
-                                        <div class="form-group" style="margin:0;"><label>37°-15W</label><input type="number" name="p2" value="0" min="0"></div>
-                                        <div class="form-group" style="margin:0;"><label>58°-15W</label><input type="number" name="p3" value="0" min="0"></div>
+                                        <div class="form-group" style="margin:0;"><label>Oprawy 22°</label><input type="number" name="p1" value="0" min="0"></div>
+                                        <div class="form-group" style="margin:0;"><label>Oprawy 37°</label><input type="number" name="p2" value="0" min="0"></div>
+                                        <div class="form-group" style="margin:0;"><label>Oprawy 58°</label><input type="number" name="p3" value="0" min="0"></div>
                                         <div class="form-group" style="margin:0;"><label>37°-20W</label><input type="number" name="p4" value="0" min="0"></div>
                                         <div class="form-group" style="margin:0;"><label>58°-20W</label><input type="number" name="p5" value="0" min="0"></div>
                                     </div>
@@ -767,6 +784,7 @@
 
         let currentUserEmail = '';
         let currentRole = 'viewer';
+        let currentCalendarDate = new Date();
 
         const db = window.supabase.createClient(supabaseUrl, supabaseKey);
 
@@ -938,7 +956,6 @@
                 let jsonString = result.choices[0].message.content;
                 let data = JSON.parse(jsonString);
 
-                // --- NASZ KOD INTERPRETUJĄCY ---
                 let p1 = 0, p2 = 0, p3 = 0, p4 = 0, p5 = 0;
                 let insightText = ""; 
 
@@ -950,15 +967,13 @@
                         
                         insightText += `<li><strong>${qty} szt</strong> - Kąt: ${escapeHTML(katStr)}, Moc: ${escapeHTML(mocStr)}</li>`;
 
-                        // Analiza wyłapanego wariantu
                         let is15W = mocStr.includes("15");
                         let is20WPlus = mocStr.includes("20") || mocStr.includes("26") || mocStr.includes("33");
 
                         let is22 = katStr.includes("22");
                         let is58 = katStr.includes("58");
-                        let is37 = katStr.includes("37") || (!is22 && !is58); // Domyślnie 37 jak nie jest to ani 22 ani 58
+                        let is37 = katStr.includes("37") || (!is22 && !is58); 
 
-                        // Przypisanie do okienek formularza
                         if (is15W) {
                             if (is22) p1 += qty;
                             else if (is58) p3 += qty;
@@ -970,7 +985,6 @@
                     });
                 }
 
-                // Formatowanie danych tekstowych
                 let finalDate = data.data_reczna;
                 if (finalDate && finalDate !== "null") {
                     if (finalDate.match(/^\d{1,2}\.\d{1,2}$/)) {
@@ -989,7 +1003,6 @@
                 let finalCompany = data.spedytor && data.spedytor !== "null" && data.spedytor.trim() !== "" ? data.spedytor : "Do ustalenia";
                 let finalCity = data.miejscowosc && data.miejscowosc !== "null" ? data.miejscowosc : "";
 
-                // Wrzucanie do formularza
                 const form = document.getElementById('shipmentForm');
                 document.getElementById('form-city').value = finalCity;
                 document.getElementById('form-street').value = '';
@@ -1003,7 +1016,6 @@
                 document.getElementById('form-p4').value = p4;
                 document.getElementById('form-p5').value = p5;
 
-                // Pokazujemy ładne podsumowanie co odczytał AI
                 showModal('Raport Odczytu ze Skanera', `
                     <p style="margin-bottom: 10px; color: var(--success-status); font-weight: bold;">Skanowanie zakończone pomyślnie!</p>
                     <p style="font-size: 0.9rem; color: var(--text-dark);">Poniżej to co Skaner odnalazł w tabeli przed posortowaniem:</p>
@@ -1022,7 +1034,6 @@
             }
         }
 
-        // --- AUTO-LOGOUT (5 MINUT BEZCZYNNOŚCI) ---
         let inactivityTimer;
         const INACTIVITY_TIME_MS = 5 * 60 * 1000; 
 
@@ -1051,7 +1062,6 @@
                 .replace(/'/g, "&#039;");
         }
 
-        // --- MAPY LEAFLET LOGIKA ---
         let map = null;
         let mapMarkers = [];
         let mapAdj = null;
@@ -1107,7 +1117,16 @@
             return null;
         }
 
-        async function updateMapMarkers(shipments) {
+        function getDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371; 
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+
+        async function updateMapMarkers(shipments, adjustments) {
             if (isUpdatingMap) return; 
             
             isUpdatingMap = true;
@@ -1125,11 +1144,14 @@
                 });
                 const homeMarker = L.marker([51.7592, 19.4560], {icon: homeIcon}).addTo(map).bindPopup('<b>Salon Masterlight</b><br>Główny Magazyn w Łodzi');
                 
-                const activeShipments = shipments.filter(s => s.status !== 'completed');
+                const activeShipments = (shipments || []).filter(s => s.status !== 'completed');
+                const activeAdjustments = (adjustments || []);
                 
                 activeShipments.sort((a, b) => {
-                    if (a.is_confirmed && !b.is_confirmed) return -1;
-                    if (!a.is_confirmed && b.is_confirmed) return 1;
+                    const aConf = a.is_confirmed === true || a.is_confirmed === 'true'; 
+                    const bConf = b.is_confirmed === true || b.is_confirmed === 'true';
+                    if (aConf && !bConf) return -1;
+                    if (!aConf && bConf) return 1;
                     return (a.date || '').localeCompare(b.date || '');
                 });
 
@@ -1137,30 +1159,51 @@
                 const size = window.innerWidth <= 768 ? 28 : 24;
                 const fontSize = window.innerWidth <= 768 ? 13 : 11;
                 
+                // Dostawy (Wysyłki)
                 for (let i = 0; i < activeShipments.length; i++) {
                     const s = activeShipments[i];
                     if(!s.location) continue;
                     const coords = await geocodeLocation(s.location);
                     
                     if (coords) {
-                        const total = s.products ? Object.values(s.products).reduce((a, b) => a + b, 0) : 0;
+                        const total = s.products ? Object.values(s.products).reduce((a, b) => parseInt(a) + parseInt(b), 0) : 0;
                         const mClass = s.is_confirmed ? 'marker-confirmed' : 'marker-planned';
                         const mColorText = s.is_confirmed ? '#10B981' : '#C4704B';
                         const statusText = s.is_confirmed ? 'Potwierdzona' : 'Oczekująca';
-                        const priority = i + 1;
                         
                         const icon = L.divIcon({
-                            html: `<div class="custom-map-marker ${mClass}" style="width:${size}px; height:${size}px; font-size:${fontSize}px;">${priority}</div>`,
+                            html: `<div class="custom-map-marker ${mClass}" style="width:${size}px; height:${size}px; font-size:${fontSize}px;" title="Wysyłka">W</div>`,
                             className: '', iconSize: [size, size], iconAnchor: [size/2, size/2]
                         });
 
                         const marker = L.marker(coords, { icon: icon }).addTo(map)
-                            .bindPopup(`<b>${escapeHTML(s.location)}</b><br>Priorytet: <strong>Nr ${priority}</strong><br>Status: <span style="color:${mColorText}; font-weight:bold;">${statusText}</span><br>Dostawa: ${escapeHTML(s.date)}<br>Sztuk: <strong>${total}</strong><br>Odbiór: ${escapeHTML(s.company)}`);
+                            .bindPopup(`<b>${escapeHTML(s.location)}</b><br><span style="color:${mColorText}; font-weight:bold;">${statusText}</span><br>Dostawa: ${escapeHTML(s.date)}<br>Sztuk: <strong>${total}</strong><br>Odbiór: ${escapeHTML(s.company)}`);
                         
                         mapMarkers.push(marker);
                         allPointsForBounds.push(marker);
                     }
-                    await new Promise(r => setTimeout(r, 300)); 
+                    await new Promise(r => setTimeout(r, 200)); 
+                }
+
+                // Regulacje
+                for (let i = 0; i < activeAdjustments.length; i++) {
+                    const a = activeAdjustments[i];
+                    if(!a.location) continue;
+                    const coords = await geocodeLocation(a.location);
+                    
+                    if (coords) {
+                        const icon = L.divIcon({
+                            html: `<div class="custom-map-marker marker-adjustment" style="width:${size}px; height:${size}px; font-size:${fontSize}px;" title="Regulacja">R</div>`,
+                            className: '', iconSize: [size, size], iconAnchor: [size/2, size/2]
+                        });
+
+                        const marker = L.marker(coords, { icon: icon }).addTo(map)
+                            .bindPopup(`<b>${escapeHTML(a.location)}</b><br><span style="color:var(--info-status); font-weight:bold;">Wyjazd Serwisowy</span><br>Termin:<br><strong>${escapeHTML(a.date)}</strong>`);
+                        
+                        mapMarkers.push(marker);
+                        allPointsForBounds.push(marker);
+                    }
+                    await new Promise(r => setTimeout(r, 200)); 
                 }
                 
                 if (allPointsForBounds.length > 1) {
@@ -1203,20 +1246,18 @@
                     const coords = await geocodeLocation(a.location);
                     
                     if (coords) {
-                        const priority = i + 1;
-                        
                         const icon = L.divIcon({
-                            html: `<div class="custom-map-marker marker-adjustment" style="width:${size}px; height:${size}px; font-size:${fontSize}px;">${priority}</div>`,
+                            html: `<div class="custom-map-marker marker-adjustment" style="width:${size}px; height:${size}px; font-size:${fontSize}px;">R</div>`,
                             className: '', iconSize: [size, size], iconAnchor: [size/2, size/2]
                         });
 
                         const marker = L.marker(coords, { icon: icon }).addTo(mapAdj)
-                            .bindPopup(`<b>${escapeHTML(a.location)}</b><br>Kolejka: <strong>Nr ${priority}</strong><br>Termin serwisu:<br><strong>${escapeHTML(a.date)}</strong>`);
+                            .bindPopup(`<b>${escapeHTML(a.location)}</b><br>Termin serwisu:<br><strong>${escapeHTML(a.date)}</strong>`);
                         
                         mapAdjMarkers.push(marker);
                         allPointsForBounds.push(marker);
                     }
-                    await new Promise(r => setTimeout(r, 300)); 
+                    await new Promise(r => setTimeout(r, 200)); 
                 }
                 
                 if (allPointsForBounds.length > 1) {
@@ -1351,7 +1392,7 @@
                 setTimeout(() => { 
                     if (!map) initMap();
                     if (map) map.invalidateSize(); 
-                    if(window.inventory && !isUpdatingMap) updateMapMarkers(window.inventory.shipments);
+                    if(window.inventory && !isUpdatingMap) updateMapMarkers(window.inventory.shipments, window.inventory.adjustments);
                 }, 150);
             }
             if (tabId === 'tab-adjustments') {
@@ -1379,6 +1420,204 @@
         }
 
         function closeModal() { document.getElementById('modal').style.display = 'none'; }
+
+        // --- KALENDARZ ---
+        function changeMonth(direction) {
+            currentCalendarDate.setMonth(currentCalendarDate.getMonth() + direction);
+            if(window.inventory) renderCalendar(getShipmentsReadinessMap());
+        }
+
+        function renderCalendar(readinessMap) {
+            const container = document.getElementById('dashboard-calendar-container');
+            const monthLabel = document.getElementById('calendar-month-label');
+            if(!container) return;
+
+            const year = currentCalendarDate.getFullYear();
+            const month = currentCalendarDate.getMonth();
+            
+            const monthNames = ["Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec", "Lipiec", "Sierpień", "Wrzesień", "Październik", "Listopad", "Grudzień"];
+            monthLabel.textContent = `${monthNames[month]} ${year}`;
+
+            container.innerHTML = '';
+
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            
+            // Konwersja niedzieli z 0 na 7 dla polskiego kalendarza (Pn - Nd)
+            let startOffset = firstDay === 0 ? 6 : firstDay - 1; 
+
+            let dayCounter = 1;
+            let isMonthFinished = false;
+
+            while (!isMonthFinished) {
+                const row = document.createElement('div');
+                row.className = 'calendar-grid';
+                let weekTotalOprawy = 0;
+
+                // 7 dni tygodnia
+                for (let j = 0; j < 7; j++) {
+                    const cell = document.createElement('div');
+                    
+                    if (dayCounter === 1 && j < startOffset) {
+                        cell.className = 'calendar-cell empty';
+                    } else if (dayCounter > daysInMonth) {
+                        cell.className = 'calendar-cell empty';
+                        isMonthFinished = true;
+                    } else {
+                        cell.className = 'calendar-cell';
+                        const cellDateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayCounter).padStart(2, '0')}`;
+                        
+                        const todayStr = new Date().toISOString().split('T')[0];
+                        if (cellDateStr === todayStr) cell.classList.add('today');
+
+                        let cellHtml = `<div class="calendar-date">${dayCounter}</div>`;
+                        
+                        // Dodaj wysyłki
+                        const dayShipments = window.inventory.shipments.filter(s => s.status !== 'completed' && s.date === cellDateStr);
+                        dayShipments.forEach(s => {
+                            const total = s.products ? Object.values(s.products).reduce((a, b) => parseInt(a) + parseInt(b), 0) : 0;
+                            weekTotalOprawy += total;
+                            
+                            let statusText = "";
+                            if(s.status === 'partial') statusText = '<span style="color:var(--warning-status);">● Braki (Część.)</span>';
+                            else if(readinessMap[s.id]) statusText = '<span style="color:var(--success-status);">● Komplet</span>';
+                            else statusText = '<span style="color:var(--accent-red);">● Braki</span>';
+                            
+                            const locationShort = escapeHTML(s.location).split('(')[0].trim();
+                            cellHtml += `<div class="cal-item shipment" onclick="editShipment('${s.id}')" title="${escapeHTML(s.location)}">
+                                <strong>W: ${locationShort}</strong><br>${total} szt<br>${statusText}
+                            </div>`;
+                        });
+
+                        // Dodaj regulacje
+                        const dayAdj = window.inventory.adjustments.filter(a => a.date === cellDateStr);
+                        dayAdj.forEach(a => {
+                            const locationShort = escapeHTML(a.location).split('(')[0].trim();
+                            cellHtml += `<div class="cal-item adjustment" title="${escapeHTML(a.location)}">
+                                <strong>R: ${locationShort}</strong><br>Wyjazd Serwis.
+                            </div>`;
+                        });
+
+                        cell.innerHTML = cellHtml;
+                        dayCounter++;
+                    }
+                    row.appendChild(cell);
+                }
+
+                // Kolumna 8: Podsumowanie tygodnia
+                if (!isMonthFinished || (isMonthFinished && row.childNodes[0].classList.contains('empty') === false)) {
+                    const sumCell = document.createElement('div');
+                    sumCell.className = 'cal-summary';
+                    sumCell.innerHTML = `<span style="font-size:0.7rem; color:var(--text-light); text-transform:uppercase;">Potrzeba</span><span style="font-size:1.4rem; line-height:1.2;">${weekTotalOprawy}</span><span style="font-size:0.75rem; font-weight:500;">szt</span>`;
+                    row.appendChild(sumCell);
+                    container.appendChild(row);
+                }
+            }
+        }
+
+        // --- INTELIGENTNE TRASY LOGISTYCZNE (Haversine + Nearest Neighbor) ---
+        async function generateLogistics() {
+            if(!window.inventory) return;
+            const container = document.getElementById('logistics-container');
+            container.innerHTML = '<div style="display:flex; align-items:center; gap:10px; color:var(--primary-dark);"><span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">autorenew</span> Komputer oblicza optymalne trasy...</div>';
+
+            const todayStr = new Date().toISOString().split('T')[0];
+            let upcomingTasks = [];
+
+            // Zbieramy wysyłki
+            window.inventory.shipments.forEach(s => {
+                if(s.status !== 'completed' && s.date >= todayStr) {
+                    upcomingTasks.push({ type: 'Wysyłka', date: s.date, loc: s.location });
+                }
+            });
+
+            // Zbieramy regulacje
+            window.inventory.adjustments.forEach(a => {
+                if(a.date >= todayStr) {
+                    upcomingTasks.push({ type: 'Regulacja', date: a.date, loc: a.location });
+                }
+            });
+
+            if(upcomingTasks.length === 0) {
+                container.innerHTML = '<p style="color: var(--success-status); font-weight:600;">Brak zadań w kolejce na najbliższe dni.</p>';
+                return;
+            }
+
+            // Grupujemy po dacie
+            const tasksByDate = {};
+            upcomingTasks.forEach(t => {
+                if(!tasksByDate[t.date]) tasksByDate[t.date] = [];
+                tasksByDate[t.date].push(t);
+            });
+
+            // Sortujemy daty
+            const sortedDates = Object.keys(tasksByDate).sort();
+            
+            let html = '<ul style="list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:10px;">';
+
+            // Dla każdej daty liczymy trasę
+            for(let date of sortedDates.slice(0, 5)) { // pokazujemy max 5 dni w przód by nie zapchać geocodera
+                let dailyTasks = tasksByDate[date];
+                
+                let baseLat = 51.7592, baseLon = 19.4560; // Łódź
+                let currentLat = baseLat, currentLon = baseLon;
+                let routeNodes = ['Baza (Łódź)'];
+                let unvisited = [...dailyTasks];
+                let totalDistance = 0;
+
+                // Geokodujemy w locie by mieć koordynaty
+                for(let t of unvisited) {
+                    let coords = await geocodeLocation(t.loc);
+                    t.coords = coords;
+                }
+
+                unvisited = unvisited.filter(t => t.coords !== null);
+
+                // Nearest Neighbor
+                while(unvisited.length > 0) {
+                    let closestIdx = -1;
+                    let minDistance = Infinity;
+
+                    for(let i=0; i<unvisited.length; i++) {
+                        let d = getDistance(currentLat, currentLon, unvisited[i].coords[0], unvisited[i].coords[1]);
+                        if(d < minDistance) {
+                            minDistance = d;
+                            closestIdx = i;
+                        }
+                    }
+
+                    let nextNode = unvisited[closestIdx];
+                    totalDistance += minDistance;
+                    currentLat = nextNode.coords[0];
+                    currentLon = nextNode.coords[1];
+                    
+                    let icon = nextNode.type === 'Wysyłka' ? '📦' : '🔧';
+                    let locShort = escapeHTML(nextNode.loc).split('(')[0].trim();
+                    routeNodes.push(`${icon} ${locShort}`);
+                    
+                    unvisited.splice(closestIdx, 1);
+                }
+
+                // Powrót do bazy
+                if(routeNodes.length > 1) {
+                    totalDistance += getDistance(currentLat, currentLon, baseLat, baseLon);
+                    routeNodes.push('Baza');
+                }
+
+                let routeStr = routeNodes.join(' ➔ ');
+                
+                html += `
+                    <li style="background:var(--primary-light); padding:1rem; border-radius:8px; border:1px solid var(--beige-light);">
+                        <strong style="color:var(--primary-dark); display:block; margin-bottom:5px;"><span class="material-symbols-outlined" style="font-size:1.2em; vertical-align:middle;">calendar_today</span> ${date}</strong>
+                        <div style="font-size:0.9rem; line-height:1.5;">Trasa: <strong>${routeStr}</strong></div>
+                        <div style="font-size:0.8rem; color:var(--text-light); margin-top:5px;">Szacowany dystans całkowity: ~${Math.round(totalDistance)} km</div>
+                    </li>
+                `;
+            }
+
+            html += '</ul>';
+            container.innerHTML = html;
+        }
 
         function printInventoryPdf() {
             if(!window.inventory || window.inventory.products.length === 0) return;
@@ -1417,7 +1656,7 @@
             `;
             
             window.inventory.products.forEach(p => {
-                const total = (p.ready || 0) + (p.assembly || 0) + (p.service || 0);
+                const total = (parseInt(p.ready) || 0) + (parseInt(p.assembly) || 0) + (parseInt(p.service) || 0);
                 html += `<tr>
                     <td>${escapeHTML(p.name)}</td>
                     <td>${escapeHTML(p.sku)}</td>
@@ -1463,7 +1702,6 @@
             setTimeout(() => { printWin.print(); printWin.close(); }, 300);
         }
 
-        // Nowa funkcja wyświetlająca braki w Modalu (zamiast od razu w oknie druku)
         function showMissingItems(id) {
             const shipment = window.inventory.shipments.find(s => String(s.id) === String(id));
             if (!shipment || !shipment.partial_missing) {
@@ -1515,7 +1753,6 @@
             showModal('Szczegóły Braków', content);
         }
 
-        // Ta funkcja jest teraz wywoływana tylko z poziomu okienka (Modala) "Szczegóły Braków"
         function printMissingPdf(id) {
             const shipment = window.inventory.shipments.find(s => String(s.id) === String(id));
             if (!shipment || !shipment.partial_missing) {
@@ -1640,7 +1877,7 @@
                     updateDashboard();
                     
                     if (document.getElementById('tab-dashboard').classList.contains('active')) {
-                        updateMapMarkers(this.shipments);
+                        updateMapMarkers(this.shipments, this.adjustments);
                     }
                     if (document.getElementById('tab-adjustments').classList.contains('active')) {
                         updateAdjMapMarkers(this.adjustments);
@@ -1861,43 +2098,6 @@
                 await this.fetchData();
             }
 
-            async addIncomingShipment(supplier, newProducts) {
-                if (currentRole === 'viewer') return;
-                let totalAdded = 0;
-                const dbUpdates = [];
-                
-                for (const [id, qty] of Object.entries(newProducts)) {
-                    if (qty > 0) {
-                        const product = this.products.find(p => String(p.id) === String(id));
-                        if (product) {
-                            const newAssembly = (product.assembly || 0) + qty;
-                            if (product.assembly_group) {
-                                dbUpdates.push(db.from('products').update({ assembly: newAssembly }).eq('assembly_group', product.assembly_group));
-                                this.products.filter(p => p.assembly_group === product.assembly_group).forEach(p => p.assembly = newAssembly);
-                            } else {
-                                dbUpdates.push(db.from('products').update({ assembly: newAssembly }).eq('id', product.id));
-                                product.assembly = newAssembly;
-                            }
-                            totalAdded += qty;
-                        }
-                    }
-                }
-                
-                updateDashboard();
-
-                if (dbUpdates.length > 0) await Promise.all(dbUpdates);
-
-                if (totalAdded > 0) {
-                    const p1 = newProducts[1] || 0;
-                    const p2 = newProducts[2] || 0;
-                    const p3 = newProducts[3] || 0;
-                    const detailStr = `${supplier} | 22°:${p1} | 37°:${p2} | 58°:${p3}`;
-                    
-                    await this.addHistory('Dostawa opraw (Huta)', detailStr);
-                    await this.fetchData();
-                }
-            }
-
             async registerProduction(produced) {
                 if (currentRole === 'viewer') return;
                 
@@ -2028,570 +2228,44 @@
                 await this.fetchData();
             }
         }
-
-        function getShipmentsReadinessMap() {
-            const readinessMap = {};
-            if (!window.inventory) return readinessMap;
-
-            let vReady = {};
-            let vAssembly = {};
+        
+        async function addIncomingShipment(supplier, newProducts) {
+            if (currentRole === 'viewer') return;
+            let totalAdded = 0;
+            const dbUpdates = [];
             
-            window.inventory.products.forEach(p => {
-                vReady[String(p.id)] = parseInt(p.ready) || 0;
-                const groupKey = p.assembly_group ? String(p.assembly_group) : `single_${p.id}`;
-                if (vAssembly[groupKey] === undefined) {
-                    vAssembly[groupKey] = parseInt(p.assembly) || 0;
-                }
-            });
-
-            let pending = window.inventory.shipments.filter(s => s.status !== 'completed');
-            
-            pending.sort((a, b) => {
-                const aConf = a.is_confirmed === true || a.is_confirmed === 'true'; 
-                const bConf = b.is_confirmed === true || b.is_confirmed === 'true';
-                if (aConf && !bConf) return -1;
-                if (!aConf && bConf) return 1;
-                return (a.date || '').localeCompare(b.date || '');
-            });
-
-            pending.forEach(s => {
-                let isReady = true;
-                let reqs = s.status === 'partial' ? s.partial_missing : s.products;
-                
-                if (reqs && typeof reqs === 'object') {
-                    for (const [pId, qty] of Object.entries(reqs)) {
-                        let needed = parseInt(qty) || 0;
-                        if (needed > 0) {
-                            const prod = window.inventory.products.find(p => String(p.id) === String(pId));
-                            if (!prod) { isReady = false; continue; }
-                            
-                            const pIdStr = String(prod.id);
-                            
-                            if (vReady[pIdStr] >= needed) {
-                                vReady[pIdStr] -= needed;
-                                needed = 0;
-                            } else {
-                                needed -= vReady[pIdStr];
-                                vReady[pIdStr] = 0;
-                            }
-                            
-                            if (needed > 0) {
-                                const poolKey = prod.assembly_group ? String(prod.assembly_group) : `single_${prod.id}`;
-                                if (vAssembly[poolKey] >= needed) {
-                                    vAssembly[poolKey] -= needed;
-                                } else {
-                                    vAssembly[poolKey] -= needed; 
-                                    isReady = false;
-                                }
-                            }
+            for (const [id, qty] of Object.entries(newProducts)) {
+                if (qty > 0) {
+                    const product = this.products.find(p => String(p.id) === String(id));
+                    if (product) {
+                        const newAssembly = (product.assembly || 0) + qty;
+                        if (product.assembly_group) {
+                            dbUpdates.push(db.from('products').update({ assembly: newAssembly }).eq('assembly_group', product.assembly_group));
+                            this.products.filter(p => p.assembly_group === product.assembly_group).forEach(p => p.assembly = newAssembly);
+                        } else {
+                            dbUpdates.push(db.from('products').update({ assembly: newAssembly }).eq('id', product.id));
+                            product.assembly = newAssembly;
                         }
+                        totalAdded += qty;
                     }
                 }
-                readinessMap[s.id] = isReady;
-            });
-
-            return readinessMap;
-        }
-
-        function getStatusClass(productId) {
-            const status = window.inventory.getStatus(productId);
-            return status === 'ok' ? 'status-ok' : status === 'warning' ? 'status-warning' : 'status-error';
-        }
-
-        function getStatusText(productId) {
-            const status = window.inventory.getStatus(productId);
-            return status === 'ok' ? '<span class="material-symbols-outlined">check_circle</span> OK' : status === 'warning' ? '<span class="material-symbols-outlined">warning</span> Mało' : '<span class="material-symbols-outlined">error</span> Brak';
-        }
-
-        function getReadinessBadge(shipment, readinessMap) {
-            if (shipment.status === 'completed') return '<span style="color: var(--text-light); font-size: 0.85em;">-</span>';
-            if (readinessMap[shipment.id]) {
-                return '<span class="status-badge status-ok" style="background:#ECFDF5; color:#059669; border: 1px solid #10B981;"><span class="material-symbols-outlined">inventory_2</span> Komplet</span>';
-            } else {
-                return '<span class="status-badge status-error" style="background:#FEF2F2; color:#DC2626; border: 1px solid #EF4444;"><span class="material-symbols-outlined">production_quantity_limits</span> Braki</span>';
             }
-        }
+            
+            updateDashboard();
 
-        function updateDashboard() {
-            try {
-                if(!window.inventory || window.inventory.products.length === 0) return;
+            if (dbUpdates.length > 0) await Promise.all(dbUpdates);
+
+            if (totalAdded > 0) {
+                const p1 = newProducts[1] || 0;
+                const p2 = newProducts[2] || 0;
+                const p3 = newProducts[3] || 0;
+                const detailStr = `${supplier} | 22°:${p1} | 37°:${p2} | 58°:${p3}`;
                 
-                const totals = window.inventory.getTotals();
-                document.querySelector('[data-stat="total"]').textContent = totals.totalAll;
-                document.querySelector('[data-stat="ready"]').textContent = totals.totalReady;
-                document.querySelector('[data-stat="shipments"]').textContent = window.inventory.shipments.filter(s => s.status !== 'completed' && s.is_confirmed).length;
-                document.querySelector('[data-stat="service"]').textContent = totals.totalService;
-
-                const alertsContainer = document.getElementById('dashboard-alerts');
-                alertsContainer.innerHTML = '';
-                const comps = window.inventory.components;
-                let lowComps = [];
-                if (comps) {
-                    if ((comps.ps_raw||0) < 50) lowComps.push('Zasilacze');
-                    if ((comps.clips_normal||0) < 50) lowComps.push('Klapki Zwykłe');
-                    if ((comps.clips_pass||0) < 50) lowComps.push('Klapki Przelotowe');
-                    
-                    if (lowComps.length > 0) {
-                        alertsContainer.innerHTML = `
-                            <div class="alert-banner critical">
-                                <span class="material-symbols-outlined">warning_amber</span>
-                                <div><strong>Krytyczny stan komponentów!</strong> Należy domówić: ${lowComps.join(', ')}.</div>
-                            </div>
-                        `;
-                    }
-                }
-
-                const readinessMap = getShipmentsReadinessMap();
-
-                const dashboardTbody = document.getElementById('products-dashboard');
-                dashboardTbody.innerHTML = '';
-                window.inventory.products.forEach(p => {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `<td data-label="Model Oprawy">${escapeHTML(p.name)}</td><td data-label="Ilość Gotowych"><strong>${p.ready || 0} szt</strong></td><td data-label="Dostępność"><span class="status-badge ${getStatusClass(p.id)}">${getStatusText(p.id)}</span></td>`;
-                    dashboardTbody.appendChild(row);
-                });
-
-                const upcomingTbody = document.getElementById('dashboard-upcoming-shipments');
-                upcomingTbody.innerHTML = '';
-                
-                const activeShipments = window.inventory.shipments.filter(s => s.status !== 'completed');
-                
-                activeShipments.sort((a, b) => {
-                    const aConf = a.is_confirmed === true || a.is_confirmed === 'true'; 
-                    const bConf = b.is_confirmed === true || b.is_confirmed === 'true';
-                    if (aConf && !bConf) return -1;
-                    if (!aConf && bConf) return 1;
-                    return (a.date || '').localeCompare(b.date || '');
-                });
-
-                let upcomingTotalLamps = 0;
-
-                if (activeShipments.length === 0) {
-                    upcomingTbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 2rem !important; color:var(--text-light); border:none;">Brak zaplanowanych wysyłek. Można odpocząć! ☕</td></tr>';
-                    document.getElementById('upcoming-total-badge').textContent = 'Zapotrzebowanie: 0 szt.';
-                } else {
-                    activeShipments.forEach((s, index) => {
-                        let total = s.products ? Object.values(s.products).reduce((a, b) => parseInt(a) + parseInt(b), 0) : 0;
-                        upcomingTotalLamps += total;
-                        
-                        let statusBadge = s.status === 'partial' ? '<span class="status-badge status-warning"><span class="material-symbols-outlined">warning</span> Niepełna</span>' :
-                                          s.is_confirmed ? '<span class="status-badge status-neutral"><span class="material-symbols-outlined">event_available</span> Potw.</span>' :
-                                          '<span class="status-badge status-warning"><span class="material-symbols-outlined">pending_actions</span> Oczek.</span>';
-
-                        const readinessBadge = getReadinessBadge(s, readinessMap);
-                        const priorityNum = index + 1;
-
-                        upcomingTbody.innerHTML += `
-                            <tr>
-                                <td data-label="Priorytet / Data"><span style="display:inline-block; width:22px; height:22px; background:${s.is_confirmed ? 'var(--success-status)' : 'var(--primary-terracotta)'}; color:white; border-radius:50%; text-align:center; line-height:22px; font-size:0.75rem; margin-right:8px; font-weight:bold;">${priorityNum}</span> <strong>${escapeHTML(s.date || '-')}</strong></td>
-                                <td data-label="Cel / Klient">${escapeHTML(s.location)}</td>
-                                <td data-label="Spedytor" style="color:var(--text-light);">${escapeHTML(s.company || '-')}</td>
-                                <td data-label="Sztuk"><strong>${total}</strong></td>
-                                <td data-label="Wirtualny Magazyn">${readinessBadge}</td>
-                                <td data-label="Status">${statusBadge}</td>
-                            </tr>
-                        `;
-                    });
-                    document.getElementById('upcoming-total-badge').textContent = `Zapotrzebowanie: ${upcomingTotalLamps} szt.`;
-                }
-
-                const incomingTbody = document.getElementById('dashboard-recent-incoming');
-                if (incomingTbody && window.inventory.history) {
-                    incomingTbody.innerHTML = '';
-                    const recentIncoming = window.inventory.history.filter(h => h.action === 'Dostawa opraw (Huta)' || h.action === 'Dostawa obudów (Huta)').slice(0, 2);
-                    
-                    if (recentIncoming.length === 0) {
-                        incomingTbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 2rem !important; color:var(--text-light); border:none;">Brak historii dostaw.</td></tr>';
-                    } else {
-                        recentIncoming.forEach(entry => {
-                            if (!entry || !entry.details) return;
-                            
-                            let supplier = "-";
-                            let p1 = "-", p2 = "-", p3 = "-";
-                            let total = 0;
-                            
-                            let cleanDetails = entry.details.replace(/\(przez:.*?\)/, '').trim();
-                            
-                            if (cleanDetails.includes('|')) {
-                                let parts = cleanDetails.split('|').map(s => s.trim());
-                                supplier = parts[0];
-                                let parseQty = (str) => {
-                                    let match = str.match(/:(\d+)/);
-                                    return match ? parseInt(match[1]) : 0;
-                                };
-                                p1 = parseQty(parts[1] || "");
-                                p2 = parseQty(parts[2] || "");
-                                p3 = parseQty(parts[3] || "");
-                                total = p1 + p2 + p3;
-                            } else {
-                                let match = cleanDetails.match(/(.*?)\s*\(\+(\d+)\s*szt\.\)/);
-                                if (match) {
-                                    supplier = match[1].trim();
-                                    total = parseInt(match[2]);
-                                    p1 = "?"; p2 = "?"; p3 = "?";
-                                } else {
-                                    supplier = cleanDetails;
-                                }
-                            }
-
-                            const row = document.createElement('tr');
-                            row.innerHTML = `
-                                <td data-label="Data Przyjęcia"><strong>${escapeHTML((entry.timestamp || '').split(',')[0])}</strong></td>
-                                <td data-label="Dostawca / Huta">${escapeHTML(supplier)}</td>
-                                <td data-label="22°">${p1 !== '?' ? `<strong>${p1}</strong> szt` : '?'}</td>
-                                <td data-label="37°">${p2 !== '?' ? `<strong>${p2}</strong> szt` : '?'}</td>
-                                <td data-label="58°">${p3 !== '?' ? `<strong>${p3}</strong> szt` : '?'}</td>
-                                <td data-label="Suma"><strong style="color:var(--success-status);">${total}</strong> szt</td>
-                            `;
-                            incomingTbody.appendChild(row);
-                        });
-                    }
-                }
-
-                updateInventoryTable();
-                updateShipmentsTables(readinessMap);
-                updateAdjustmentsTable();
-                if(currentRole !== 'worker') updateHistoryTable(); 
-                updateComponentsDisplay();
-            } catch (error) {
-                console.error("Błąd podczas renderowania Dashboardu:", error);
+                await this.addHistory('Dostawa opraw (Huta)', detailStr);
+                await this.fetchData();
             }
         }
-
-        function updateInventoryTable() {
-            const tbody = document.getElementById('products-table');
-            const tbodyService = document.getElementById('service-table');
-            tbody.innerHTML = ''; tbodyService.innerHTML = '';
-            const isViewer = currentRole === 'viewer';
-            
-            window.inventory.products.forEach(p => {
-                const total = (parseInt(p.ready) || 0) + (parseInt(p.assembly) || 0) + (parseInt(p.service) || 0);
-                
-                const readyCell = isViewer ? `<strong>${p.ready || 0}</strong>` : `<td data-label="Gotowe" onclick="editCell(this, 'ready', '${p.id}')" class="editable"><strong>${p.ready || 0}</strong></td>`;
-                const assemblyCell = isViewer ? (p.assembly || 0) : `<td data-label="W Montażu" onclick="editCell(this, 'assembly', '${p.id}')" class="editable">${p.assembly || 0}</td>`;
-
-                const rowHTML = `
-                    <td data-label="Model Oprawy">${escapeHTML(p.name)}</td>
-                    <td data-label="Kod SKU" style="color:var(--text-light); font-size:0.85em;">${escapeHTML(p.sku)}</td>
-                    ${isViewer ? `<td data-label="Gotowe">${readyCell}</td>` : readyCell}
-                    ${isViewer ? `<td data-label="W Montażu">${assemblyCell}</td>` : assemblyCell}
-                    <td data-label="Łącznie"><strong>${total}</strong></td>
-                    <td data-label="Dostępność"><span class="status-badge ${getStatusClass(p.id)}">${getStatusText(p.id)}</span></td>
-                `;
-                const tr = document.createElement('tr'); tr.innerHTML = rowHTML; tbody.appendChild(tr);
-
-                const serviceCell = isViewer ? (p.service || 0) : `<td data-label="Ilość (szt)" onclick="editCell(this, 'service', '${p.id}')" class="editable">${p.service || 0}</td>`;
-                const serviceRowHTML = `<td data-label="Model Oprawy">${escapeHTML(p.name)}</td>${isViewer ? `<td data-label="Ilość (szt)">${serviceCell}</td>` : serviceCell}`;
-                const trS = document.createElement('tr'); trS.innerHTML = serviceRowHTML; tbodyService.appendChild(trS);
-            });
-        }
-
-        function renderShipmentRow(s, readinessMap) {
-            let total = s.products ? Object.values(s.products).reduce((a, b) => parseInt(a) + parseInt(b), 0) : 0;
-            let statusBadge = s.status === 'completed' ? '<span class="status-badge status-ok"><span class="material-symbols-outlined">check_circle</span> Zrealizowana</span>' :
-                              s.status === 'partial' ? '<span class="status-badge status-warning"><span class="material-symbols-outlined">warning</span> Niepełna</span>' :
-                              s.is_confirmed ? '<span class="status-badge status-neutral"><span class="material-symbols-outlined">event_available</span> Potwierdzona</span>' :
-                              '<span class="status-badge status-warning"><span class="material-symbols-outlined">pending_actions</span> Oczekująca</span>';
-
-            const readinessBadge = getReadinessBadge(s, readinessMap);
-
-            let actionButtons = '';
-            if (currentRole !== 'viewer') {
-                actionButtons += `<button class="btn-small btn-secondary" onclick="editShipment('${s.id}')" title="Edytuj dane"><span class="material-symbols-outlined">edit</span></button>`;
-                if (currentRole === 'admin') actionButtons += `<button class="btn-small btn-secondary" onclick="deleteShipment('${s.id}')" title="Usuń trwale"><span class="material-symbols-outlined" style="color:var(--accent-red);">delete</span></button>`;
-                
-                if (s.status === 'planned' && !s.is_confirmed) {
-                    actionButtons = `<button class="btn-small btn-primary" onclick="confirmShipmentDateUI('${s.id}')"><span class="material-symbols-outlined">event_available</span> Zatwierdź</button>` + actionButtons;
-                } else if (s.status === 'planned' && s.is_confirmed) {
-                    actionButtons = `<button class="btn-small btn-primary" onclick="completeShipmentUI('${s.id}')"><span class="material-symbols-outlined">local_shipping</span> Wydaj</button>` + actionButtons;
-                } else if (s.status === 'partial') {
-                    actionButtons = `<button class="btn-small btn-primary" onclick="completeRemainingShipmentUI('${s.id}')"><span class="material-symbols-outlined">done_all</span> Wydaj braki</button>` + actionButtons;
-                }
-            }
-            if (s.status === 'partial') {
-                actionButtons += `<button class="btn-small btn-secondary" onclick="showMissingItems('${s.id}')" title="Pokaż listę braków"><span class="material-symbols-outlined">list_alt</span> Braki</button>`;
-            }
-
-            return `
-                <tr class="${s.status === 'completed' ? 'row-completed' : ''}">
-                    <td data-label="Data"><strong>${escapeHTML(s.date || '-')}</strong></td>
-                    <td data-label="Cel">${escapeHTML(s.location)}</td>
-                    <td data-label="Spedytor" style="color:var(--text-light);">${escapeHTML(s.company || '-')}</td>
-                    <td data-label="Sztuk"><strong>${total}</strong></td>
-                    <td data-label="Kąty"><button class="btn-small btn-secondary" onclick="showAnglesDemand('${s.id}')" style="margin:0;"><span class="material-symbols-outlined">visibility</span> Pokaż</button></td>
-                    <td data-label="Wirtualny Magazyn">${readinessBadge}</td>
-                    <td data-label="Status">${statusBadge}</td>
-                    ${currentRole !== 'viewer' || s.status === 'partial' ? `<td data-label="Akcja">${actionButtons}</td>` : '<td class="admin-only-col"></td>'}
-                </tr>
-            `;
-        }
-
-        function updateShipmentsTables(readinessMap) {
-            const tbodyUnconf = document.getElementById('shipments-unconfirmed-table');
-            const tbodyConf = document.getElementById('shipments-confirmed-table');
-            tbodyUnconf.innerHTML = ''; tbodyConf.innerHTML = '';
-            let confCount = 0;
-
-            const sortedShipments = [...window.inventory.shipments].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
-
-            sortedShipments.forEach(s => {
-                const rowHTML = renderShipmentRow(s, readinessMap);
-                if (!s.is_confirmed && s.status === 'planned') {
-                    tbodyUnconf.innerHTML += rowHTML;
-                } else {
-                    tbodyConf.innerHTML += rowHTML;
-                    if (s.status !== 'completed') confCount++;
-                }
-            });
-            document.getElementById('shipments-count').textContent = confCount + ' rekordów';
-        }
-
-        function updateAdjustmentsTable() {
-            const tbody = document.getElementById('adjustments-table');
-            if(!tbody) return;
-            tbody.innerHTML = '';
-            window.inventory.adjustments.forEach(a => {
-                const tr = document.createElement('tr');
-                let action = currentRole === 'admin' ? `<td data-label="Akcja"><button class="btn-small btn-secondary" onclick="deleteAdjustment('${a.id}')" style="margin:0;"><span class="material-symbols-outlined" style="color:var(--accent-red);">delete</span></button></td>` : `<td class="admin-only-col"></td>`;
-                tr.innerHTML = `<td data-label="Data Wyjazdu"><strong>${escapeHTML(a.date || '-')}</strong></td><td data-label="Miejscowość / Obiekt">${escapeHTML(a.location)}</td>${action}`;
-                tbody.appendChild(tr);
-            });
-        }
-
-        function updateHistoryTable() {
-            const tbody = document.getElementById('history-table');
-            if(!tbody) return;
-            tbody.innerHTML = '';
-            window.inventory.history.forEach(h => {
-                const tr = document.createElement('tr');
-                
-                const detailsStr = h.details || '';
-                const match = detailsStr.match(/\(przez: (.*?)\)/);
-                const worker = match ? match[1] : 'System';
-                const cleanDetails = detailsStr.replace(/\(przez:.*?\)/, '').trim();
-
-                tr.innerHTML = `<td data-label="Data i Czas" style="color:var(--text-light); font-size:0.85em;">${escapeHTML(h.timestamp)}</td><td data-label="Pracownik"><strong>${escapeHTML(worker)}</strong></td><td data-label="Typ Operacji">${escapeHTML(h.action)}</td><td data-label="Szczegóły">${escapeHTML(cleanDetails)}</td>`;
-                tbody.appendChild(tr);
-            });
-        }
-
-        function updateComponentsDisplay() {
-            if(!window.inventory.components) return;
-            const comps = window.inventory.components;
-            
-            const elRaw = document.getElementById('ps-raw-cell');
-            const elNorm = document.getElementById('clips-normal-cell');
-            const elPass = document.getElementById('clips-pass-cell');
-            
-            if(elRaw) elRaw.innerHTML = `<strong>${comps.ps_raw || 0} szt.</strong>`;
-            if(elNorm) elNorm.innerHTML = `<strong>${comps.clips_normal || 0} szt.</strong>`;
-            if(elPass) elPass.innerHTML = `<strong>${comps.clips_pass || 0} szt.</strong>`;
-            
-            if (currentRole !== 'viewer') {
-                document.querySelectorAll('#tab-components .table-responsive td:last-child').forEach(td => td.classList.add('editable'));
-            }
-        }
-
-        function editCell(cell, field, productId) {
-            if (currentRole === 'viewer') return;
-            if (cell.querySelector('input')) return;
-            
-            const product = window.inventory.products.find(p => String(p.id) === String(productId));
-            const input = document.createElement('input');
-            input.type = 'number'; input.value = product[field] || 0; 
-            input.style.width = '100%'; input.style.textAlign = 'inherit';
-            
-            const originalHTML = cell.innerHTML;
-            cell.innerHTML = ''; cell.appendChild(input);
-            cell.classList.remove('editable');
-            input.focus(); input.select();
-
-            const save = async () => {
-                const newValue = parseInt(input.value);
-                if (!isNaN(newValue) && newValue !== (product[field]||0)) {
-                    cell.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite; color: var(--primary-terracotta);">autorenew</span>';
-                    await window.inventory.updateProduct(productId, { [field]: newValue });
-                } else {
-                    cell.innerHTML = originalHTML;
-                }
-                cell.classList.add('editable');
-            };
-
-            input.addEventListener('blur', save);
-            input.addEventListener('keypress', (e) => { if (e.key === 'Enter') input.blur(); });
-        }
-
-        function editComponentCell(cell, field) {
-            if (currentRole === 'viewer') return;
-            if (cell.querySelector('input')) return;
-            
-            const currentVal = window.inventory.components[field] || 0;
-            const input = document.createElement('input');
-            input.type = 'number'; input.value = currentVal; 
-            input.style.width = '100%'; input.style.textAlign = 'inherit';
-            
-            const originalHTML = cell.innerHTML;
-            cell.innerHTML = ''; cell.appendChild(input);
-            cell.classList.remove('editable');
-            input.focus(); input.select();
-
-            const save = async () => {
-                const newValue = parseInt(input.value);
-                if (!isNaN(newValue) && newValue !== currentVal) {
-                    cell.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite; color: var(--primary-terracotta);">autorenew</span>';
-                    await window.inventory.updateComponent(field, newValue);
-                } else {
-                    cell.innerHTML = originalHTML;
-                }
-                cell.classList.add('editable');
-            };
-
-            input.addEventListener('blur', save);
-            input.addEventListener('keypress', (e) => { if (e.key === 'Enter') input.blur(); });
-        }
-
-        async function confirmShipmentDateUI(id) {
-            if (confirm('Zatwierdzić termin wysyłki i przenieść do kolejki realizacji?')) {
-                showLoading();
-                await window.inventory.confirmShipment(id);
-                hideLoading();
-                showToast('Termin wysyłki został zatwierdzony.', 'success');
-            }
-        }
-
-        async function completeShipmentUI(id) {
-            const s = window.inventory.shipments.find(x => String(x.id) === String(id));
-            if (!s) return;
-            const total = s.products ? Object.values(s.products).reduce((a, b) => parseInt(a) + parseInt(b), 0) : 0;
-            if (confirm(`Wydano towar z magazynu (${total} szt.)? \nStany zostaną zaktualizowane.`)) {
-                showLoading();
-                await window.inventory.completeShipment(id);
-                hideLoading();
-                showToast('Towar wydany, zaktualizowano stany.', 'success');
-            }
-        }
-
-        async function completeRemainingShipmentUI(id) {
-            if (confirm('Wydano brakującą część towaru? \nZamówienie zostanie zamknięte jako kompletne.')) {
-                showLoading();
-                await window.inventory.completeRemainingShipment(id);
-                hideLoading();
-                showToast('Zamówienie sfinalizowane.', 'success');
-            }
-        }
-
-        async function deleteShipment(id) { 
-            if (currentRole === 'admin' && confirm('⚠️ Uwaga: Czy na pewno trwale usunąć to zamówienie z bazy danych? Operacji nie można cofnąć.')) { 
-                showLoading();
-                await window.inventory.deleteShipment(id); 
-                hideLoading();
-                showToast('Zamówienie usunięte z bazy.', 'warning');
-            } 
-        }
-
-        async function deleteAdjustment(id) {
-            if (currentRole === 'admin' && confirm('Usunąć ten wpis z regulacji?')) {
-                showLoading();
-                await window.inventory.deleteAdjustment(id);
-                hideLoading();
-                showToast('Termin usunięty.', 'success');
-            }
-        }
-
-        function showAnglesDemand(id) {
-            const shipment = window.inventory.shipments.find(s => String(s.id) === String(id));
-            if(!shipment) return;
-            
-            const p = shipment.products || {};
-            const a22 = parseInt(p[1]) || 0;
-            const a37 = (parseInt(p[2]) || 0) + (parseInt(p[4]) || 0);
-            const a58 = (parseInt(p[3]) || 0) + (parseInt(p[5]) || 0);
-
-            const content = `
-                <div style="text-align: center;">
-                    <p style="color: var(--text-light); margin-bottom: 1.5rem; font-size:0.95rem;">Zapotrzebowanie dla: <br><strong style="color:var(--text-dark); font-size:1.2rem;">${escapeHTML(shipment.location)}</strong></p>
-                    <div style="display:flex; justify-content: space-around; background: var(--background); padding: 2rem 1rem; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: inset 0 2px 4px rgba(0,0,0,0.03);">
-                        <div><div style="font-size: 0.8rem; color: var(--text-light); text-transform:uppercase; letter-spacing:1px; margin-bottom:5px; font-weight:600;">Kąt 22°</div><div style="font-size: 2.5rem; font-weight: 700; color:var(--primary-dark);">${a22}</div></div>
-                        <div><div style="font-size: 0.8rem; color: var(--text-light); text-transform:uppercase; letter-spacing:1px; margin-bottom:5px; font-weight:600;">Kąt 37°</div><div style="font-size: 2.5rem; font-weight: 700; color:var(--primary-dark);">${a37}</div></div>
-                        <div><div style="font-size: 0.8rem; color: var(--text-light); text-transform:uppercase; letter-spacing:1px; margin-bottom:5px; font-weight:600;">Kąt 58°</div><div style="font-size: 2.5rem; font-weight: 700; color:var(--primary-dark);">${a58}</div></div>
-                    </div>
-                </div>
-            `;
-            showModal('Zapotrzebowanie Kątowe', content);
-        }
-
-        function editShipment(id) {
-            if (currentRole === 'viewer') return;
-            const shipment = window.inventory.shipments.find(s => String(s.id) === String(id));
-            if (!shipment) return;
-
-            const p = shipment.products || {};
-            const p1 = p[1] || 0, p2 = p[2] || 0, p3 = p[3] || 0, p4 = p[4] || 0, p5 = p[5] || 0;
-
-            const isPartial = shipment.status === 'partial';
-            const disableProducts = isPartial ? 'disabled' : '';
-            
-            const formHTML = `
-                <div style="display: grid; gap: 1.25rem;">
-                    <div class="form-group">
-                        <label>Data Wysyłki</label>
-                        <input type="date" id="edit_shipment_date" value="${escapeHTML(shipment.date)}">
-                    </div>
-                    <div class="form-group">
-                        <label>Pełny Cel / Adresat</label>
-                        <input type="text" id="edit_shipment_location" value="${escapeHTML(shipment.location)}">
-                    </div>
-                    <div class="form-group">
-                        <label>Spedytor / Firma Przewozowa</label>
-                        <input type="text" id="edit_shipment_company" value="${escapeHTML(shipment.company || '')}">
-                    </div>
-                    
-                    <div style="margin-top: 0.5rem; background-color: var(--background); padding: 1.25rem; border-radius: 12px; border: 1px solid var(--border-color);">
-                        <h3 style="margin-bottom: 1rem; font-size: 0.85rem; color: var(--text-light); text-transform:uppercase; letter-spacing:1px;">Ilości Opraw (szt.)</h3>
-                        ${isPartial ? '<p style="color: var(--accent-red); font-size:0.8rem; margin-top:-10px; margin-bottom:10px; font-weight:500;">Edycja ilości zablokowana dla wysyłki częściowej.</p>' : ''}
-                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
-                            <div class="form-group" style="margin:0;"><label>Oprawy 22°</label><input type="number" id="edit_p1" value="${p1}" min="0" ${disableProducts}></div>
-                            <div class="form-group" style="margin:0;"><label>Oprawy 37°</label><input type="number" id="edit_p2" value="${p2}" min="0" ${disableProducts}></div>
-                            <div class="form-group" style="margin:0;"><label>Oprawy 58°</label><input type="number" id="edit_p3" value="${p3}" min="0" ${disableProducts}></div>
-                            <div class="form-group" style="margin:0;"><label>37°-20W</label><input type="number" id="edit_p4" value="${p4}" min="0" ${disableProducts}></div>
-                            <div class="form-group" style="margin:0;"><label>58°-20W</label><input type="number" id="edit_p5" value="${p5}" min="0" ${disableProducts}></div>
-                        </div>
-                    </div>
-                    
-                    <div style="margin-top: 1rem;">
-                        <button class="btn-primary" onclick="saveShipment('${id}')" style="width:100%; padding: 1rem;"><span class="material-symbols-outlined">save</span> Zapisz Zmiany w Zamówieniu</button>
-                    </div>
-                </div>
-            `;
-            showModal('Edycja Zamówienia', formHTML);
-        }
-
-        async function saveShipment(id) {
-            const newDate = document.getElementById('edit_shipment_date').value;
-            const newLocation = document.getElementById('edit_shipment_location').value;
-            const newCompany = document.getElementById('edit_shipment_company').value;
-            
-            if (!newDate || !newLocation) { showToast('Data i cel są wymagane.', 'error'); return; }
-
-            const shipment = window.inventory.shipments.find(s => String(s.id) === String(id));
-            const data = { date: newDate, location: newLocation, company: newCompany };
-
-            if (shipment.status !== 'partial') {
-                data.products = {
-                    1: parseInt(document.getElementById('edit_p1').value) || 0,
-                    2: parseInt(document.getElementById('edit_p2').value) || 0,
-                    3: parseInt(document.getElementById('edit_p3').value) || 0,
-                    4: parseInt(document.getElementById('edit_p4').value) || 0,
-                    5: parseInt(document.getElementById('edit_p5').value) || 0,
-                };
-            }
-
-            closeModal();
-            showLoading();
-            await window.inventory.updateShipmentInDB(id, data);
-            hideLoading();
-            showToast('Zmiany zostały zapisane.', 'success');
-        }
+        CloudInventoryManager.prototype.addIncomingShipment = addIncomingShipment;
 
         document.getElementById('shipmentForm').addEventListener('submit', async function(e) {
             e.preventDefault();
