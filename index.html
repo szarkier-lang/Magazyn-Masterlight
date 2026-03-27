@@ -10,32 +10,84 @@
     
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-    <script>window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';</script>
+    <script>
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+    </script>
     
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        :root { --primary-terracotta: #C4704B; --primary-dark: #A85A3A; --primary-light: #FDF2EE; --accent-red: #D84C4C; --accent-red-dark: #C23E3E; --warm-beige: #F5E6D3; --beige-light: #E8D7C3; --text-dark: #1F2937; --text-light: #6B7280; --border-color: #E5E7EB; --success-status: #10B981; --warning-status: #F59E0B; --error-status: #EF4444; --info-status: #3B82F6; --background: #F3F4F6; --sidebar-bg: #8B6F47; --shadow-sm: 0 1px 2px 0 rgba(0,0,0,0.05); --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06); --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05); }
+
+        :root {
+            --primary-terracotta: #C4704B;
+            --primary-dark: #A85A3A;
+            --primary-light: #FDF2EE;
+            --accent-red: #D84C4C;
+            --accent-red-dark: #C23E3E;
+            --warm-beige: #F5E6D3;
+            --beige-light: #E8D7C3;
+            --text-dark: #1F2937;
+            --text-light: #6B7280;
+            --border-color: #E5E7EB;
+            --success-status: #10B981;
+            --warning-status: #F59E0B;
+            --error-status: #EF4444;
+            --info-status: #3B82F6;
+            --background: #F3F4F6;
+            --sidebar-bg: #8B6F47;
+            
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
         * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
-        body { font-family: 'Inter', sans-serif; background-color: var(--background); color: var(--text-dark); line-height: 1.6; overflow-x: hidden; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--background);
+            color: var(--text-dark);
+            line-height: 1.6;
+            margin: 0; padding: 0;
+            overflow-x: hidden;
+        }
+
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #9CA3AF; }
+
         .material-symbols-outlined { vertical-align: middle; font-size: 1.25em; }
         button .material-symbols-outlined { font-size: 1.15em; margin-right: 6px; vertical-align: -0.15em; }
         .status-badge .material-symbols-outlined { font-size: 1.1em; margin-right: 4px; vertical-align: -0.15em; }
         .sidebar-nav a .material-symbols-outlined { font-size: 1.4em; margin-right: 12px; opacity: 0.9; }
 
-        #loading-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(243, 244, 246, 0.95); z-index: 99999; display: flex; flex-direction: column; justify-content: center; align-items: center; transition: opacity 0.4s ease; backdrop-filter: blur(4px); }
-        .spinner { width: 50px; height: 50px; border: 4px solid #E5E7EB; border-top: 4px solid var(--primary-terracotta); border-radius: 50%; animation: spin 1s cubic-bezier(0.55, 0.15, 0.45, 0.85) infinite; margin-bottom: 1.5rem; }
+        #loading-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(243, 244, 246, 0.95); z-index: 99999;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            transition: opacity 0.4s ease; backdrop-filter: blur(4px);
+        }
+        .spinner {
+            width: 50px; height: 50px; border: 4px solid #E5E7EB;
+            border-top: 4px solid var(--primary-terracotta); border-radius: 50%;
+            animation: spin 1s cubic-bezier(0.55, 0.15, 0.45, 0.85) infinite; margin-bottom: 1.5rem;
+        }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
         #toast-container { position: fixed; top: 20px; right: 20px; z-index: 100000; display: flex; flex-direction: column; gap: 10px; pointer-events: none;}
-        .toast { background: white; padding: 1rem 1.5rem; border-radius: 12px; box-shadow: var(--shadow-lg); display: flex; align-items: center; gap: 12px; animation: slideInRight 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; max-width: 400px; font-weight: 500; border-left: 6px solid #ccc; }
+        .toast {
+            background: white; padding: 1rem 1.5rem; border-radius: 12px;
+            box-shadow: var(--shadow-lg); display: flex; align-items: center; gap: 12px;
+            animation: slideInRight 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; max-width: 400px; font-weight: 500; border-left: 6px solid #ccc;
+        }
         .toast.success { border-left-color: var(--success-status); color: var(--text-dark); }
         .toast.success .material-symbols-outlined { color: var(--success-status); }
         .toast.error { border-left-color: var(--accent-red); color: var(--text-dark); }
@@ -45,24 +97,43 @@
         @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         @keyframes fadeOutRight { from { transform: translateX(0); opacity: 1; } to { transform: translateX(120%); opacity: 0; } }
 
-        .alert-banner { background: #FEF3C7; border: 1px solid #FDE68A; border-left: 6px solid var(--warning-status); padding: 1rem 1.5rem; border-radius: 12px; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 15px; color: #B45309; font-weight: 500; box-shadow: var(--shadow-sm); }
+        .alert-banner {
+            background: #FEF3C7; border: 1px solid #FDE68A; border-left: 6px solid var(--warning-status); padding: 1rem 1.5rem; border-radius: 12px;
+            margin-bottom: 1.5rem; display: flex; align-items: center; gap: 15px; color: #B45309; font-weight: 500; box-shadow: var(--shadow-sm);
+        }
         .alert-banner.critical { background: #FEE2E2; border-color: #FECACA; border-left-color: var(--accent-red); color: #B91C1C; }
         .alert-banner .material-symbols-outlined { font-size: 1.8rem; }
 
-        #auth-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-terracotta) 100%); display: flex; justify-content: center; align-items: center; z-index: 9999; }
-        .auth-box { background: white; padding: 3rem; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); width: 100%; max-width: 400px; text-align: center; }
+        #auth-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-terracotta) 100%);
+            display: flex; justify-content: center; align-items: center; z-index: 9999;
+        }
+        .auth-box {
+            background: white; padding: 3rem; border-radius: 16px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); width: 100%; max-width: 400px; text-align: center;
+        }
         .auth-box h2 { color: var(--primary-dark); margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 700; }
         .hidden { display: none !important; }
 
         .mobile-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9998; backdrop-filter: blur(2px); }
         .mobile-overlay.active { display: block; }
 
-        .sidebar { width: 260px; background: linear-gradient(180deg, var(--sidebar-bg) 0%, #6F5A3A 100%); color: #fff; padding: 2rem 0; position: fixed; left: 0; top: 0; height: 100vh; overflow-y: auto; box-shadow: 4px 0 24px rgba(0,0,0,0.1); z-index: 9999; transition: transform 0.3s ease; }
+        .sidebar {
+            width: 260px; background: linear-gradient(180deg, var(--sidebar-bg) 0%, #6F5A3A 100%);
+            color: #fff; padding: 2rem 0; position: fixed; left: 0; top: 0; height: 100vh;
+            overflow-y: auto; box-shadow: 4px 0 24px rgba(0,0,0,0.1); z-index: 9999;
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
         .sidebar-logo { padding: 0 1.5rem; margin-bottom: 2rem; border-bottom: 1px solid rgba(255,255,255,0.15); padding-bottom: 1.5rem; }
         .sidebar-logo h2 { font-size: 1.2rem; letter-spacing: 1px; color: #fff; display: flex; align-items: center; gap: 10px; font-weight: 700; text-shadow: 1px 1px 2px rgba(0,0,0,0.2); }
+        .sidebar-logo h2 .material-symbols-outlined { color: #fff; opacity: 0.9; }
         .sidebar-nav { list-style: none; padding: 0 1rem; }
         .sidebar-nav li { margin: 0.3rem 0; }
-        .sidebar-nav a { display: flex; align-items: center; padding: 0.9rem 1.2rem; border-radius: 8px; color: rgba(255,255,255,0.8); text-decoration: none; transition: all 0.2s ease; font-weight: 500; font-size: 0.95rem; }
+        .sidebar-nav a {
+            display: flex; align-items: center; padding: 0.9rem 1.2rem; border-radius: 8px;
+            color: rgba(255,255,255,0.8); text-decoration: none; transition: all 0.2s ease; font-weight: 500; font-size: 0.95rem;
+        }
         .sidebar-nav a:hover { background-color: rgba(255,255,255,0.1); color: #fff; }
         .sidebar-nav a.active { background-color: rgba(255,255,255,0.2); color: #fff; box-shadow: var(--shadow-sm); font-weight: 600; border: 1px solid rgba(255,255,255,0.1); }
         .sidebar-nav a.active .material-symbols-outlined { opacity: 1; color: var(--warm-beige); }
@@ -72,7 +143,11 @@
 
         .main-content { margin-left: 260px; flex: 1; overflow-y: auto; display: flex; flex-direction: column; width: calc(100% - 260px); transition: margin 0.3s ease; }
         
-        .header { background: #fff; color: var(--text-dark); padding: 1.2rem 2.5rem; box-shadow: var(--shadow-sm); border-bottom: 3px solid var(--primary-terracotta); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 50; }
+        .header {
+            background: #fff; color: var(--text-dark); padding: 1.2rem 2.5rem; 
+            box-shadow: var(--shadow-sm); border-bottom: 3px solid var(--primary-terracotta);
+            display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 50;
+        }
         .header-left { display: flex; align-items: center; }
         .header-title h1 { font-size: 1.5rem; margin-bottom: 0; font-weight: 700; display: flex; align-items: center; gap: 10px; color: var(--primary-terracotta);}
         .user-badge { background: var(--background); padding: 0.6rem 1rem; border-radius: 12px; font-size: 0.85rem; border: 1px solid var(--border-color); text-align: left; display: flex; align-items: center; gap: 15px; }
@@ -80,12 +155,16 @@
 
         .content { flex: 1; padding: 2rem 2.5rem; max-width: 1600px; margin: 0 auto; width: 100%; }
 
-        .tab-content { display: none; animation: slideUp 0.4s ease forwards; opacity: 0; }
+        .tab-content { display: none; animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; }
         .tab-content.active { display: block; }
         @keyframes slideUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
 
         .stats-bar { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem; margin-bottom: 2.5rem; }
-        .stat-card { background: #fff; padding: 1.5rem; border-radius: 16px; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm); transition: transform 0.3s ease, box-shadow 0.3s ease; position: relative; overflow: hidden; }
+        .stat-card {
+            background: #fff; padding: 1.5rem; border-radius: 16px; border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-sm); transition: transform 0.3s ease, box-shadow 0.3s ease;
+            position: relative; overflow: hidden;
+        }
         .stat-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: var(--primary-terracotta); border-radius: 5px 0 0 5px; }
         .stat-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); border-color: var(--beige-light); }
         .stat-card h3 { color: var(--text-light); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem; font-weight: 600; }
@@ -100,11 +179,21 @@
 
         .table-responsive { width: 100%; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm); overflow: hidden; }
         table { width: 100%; border-collapse: separate; border-spacing: 0; margin: 0; font-size: 0.9rem; table-layout: auto; }
-        th { background-color: var(--primary-terracotta); color: #fff; padding: 1rem 0.75rem; text-align: left; font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--primary-dark); position: sticky; top: 0; z-index: 10; }
-        td { padding: 0.8rem 0.75rem; border-bottom: 1px solid var(--border-color); color: var(--text-dark); vertical-align: middle; word-break: break-word; }
+        th { 
+            background-color: var(--primary-terracotta); color: #fff; padding: 1rem 0.75rem; text-align: left; 
+            font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px;
+            border-bottom: 1px solid var(--primary-dark);
+            position: sticky; top: 0; z-index: 10;
+        }
+        td { 
+            padding: 0.8rem 0.75rem; border-bottom: 1px solid var(--border-color); 
+            color: var(--text-dark); vertical-align: middle; 
+            word-break: break-word; 
+        }
         tbody tr { transition: background-color 0.2s, opacity 0.2s; }
         tbody tr:last-child td { border-bottom: none; }
         tbody tr:hover { background-color: #FEF6F3; }
+        
         .row-completed { opacity: 0.6; background-color: #F9FAFB; }
         .row-completed:hover { opacity: 1; background-color: #F3F4F6 !important; }
 
@@ -131,19 +220,32 @@
 
         .form-group { margin-bottom: 1.25rem; display: flex; flex-direction: column; gap: 0.5rem; }
         .form-group label { font-weight: 600; color: var(--text-dark); font-size: 0.85rem; letter-spacing: 0.3px; }
-        input[type="text"], input[type="number"], input[type="date"], input[type="email"], input[type="password"] { padding: 0.75rem 1.1rem; background: #fff; border: 1px solid #D1D5DB; border-radius: 10px; font-size: 0.95rem; color: var(--text-dark); width: 100%; font-family: 'Inter', sans-serif; transition: all 0.2s ease; outline: none; box-shadow: inset 0 1px 2px rgba(0,0,0,0.03); }
+        input[type="text"], input[type="number"], input[type="date"], input[type="email"], input[type="password"] { 
+            padding: 0.75rem 1.1rem; background: #fff; border: 1px solid #D1D5DB; border-radius: 10px; 
+            font-size: 0.95rem; color: var(--text-dark); width: 100%; font-family: 'Inter', sans-serif;
+            transition: all 0.2s ease; outline: none; box-shadow: inset 0 1px 2px rgba(0,0,0,0.03);
+        }
         input:focus { border-color: var(--primary-terracotta); box-shadow: 0 0 0 3px rgba(196, 112, 75, 0.15), inset 0 1px 2px rgba(0,0,0,0.03); }
 
         .editable { cursor: pointer; background-color: #F9FAFB; border-radius: 8px; transition: background 0.2s; border: 1px solid transparent; text-align: center;}
         .editable:hover { background-color: #FEF6F3; border-color: var(--beige-light); }
         .editable input { max-width: 90px; text-align: center; padding: 0.4rem; margin: 0 auto; display: block; }
         
-        /* MAPA I KALENDARZ */
-        .map-container { height: 450px; width: 100%; border-bottom-left-radius: 16px; border-bottom-right-radius: 16px; z-index: 1; background-color: #f3f4f6; }
+        /* STYLE MAPY I KALENDARZA */
+        .map-container {
+            height: 450px; width: 100%; 
+            border-bottom-left-radius: 16px; border-bottom-right-radius: 16px; 
+            z-index: 1; background-color: #f3f4f6;
+        }
         .leaflet-popup-content-wrapper { border-radius: 12px !important; box-shadow: var(--shadow-lg) !important; padding: 5px !important;}
         .leaflet-popup-content { margin: 12px 16px !important; font-family: 'Inter', sans-serif !important; color: var(--text-dark) !important; font-size: 0.9rem !important; line-height: 1.5 !important;}
         .leaflet-container { font-family: 'Inter', sans-serif !important; }
-        .custom-map-marker { display: flex; align-items: center; justify-content: center; border-radius: 50%; color: #fff; font-weight: 700; box-shadow: 0 3px 8px rgba(0,0,0,0.4); border: 2px solid #fff; }
+
+        .custom-map-marker {
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 50%; color: #fff; font-weight: 700;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.4); border: 2px solid #fff;
+        }
         .marker-home { background-color: #1F2937; }
         .marker-confirmed { background-color: #10B981; } 
         .marker-planned { background-color: #C4704B; }   
@@ -164,6 +266,7 @@
 
         .footer { text-align: center; padding: 3rem 2rem; color: var(--text-light); font-size: 0.85rem; margin-top: 2rem; border-top: 1px solid var(--border-color); background: #fff; }
 
+        /* --- MOBILE OPTYMALIZACJA --- */
         @media (max-width: 768px) {
             .mobile-menu-btn { display: block; }
             .sidebar { transform: translateX(-100%); } 
@@ -177,8 +280,10 @@
             .section-content { padding: 1rem 1.2rem; }
             .user-badge { display: none; }
             #toast-container { right: 10px; top: 10px; left: 10px; align-items: stretch; }
+            .toast { max-width: none; }
+
             .mobile-only-logout { display: block !important; }
-            
+
             .calendar-grid, .calendar-header { grid-template-columns: 1fr; }
             .calendar-header { display: none; }
             .calendar-cell.empty { display: none; }
@@ -189,12 +294,24 @@
             thead tr { position: absolute; top: -9999px; left: -9999px; }
             tr { border: 1px solid var(--border-color); margin-bottom: 1rem; border-radius: 12px; overflow: hidden; box-shadow: var(--shadow-sm); background: #fff; padding: 0.5rem 0; }
             tr:hover { background-color: #fff !important; }
-            td { border: none; border-bottom: 1px solid #F3F4F6; position: relative; padding: 0.7rem 1rem 0.7rem 45% !important; text-align: right; min-height: 40px; display: flex; align-items: center; justify-content: flex-end; font-size: 0.85rem; white-space: normal; }
+            td { 
+                border: none; border-bottom: 1px solid #F3F4F6; position: relative;
+                padding: 0.7rem 1rem 0.7rem 45% !important; text-align: right; min-height: 40px;
+                display: flex; align-items: center; justify-content: flex-end; font-size: 0.85rem;
+                white-space: normal; 
+            }
             td:last-child { border-bottom: none; }
-            td::before { content: attr(data-label); position: absolute; left: 1rem; width: 40%; text-align: left; font-weight: 600; color: var(--text-light); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; }
+            td::before { 
+                content: attr(data-label); position: absolute; left: 1rem; width: 40%; 
+                text-align: left; font-weight: 600; color: var(--text-light);
+                font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px;
+            }
             .editable input { max-width: 140px; text-align: right; padding: 0.5rem; border-radius: 6px; }
             td[data-label="Akcja"] { justify-content: flex-end; flex-wrap: wrap; gap: 5px; padding-top: 1rem !important; }
+            .btn-small { margin-bottom: 0; margin-right: 0; }
+            
             .map-container { height: 400px !important; border-radius: 0 0 12px 12px !important; } 
+            .leaflet-popup-content { font-size: 0.8rem !important; }
         }
 
         @media print {
@@ -209,12 +326,16 @@
             .section-header { background: #f5f5f5 !important; border-bottom: 2px solid #333 !important; padding: 10px 15px !important; }
             .section-header h2 { color: #000 !important; font-size: 14pt !important; margin: 0 !important; }
             .section-header .material-symbols-outlined { display: none !important; } 
-            .table-responsive { border: none !important; box-shadow: none !important; }
-            table { display: table !important; width: 100% !important; border-collapse: collapse !important; }
-            tr { display: table-row !important; border-bottom: 1px solid #ddd !important; }
-            th { display: table-cell !important; background-color: #eee !important; color: #000 !important; border-bottom: 2px solid #333 !important; padding: 8px !important; font-size: 10pt !important; position: static !important;}
+            .section-content { padding: 10px !important; }
+            .table-responsive { max-height: none !important; overflow: visible !important; border: none !important; box-shadow: none !important; }
+            table { display: table !important; width: 100% !important; border-collapse: collapse !important; table-layout: auto !important; }
+            thead { display: table-header-group !important; }
+            tbody { display: table-row-group !important; }
+            tr { display: table-row !important; page-break-inside: avoid !important; border-bottom: 1px solid #ddd !important; }
+            th { display: table-cell !important; background-color: #eee !important; color: #000 !important; font-weight: bold !important; border-bottom: 2px solid #333 !important; padding: 8px !important; font-size: 10pt !important; position: static !important; text-transform: uppercase; }
             td { display: table-cell !important; padding: 8px !important; font-size: 10pt !important; border: none !important; text-align: left !important; color: #000 !important; }
             td::before { display: none !important; }
+            .status-badge { border: 1px solid #666 !important; background: transparent !important; color: #000 !important; padding: 2px 6px !important; font-weight: normal !important; }
             td[data-label="Akcja"], th.admin-only-col { display: none !important; }
             .map-container, #map-section-container, #adj-map-section-container, #logistics-section { display: none !important; }
         }
@@ -223,8 +344,10 @@
 <body>
 
     <div id="toast-container"></div>
+
     <div id="loading-screen" class="hidden">
-        <div class="spinner"></div><h2 style="color: var(--primary-dark); font-weight: 600; font-size: 1.2rem;">Synchronizacja z chmurą...</h2>
+        <div class="spinner"></div>
+        <h2 style="color: var(--primary-dark); font-weight: 600; font-size: 1.2rem;">Synchronizacja z chmurą...</h2>
     </div>
 
     <div id="auth-screen">
@@ -232,19 +355,42 @@
             <h2><span class="material-symbols-outlined" style="font-size: 2.8rem; color: var(--primary-terracotta);">highlight</span> MASTERLIGHT</h2>
             <p style="margin-bottom: 2.5rem; color: var(--text-light); font-size: 0.95rem;">Zaloguj się do chmury magazynowej WMS</p>
             <form id="login-form">
-                <div class="form-group"><label>Adres E-mail</label><input type="email" id="login-email" required placeholder="np. jan.kowalski@masterlight.pl"></div>
-                <div class="form-group"><label>Hasło dostępu</label><input type="password" id="login-password" required placeholder="••••••••"></div>
-                <button type="submit" id="login-submit-btn" class="btn-primary" style="width: 100%; margin-top: 1.5rem; padding: 1rem; font-size: 1rem;"><span class="material-symbols-outlined">login</span> Zaloguj bezpiecznie</button>
+                <div class="form-group">
+                    <label>Adres E-mail</label>
+                    <input type="email" id="login-email" required placeholder="np. jan.kowalski@masterlight.pl">
+                </div>
+                <div class="form-group">
+                    <label>Hasło dostępu</label>
+                    <input type="password" id="login-password" required placeholder="••••••••">
+                </div>
+                <button type="submit" id="login-submit-btn" class="btn-primary" style="width: 100%; margin-top: 1.5rem; padding: 1rem; font-size: 1rem;">
+                    <span class="material-symbols-outlined">login</span> Zaloguj bezpiecznie
+                </button>
             </form>
             <p id="login-error" style="color: var(--accent-red); margin-top: 1.5rem; display: none; font-weight: 600; background-color: #FEF2F2; padding: 0.8rem; border-radius: 8px; border: 1px solid #FECACA;"></p>
+        </div>
+    </div>
+
+    <div id="api-key-modal" class="modal">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h2 style="color: var(--primary-dark); font-size: 1.3rem;"><span class="material-symbols-outlined">smart_toy</span> Aktywacja Skanera AI</h2>
+                <span class="close" onclick="document.getElementById('api-key-modal').style.display='none'"><span class="material-symbols-outlined">close</span></span>
+            </div>
+            <p style="margin-bottom: 1.5rem; color: var(--text-light); font-size: 0.95rem; line-height: 1.6;">Wprowadź swój darmowy klucz API OpenAI (ChatGPT). Zostanie on bezpiecznie zaszyfrowany i zapisany <strong>tylko w pamięci tej przeglądarki</strong>.</p>
+            <input type="text" id="api-key-input" placeholder="Wklej klucz (np. sk-proj-...)" style="margin-bottom: 1.5rem;">
+            <button onclick="saveApiKey()" class="btn-primary" style="width: 100%; padding: 1rem;"><span class="material-symbols-outlined">save</span> Zapisz i Wybierz Plik</button>
         </div>
     </div>
 
     <div id="mobile-overlay" class="mobile-overlay" onclick="toggleSidebar()"></div>
 
     <div id="app-container" class="hidden" style="display: flex; width: 100%; height: 100vh;">
+        
         <aside class="sidebar">
-            <div class="sidebar-logo"><h2><span class="material-symbols-outlined" style="font-size: 1.8rem;">highlight</span> MASTERLIGHT</h2></div>
+            <div class="sidebar-logo">
+                <h2><span class="material-symbols-outlined" style="font-size: 1.8rem;">highlight</span> MASTERLIGHT</h2>
+            </div>
             <nav class="sidebar-nav">
                 <ul id="nav-list">
                     <li><a href="#" onclick="switchTab('tab-dashboard')" class="nav-item active"><span class="material-symbols-outlined">space_dashboard</span> Dashboard</a></li>
@@ -255,7 +401,9 @@
                     <li><a href="#" onclick="switchTab('tab-components')" class="nav-item"><span class="material-symbols-outlined">electrical_services</span> Komponenty</a></li>
                     <li id="nav-reports"><a href="#" onclick="switchTab('tab-reports')" class="nav-item"><span class="material-symbols-outlined">precision_manufacturing</span> Panel Produkcji</a></li>
                     <li id="nav-settings"><a href="#" onclick="switchTab('tab-settings')" class="nav-item"><span class="material-symbols-outlined">settings_suggest</span> Ustawienia Systemu (AI)</a></li>
-                    <li class="mobile-only-logout" style="margin-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1rem;"><a href="#" onclick="logoutUser()" class="nav-item" style="color: #FECACA;"><span class="material-symbols-outlined">logout</span> Wyloguj się</a></li>
+                    <li class="mobile-only-logout" style="margin-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1rem;">
+                        <a href="#" onclick="logoutUser()" class="nav-item" style="color: #FECACA;"><span class="material-symbols-outlined">logout</span> Wyloguj się</a>
+                    </li>
                 </ul>
             </nav>
         </aside>
@@ -263,15 +411,22 @@
         <div class="main-content">
             <header class="header">
                 <div class="header-left">
-                    <button class="mobile-menu-btn" onclick="toggleSidebar()"><span class="material-symbols-outlined" style="font-size: 2rem;">menu</span></button>
-                    <div class="header-title"><h1>Magazyn Masterlight</h1></div>
+                    <button class="mobile-menu-btn" onclick="toggleSidebar()">
+                        <span class="material-symbols-outlined" style="font-size: 2rem;">menu</span>
+                    </button>
+                    <div class="header-title">
+                        <h1>Magazyn Masterlight</h1>
+                    </div>
                 </div>
+                
                 <div class="user-badge" id="user-info">
                     <div class="user-badge-info">
                         <p><span class="material-symbols-outlined" style="font-size: 1.2rem; color: var(--primary-terracotta);">account_circle</span> <strong id="logged-email">...</strong></p>
                         <p style="font-size: 0.75rem; color: var(--text-light); padding-left: 24px;"><span id="logged-role">...</span></p>
                     </div>
-                    <button onclick="logoutUser()" class="btn-secondary btn-small" style="margin: 0; padding: 0.6rem; border-radius: 8px;" title="Wyloguj się"><span class="material-symbols-outlined" style="margin:0; color: var(--accent-red);">logout</span></button>
+                    <button onclick="logoutUser()" class="btn-secondary btn-small" style="margin: 0; padding: 0.6rem; border-radius: 8px;" title="Wyloguj się">
+                        <span class="material-symbols-outlined" style="margin:0; color: var(--accent-red);">logout</span>
+                    </button>
                 </div>
             </header>
 
@@ -582,6 +737,9 @@
                                 <span class="material-symbols-outlined" style="font-size:2rem;">info</span>
                                 <div>System używa architektury <strong>Multi-Agent Workflow</strong> z GPT-4o. Wysyła 2 niezależne zapytania i sam łączy ich wyniki.</div>
                             </div>
+                            <p style="color: var(--text-dark); font-size: 0.95rem; margin-bottom: 1.5rem; line-height: 1.6;">
+                                Wprowadź poniżej klucz API z platformy OpenAI.
+                            </p>
                             <div class="form-group">
                                 <label>Twój Klucz API OpenAI</label>
                                 <input type="password" id="settings-api-key" placeholder="Wklej klucz (np. sk-proj-...)">
@@ -596,7 +754,7 @@
 
                 <footer class="footer">
                     <p>© 2026 Masterlight Sp. z o.o. - Wszelkie prawa zastrzeżone</p>
-                    <p style="font-size: 0.75rem; color: var(--text-light); margin-top: 5px;">Cloud WMS Engine v2.2 | Zalogowano jako: <span id="footer-user">...</span></p>
+                    <p style="font-size: 0.75rem; color: var(--text-light); margin-top: 5px;">Cloud WMS Engine v2.3 | Zalogowano jako: <span id="footer-user">...</span></p>
                 </footer>
             </div>
         </div>
@@ -700,45 +858,88 @@
 
                 btn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">autorenew</span> Agenci analizują obraz...';
 
-                const headerPrompt = `Jesteś detektywem analizującym TYLKO i wyłącznie górną część oferty. IGNORUJ całkowicie tabele i ceny. 
+                const headerPrompt = `Jesteś detektywem analizującym TYLKO i wyłącznie górną część oferty. IGNORUJ całkowicie tabele i ceny. Szukaj długopisu.
+                
                 Wypełnij 4 zmienne (Zwróć TYLKO JSON):
-                1. 'ship_city': Miejscowość (np. Kalisz) nad tekstem 'Sklep nr:'.
-                2. 'ship_target': Numer sklepu w formacie 'ROSSMANN Sklep nr X'.
-                3. 'date': Odręczna data z góry. Format YYYY-MM-DD z rokiem ${new Date().getFullYear()}. Jeśli brak odręcznej, wpisz: ${today}
-                4. 'company': Odręcznie dopisany spedytor (AMUNET, BUDPOL, ASTORGA, IPP, LAWBUD). Jeśli brak, wpisz: Do ustalenia.
+                1. 'ship_city': Miejscowość (np. Kalisz) znajdująca się dokładnie nad tekstem 'Sklep nr:'.
+                2. 'ship_target': Numer sklepu. Wpisz go w formacie 'ROSSMANN Sklep nr X'.
+                3. 'date': Data dopisana ODRĘCZNIE na górze dokumentu. Sformatuj ją jako YYYY-MM-DD z rokiem ${new Date().getFullYear()}. Zignoruj datę wydruku z komputera. Jeżeli nie ma na zdjęciu odręcznej daty z długopisu, wpisz: ${today}
+                4. 'company': Odręcznie dopisany długopisem spedytor (szukaj słów: AMUNET, BUDPOL, ASTORGA, IPP, LAWBUD). Jeśli brak długopisu, wpisz: Do ustalenia.
+
+                Zwróć dokładnie taki JSON:
                 {"ship_city":"","ship_target":"","date":"","company":""}`;
 
-                const tablePrompt = `Jesteś księgowym analizującym WYŁĄCZNIE tabelę 'Sala sprzedaży'. Ignoruj nagłówki. Zignoruj OLITE, ONTEC, CZUJNIKI.
-                Instrukcja: 1. Znajdź wiersze od 4 do 8 tabeli. 2. Z pierwszej kolumny odczytaj tekst (np. G1 58 15W). 3. Z kolumny 'Ilość towaru' (5. kolumna) odczytaj wartość liczbową. Zwróć TYLKO JSON.
-                { "oprawy": [ { "oznaczenie": "G3 22 15W", "ilosc": 13 } ] }`;
+                const tablePrompt = `Jesteś księgowym analizującym WYŁĄCZNIE i tylko tabelę pod hasłem 'Sala sprzedaży'. Ignorujesz nagłówki i daty.
+                Twoim zadaniem jest wyciągnięcie z tabeli ilości dla opraw z rodziny VIGO. Zignoruj panele ML OLITE, ONTEC, CZUJNIKI.
+                
+                Instrukcja:
+                1. Znajdź wiersze od 4 do 8 tabeli.
+                2. Spójrz w pierwszą kolumnę tego wiersza ('L.p. / ozn. proj.') i odczytaj tekst (np. G1 58 15W, G3 22, itp.).
+                3. Przesuń wzrok do prawej strony tabeli, do kolumny nazwanej 'Ilość towaru' lub 'Ilość' (to zazwyczaj 5. kolumna) i odczytaj wartość liczbową.
+
+                Zwróć wynik jako obiekt JSON zawierający tablicę 'oprawy':
+                {
+                  "oprawy": [
+                    { "oznaczenie": "G3 22 15W", "ilosc": 13 },
+                    { "oznaczenie": "G2 37 15W", "ilosc": 150 }
+                  ]
+                }`;
 
                 const hMsgs = [{ type: "text", text: headerPrompt }];
-                const tMsgs = [{ type: "text", text: tablePrompt + (pdfText ? `\nTekst z PDF:\n${pdfText}` : "") }];
+                const tMsgs = [{ type: "text", text: tablePrompt + (pdfText ? `\n\nOto suchy tekst z PDFa, użyj go jako gwarancji przy łączeniu oprawy z ilością:\n${pdfText}` : "") }];
                 
                 base64Images.forEach(img => {
                     hMsgs.push({ type: "image_url", image_url: { url: `data:image/jpeg;base64,${img}`, detail: "high" } });
                     tMsgs.push({ type: "image_url", image_url: { url: `data:image/jpeg;base64,${img}`, detail: "high" } });
                 });
 
-                const reqOpts = (msgs) => ({ method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` }, body: JSON.stringify({ model: "gpt-4o", messages: [{ role: "user", content: msgs }], response_format: { type: "json_object" }, temperature: 0.1 }) });
+                const reqOpts = (msgs) => ({ 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` }, 
+                    body: JSON.stringify({ 
+                        model: "gpt-4o", 
+                        messages: [{ role: "user", content: msgs }], 
+                        response_format: { type: "json_object" }, 
+                        temperature: 0.1 
+                    }) 
+                });
 
-                const [headerRes, tableRes] = await Promise.all([fetch('https://api.openai.com/v1/chat/completions', reqOpts(hMsgs)), fetch('https://api.openai.com/v1/chat/completions', reqOpts(tMsgs))]);
-                const headerData = await headerRes.json(); const tableData = await tableRes.json();
+                const [headerRes, tableRes] = await Promise.all([
+                    fetch('https://api.openai.com/v1/chat/completions', reqOpts(hMsgs)), 
+                    fetch('https://api.openai.com/v1/chat/completions', reqOpts(tMsgs))
+                ]);
                 
-                if (headerData.error) throw new Error(headerData.error.message);
+                const headerData = await headerRes.json(); 
+                const tableData = await tableRes.json();
+
+                if (headerData.error) throw new Error("Błąd OpenAI (Nagłówek): " + headerData.error.message);
+                if (tableData.error) throw new Error("Błąd OpenAI (Tabela): " + tableData.error.message);
 
                 const headerJson = JSON.parse(headerData.choices[0].message.content);
                 const tableJson = JSON.parse(tableData.choices[0].message.content);
 
-                let p1=0, p2=0, p3=0, p4=0, p5=0;
+                let p1 = 0, p2 = 0, p3 = 0, p4 = 0, p5 = 0;
+                
                 if (tableJson.oprawy && Array.isArray(tableJson.oprawy)) {
                     tableJson.oprawy.forEach(op => {
-                        let text = (op.oznaczenie || "").toUpperCase(), qty = parseInt(op.ilosc) || 0;
+                        let text = (op.oznaczenie || "").toUpperCase();
+                        let qty = parseInt(op.ilosc) || 0;
+                        
                         let is15W = text.includes("15W") || text.includes("15 W");
                         let is20WPlus = text.includes("20W") || text.includes("26W") || text.includes("33W");
-                        let is22 = text.includes("22") || text.includes("G3"), is58 = text.includes("58") || text.includes("235") || text.includes("G1") || text.includes("G5");
-                        if (is15W) { if(is22) p1+=qty; else if(is58) p3+=qty; else p2+=qty; } 
-                        else if (is20WPlus) { if(is58) p5+=qty; else p4+=qty; }
+
+                        let is22 = text.includes("22") || text.includes("G3");
+                        let is58 = text.includes("58") || text.includes("235") || text.includes("G1") || text.includes("G5");
+                        let is37 = text.includes("37") || text.includes("140") || text.includes("185") || text.includes("G2") || text.includes("G4") || (!is22 && !is58);
+
+                        if (is15W) {
+                            if (is22) p1 += qty;
+                            else if (is58) p3 += qty;
+                            else p2 += qty; 
+                        } else if (is20WPlus) {
+                            if (is58) p5 += qty;
+                            else p4 += qty; 
+                        }
                     });
                 }
 
@@ -747,14 +948,22 @@
                 document.getElementById('form-target').value = headerJson.ship_target || '';
                 document.getElementById('form-date').value = headerJson.date || today;
                 document.getElementById('form-company').value = headerJson.company || 'Do ustalenia';
-                document.getElementById('form-p1').value = p1; document.getElementById('form-p2').value = p2; document.getElementById('form-p3').value = p3; document.getElementById('form-p4').value = p4; document.getElementById('form-p5').value = p5;
-                showToast('Zeskanowano pomyślnie!', 'success');
+                
+                document.getElementById('form-p1').value = p1;
+                document.getElementById('form-p2').value = p2;
+                document.getElementById('form-p3').value = p3;
+                document.getElementById('form-p4').value = p4;
+                document.getElementById('form-p5').value = p5;
 
-            } catch (error) { 
-                showModal('Błąd analizy AI', `<p style="color:var(--accent-red);">${error.message}</p>`); 
-            } 
-            finally { 
-                btn.innerHTML = originalText; btn.disabled = false; document.getElementById('ai-image-input').value = ''; 
+                showToast('Sukces! Agenci AI przeanalizowali dokument.', 'success');
+
+            } catch (error) {
+                console.error("Szczegóły błędu AI:", error);
+                showModal('Błąd analizy AI', `<p style="color:var(--accent-red); font-weight:500;">${error.message}</p><p style="margin-top:1rem; font-size:0.85rem;">Spróbuj wykonać zdjęcie jeszcze raz.</p>`);
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                document.getElementById('ai-image-input').value = ''; 
             }
         }
 
@@ -905,7 +1114,7 @@
         function showModal(title, content) { document.getElementById('modal-title').textContent = title; document.getElementById('modal-content').innerHTML = content; document.getElementById('modal').style.display = 'block'; }
         function closeModal() { document.getElementById('modal').style.display = 'none'; }
 
-        // --- KALENDARZ I LOGISTYKA ---
+        // KALENDARZ I LOGISTYKA
         function changeMonth(dir) { currentCalendarDate.setMonth(currentCalendarDate.getMonth() + dir); if(window.inventory) renderCalendar(getShipmentsReadinessMap()); }
         
         function renderCalendar(readinessMap) {
@@ -982,7 +1191,7 @@
                 }
                 if(route.length > 1) { totalDist += getDistance(currentLat, currentLon, 51.7592, 19.4560); route.push('Baza'); }
                 
-                html += `<li style="background:var(--primary-light); padding:1rem; border-radius:8px; border:1px solid var(--beige-light);"><strong style="display:block; margin-bottom:5px; color:var(--primary-dark);">${date}</strong><div style="font-size:0.9rem;">Trasa: <strong>${route.join(' ➔ ')}</strong></div><div style="font-size:0.8rem; color:var(--text-light); margin-top:5px;">Dystans: ~${Math.round(totalDist)} km</div></li>`;
+                html += `<li style="background:var(--primary-light); padding:1rem; border-radius:8px; border:1px solid var(--beige-light);"><strong style="display:block; margin-bottom:5px; color:var(--primary-dark);"><span class="material-symbols-outlined" style="font-size:1.2em; vertical-align:middle;">calendar_today</span> ${date}</strong><div style="font-size:0.9rem;">Trasa: <strong>${route.join(' ➔ ')}</strong></div><div style="font-size:0.8rem; color:var(--text-light); margin-top:5px;">Dystans całkowity: ~${Math.round(totalDist)} km</div></li>`;
             }
             container.innerHTML = html + '</ul>';
         }
@@ -1021,38 +1230,61 @@
             const w = window.open('', '', 'width=800,height=600'); w.document.write(h); w.document.close(); setTimeout(() => { w.print(); w.close(); }, 300);
         }
 
-        // --- GŁÓWNY MENEDŻER DANYCH Z CHMURY (Z BEZPIECZEŃSTWEM) ---
         class CloudInventoryManager {
-            constructor() { this.products = []; this.shipments = []; this.history = []; this.adjustments = []; this.components = { ps_raw: 0, clips_normal: 0, clips_pass: 0 }; this.realtimeTimeout = null; this.isFirstLoad = true; }
+            constructor() { 
+                this.products = []; this.shipments = []; this.history = []; this.adjustments = []; 
+                this.components = { ps_raw: 0, clips_normal: 0, clips_pass: 0 }; 
+                this.realtimeTimeout = null; this.isFirstLoad = true; 
+            }
             
-            async init() { showLoading(); await this.fetchData(); this.setupRealtime(); hideLoading(); if (this.isFirstLoad) { showToast(`Zalogowano`, 'success'); this.isFirstLoad = false; } }
+            async init() { 
+                showLoading(); 
+                await this.fetchData(); 
+                this.setupRealtime(); 
+                hideLoading(); 
+                if (this.isFirstLoad) { showToast(`Zalogowano`, 'success'); this.isFirstLoad = false; } 
+            }
             
             async fetchData() {
                 try {
-                    const [p, c, s, a, h] = await Promise.all([ db.from('products').select('*').order('id'), db.from('components').select('*').eq('id', 1).single(), db.from('shipments').select('*').order('date'), db.from('adjustments').select('*').order('date'), db.from('history').select('*').order('created_at', { ascending: false }).limit(40) ]);
-                    
-                    if (p.error) throw p.error;
-                    if (c.error && c.error.code !== "PGRST116") throw c.error; // Ignoruj błąd jeśli brak jeszcze komponentów
-                    if (s.error) throw s.error;
-                    if (a.error) throw a.error;
-                    if (h.error) throw h.error;
+                    // BEZPIECZNE POBIERANIE Z BAZY DANYCH (Wykryje przerwę w Supabase)
+                    let prodsRes = await db.from('products').select('*').order('id');
+                    let compsRes = await db.from('components').select('*').eq('id', 1).single();
+                    let shipsRes = await db.from('shipments').select('*').order('date');
+                    let adjsRes  = await db.from('adjustments').select('*').order('date');
+                    let histRes  = await db.from('history').select('*').order('created_at', { ascending: false }).limit(40);
 
-                    this.products = p.data || [];
-                    this.components = c.data || { ps_raw: 0, clips_normal: 0, clips_pass: 0 };
-                    this.shipments = s.data || [];
-                    this.adjustments = a.data || [];
-                    this.history = (h.data || []).map(x => ({ timestamp: new Date(x.created_at).toLocaleString('pl-PL'), action: x.action, details: x.details }));
+                    if (prodsRes.error) throw prodsRes.error;
+                    if (shipsRes.error) throw shipsRes.error;
+
+                    this.products = prodsRes.data || [];
+                    this.components = compsRes.data || { ps_raw: 0, clips_normal: 0, clips_pass: 0 };
+                    this.shipments = shipsRes.data || [];
+                    this.adjustments = adjsRes.data || [];
+                    this.history = (histRes.data || []).map(x => ({ 
+                        timestamp: new Date(x.created_at).toLocaleString('pl-PL'), 
+                        action: x.action || '', 
+                        details: x.details || '' 
+                    }));
                     
                     const t = new Date().toISOString().split('T')[0];
                     const upds = [];
-                    for (let sh of this.shipments) { if (sh.status !== 'completed' && (sh.date || '') < t) { if (currentRole === 'admin' || currentRole === 'worker') upds.push(db.from('shipments').update({ date: t }).eq('id', sh.id)); sh.date = t; } }
+                    for (let sh of this.shipments) { 
+                        if (sh.status !== 'completed' && (sh.date || '') < t) { 
+                            if (currentRole === 'admin' || currentRole === 'worker') {
+                                upds.push(db.from('shipments').update({ date: t }).eq('id', sh.id)); 
+                            }
+                            sh.date = t; 
+                        } 
+                    }
                     if (upds.length > 0) await Promise.all(upds);
                     
                     updateDashboard();
                     if (document.getElementById('tab-dashboard').classList.contains('active')) updateMapMarkers(this.shipments, this.adjustments);
                     if (document.getElementById('tab-adjustments').classList.contains('active')) updateAdjMapMarkers(this.adjustments);
+                    
                 } catch(e) { 
-                    console.error("Błąd połączenia z bazą:", e);
+                    console.error("Błąd Bazy Danych:", e);
                     hideLoading();
                     const alertsContainer = document.getElementById('dashboard-alerts');
                     if(alertsContainer) {
@@ -1060,8 +1292,8 @@
                             <div class="alert-banner critical" style="background:#FEE2E2; border-left-color:#DC2626; color:#991B1B;">
                                 <span class="material-symbols-outlined" style="font-size: 2.5rem;">cloud_off</span>
                                 <div><strong>Awaria połączenia z bazą danych (Supabase)</strong><br>
-                                System nie mógł załadować Twoich towarów. Najczęstsza przyczyna: projekt Supabase został uśpiony (Paused) z powodu darmowego planu. Zaloguj się na platformę Supabase i kliknij "Restore project".<br>
-                                <span style="font-size:0.8rem;">Szczegóły: ${e.message || 'Brak odpowiedzi'}</span></div>
+                                System nie mógł załadować Twoich towarów. Projekt Supabase prawdopodobnie został uśpiony z powodu darmowego planu.<br>
+                                <u>Zaloguj się na supabase.com i kliknij "Restore project".</u></div>
                             </div>
                         `;
                     }
@@ -1105,18 +1337,6 @@
                 if(upds.length > 0) await Promise.all(upds); await db.from('shipments').update({ status: s.status, partial_missing: s.partial_missing }).eq('id', id); await this.addHistory('Wydano braki', s.location); await this.fetchData();
             }
 
-            async addIncomingShipment(supplier, newProducts) {
-                if (currentRole === 'viewer') return; let tot = 0; const upds = [];
-                for (const [id, qtyStr] of Object.entries(newProducts)) {
-                    let qty = parseInt(qtyStr); if (qty > 0) {
-                        const p = this.products.find(x => String(x.id) === String(id));
-                        if(p) { let n = (parseInt(p.assembly)||0) + qty; if (p.assembly_group) { upds.push(db.from('products').update({ assembly: n }).eq('assembly_group', p.assembly_group)); this.products.filter(x => x.assembly_group === p.assembly_group).forEach(x => x.assembly = n); } else { upds.push(db.from('products').update({ assembly: n }).eq('id', p.id)); p.assembly = n; } tot += qty; }
-                    }
-                }
-                updateDashboard(); if(upds.length > 0) await Promise.all(upds);
-                if(tot > 0) { await this.addHistory('Dostawa opraw (Huta)', `${supplier} | 22°:${newProducts[1]||0} | 37°:${newProducts[2]||0} | 58°:${newProducts[3]||0}`); await this.fetchData(); }
-            }
-
             async registerProduction(prod) {
                 if (currentRole === 'viewer') return; const t = Object.values(prod).reduce((a,b)=>a+parseInt(b||0),0); if (t === 0) return;
                 const minC = Math.min(parseInt(this.components.ps_raw)||0, parseInt(this.components.clips_normal)||0, parseInt(this.components.clips_pass)||0);
@@ -1139,10 +1359,23 @@
             async updateComponent(f, v) { if (currentRole === 'viewer') return; this.components[f] = v; updateDashboard(); await db.from('components').update({ [f]: v }).eq('id', 1); await this.addHistory('Korekta komponentów', `Zaktualizowano`); await this.fetchData(); }
         }
 
+        async function addIncomingShipment(supplier, newProducts) {
+            if (currentRole === 'viewer') return; let tot = 0; const upds = [];
+            for (const [id, qtyStr] of Object.entries(newProducts)) {
+                let qty = parseInt(qtyStr); if (qty > 0) {
+                    const p = this.products.find(x => String(x.id) === String(id));
+                    if(p) { let n = (parseInt(p.assembly)||0) + qty; if (p.assembly_group) { upds.push(db.from('products').update({ assembly: n }).eq('assembly_group', p.assembly_group)); this.products.filter(x => x.assembly_group === p.assembly_group).forEach(x => x.assembly = n); } else { upds.push(db.from('products').update({ assembly: n }).eq('id', p.id)); p.assembly = n; } tot += qty; }
+                }
+            }
+            updateDashboard(); if(upds.length > 0) await Promise.all(upds);
+            if(tot > 0) { await this.addHistory('Dostawa opraw (Huta)', `${supplier} | 22°:${newProducts[1]||0} | 37°:${newProducts[2]||0} | 58°:${newProducts[3]||0}`); await this.fetchData(); }
+        }
+        CloudInventoryManager.prototype.addIncomingShipment = addIncomingShipment;
+
         function getShipmentsReadinessMap() {
-            const m = {}; if (!window.inventory) return m;
+            const m = {}; if (!window.inventory || !window.inventory.products) return m;
             let vR = {}, vA = {}; window.inventory.products.forEach(p => { vR[String(p.id)] = parseInt(p.ready)||0; const g = p.assembly_group ? String(p.assembly_group) : `s_${p.id}`; if(vA[g]===undefined) vA[g]=parseInt(p.assembly)||0; });
-            let pend = window.inventory.shipments.filter(s => s.status !== 'completed').sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+            let pend = (window.inventory.shipments || []).filter(s => s.status !== 'completed').sort((a,b)=>(a.date||'').localeCompare(b.date||''));
             pend.forEach(s => {
                 let ok = true; let rq = s.status === 'partial' ? s.partial_missing : s.products;
                 if(rq) {
@@ -1160,30 +1393,34 @@
         
         function updateDashboard() {
             try {
-                if(!window.inventory || window.inventory.products.length === 0) return;
-                const t = window.inventory.getTotals();
-                document.querySelector('[data-stat="total"]').textContent = t.totalAll; document.querySelector('[data-stat="ready"]').textContent = t.totalReady;
-                document.querySelector('[data-stat="shipments"]').textContent = window.inventory.shipments.filter(s => s.status!=='completed'&&s.is_confirmed).length;
-                document.querySelector('[data-stat="service"]').textContent = t.totalService;
+                if(!window.inventory) return;
+                
+                if (window.inventory.products && window.inventory.products.length > 0) {
+                    const t = window.inventory.getTotals();
+                    document.querySelector('[data-stat="total"]').textContent = t.totalAll; document.querySelector('[data-stat="ready"]').textContent = t.totalReady;
+                    document.querySelector('[data-stat="shipments"]').textContent = window.inventory.shipments.filter(s => s.status!=='completed'&&s.is_confirmed).length;
+                    document.querySelector('[data-stat="service"]').textContent = t.totalService;
 
-                const alertsContainer = document.getElementById('dashboard-alerts');
-                alertsContainer.innerHTML = '';
-                const c = window.inventory.components; let lc = []; if(c) { if((parseInt(c.ps_raw)||0)<50) lc.push('Zasilacze'); if((parseInt(c.clips_normal)||0)<50) lc.push('Klapki Zwykłe'); if((parseInt(c.clips_pass)||0)<50) lc.push('Klapki Przelotowe'); }
-                if(lc.length>0) alertsContainer.innerHTML = `<div class="alert-banner critical"><span class="material-symbols-outlined">warning_amber</span><div><strong>Krytyczny stan!</strong> Domów: ${lc.join(', ')}.</div></div>`;
+                    const alertsContainer = document.getElementById('dashboard-alerts');
+                    alertsContainer.innerHTML = '';
+                    const c = window.inventory.components; let lc = []; if(c) { if((parseInt(c.ps_raw)||0)<50) lc.push('Zasilacze'); if((parseInt(c.clips_normal)||0)<50) lc.push('Klapki Zwykłe'); if((parseInt(c.clips_pass)||0)<50) lc.push('Klapki Przelotowe'); }
+                    if(lc.length>0) alertsContainer.innerHTML = `<div class="alert-banner critical"><span class="material-symbols-outlined">warning_amber</span><div><strong>Krytyczny stan!</strong> Domów: ${lc.join(', ')}.</div></div>`;
 
-                const rMap = getShipmentsReadinessMap();
-                const pt = document.getElementById('products-dashboard'); pt.innerHTML = '';
-                window.inventory.products.forEach(p => { pt.innerHTML += `<tr><td>${escapeHTML(p.name)}</td><td><strong>${p.ready||0} szt</strong></td><td><span class="status-badge ${getStatusClass(p.id)}">${getStatusText(p.id)}</span></td></tr>`; });
+                    const rMap = getShipmentsReadinessMap();
+                    const pt = document.getElementById('products-dashboard'); if(pt) { pt.innerHTML = '';
+                    window.inventory.products.forEach(p => { pt.innerHTML += `<tr><td>${escapeHTML(p.name)}</td><td><strong>${p.ready||0} szt</strong></td><td><span class="status-badge ${getStatusClass(p.id)}">${getStatusText(p.id)}</span></td></tr>`; }); }
 
-                const ut = document.getElementById('dashboard-upcoming-shipments');
-                if(ut) {
-                    ut.innerHTML = ''; let uTot = 0; const aS = window.inventory.shipments.filter(s=>s.status!=='completed').sort((a,b)=>{const ac=a.is_confirmed===true||a.is_confirmed==='true';const bc=b.is_confirmed===true||b.is_confirmed==='true';if(ac&&!bc)return -1;if(!ac&&bc)return 1;return(a.date||'').localeCompare(b.date||'');});
-                    if(aS.length===0) ut.innerHTML='<tr><td colspan="6" style="text-align:center;padding:2rem!important;border:none;">Brak wysyłek.</td></tr>';
-                    else { aS.forEach((s,i)=>{ let tot=s.products?Object.values(s.products).reduce((a,b)=>parseInt(a||0)+parseInt(b||0),0):0; uTot+=tot; let sb=s.status==='partial'?'<span class="status-badge status-warning">Niepełna</span>':(s.is_confirmed?'<span class="status-badge status-neutral">Potw.</span>':'<span class="status-badge status-warning">Oczek.</span>'); let rb=s.status==='completed'?'-':(rMap[s.id]?'<span class="status-badge status-ok">Komplet</span>':'<span class="status-badge status-error">Braki</span>'); ut.innerHTML+=`<tr><td><strong>${escapeHTML(s.date||'-')}</strong></td><td>${escapeHTML(s.location)}</td><td>${escapeHTML(s.company||'-')}</td><td><strong>${tot}</strong></td><td>${rb}</td><td>${sb}</td></tr>`; }); }
-                    const bdg = document.getElementById('upcoming-total-badge'); if(bdg) bdg.textContent = `Zapotrzebowanie: ${uTot} szt.`;
+                    const ut = document.getElementById('dashboard-upcoming-shipments');
+                    if(ut) {
+                        ut.innerHTML = ''; let uTot = 0; const aS = window.inventory.shipments.filter(s=>s.status!=='completed').sort((a,b)=>{const ac=a.is_confirmed===true||a.is_confirmed==='true';const bc=b.is_confirmed===true||b.is_confirmed==='true';if(ac&&!bc)return -1;if(!ac&&bc)return 1;return(a.date||'').localeCompare(b.date||'');});
+                        if(aS.length===0) ut.innerHTML='<tr><td colspan="6" style="text-align:center;padding:2rem!important;border:none;">Brak wysyłek.</td></tr>';
+                        else { aS.forEach((s,i)=>{ let tot=s.products?Object.values(s.products).reduce((a,b)=>parseInt(a||0)+parseInt(b||0),0):0; uTot+=tot; let sb=s.status==='partial'?'<span class="status-badge status-warning">Niepełna</span>':(s.is_confirmed?'<span class="status-badge status-neutral">Potw.</span>':'<span class="status-badge status-warning">Oczek.</span>'); let rb=s.status==='completed'?'-':(rMap[s.id]?'<span class="status-badge status-ok">Komplet</span>':'<span class="status-badge status-error">Braki</span>'); ut.innerHTML+=`<tr><td><strong>${escapeHTML(s.date||'-')}</strong></td><td>${escapeHTML(s.location)}</td><td>${escapeHTML(s.company||'-')}</td><td><strong>${tot}</strong></td><td>${rb}</td><td>${sb}</td></tr>`; }); }
+                        const bdg = document.getElementById('upcoming-total-badge'); if(bdg) bdg.textContent = `Zapotrzebowanie: ${uTot} szt.`;
+                    }
+
+                    renderCalendar(rMap);
+                    updateInventoryTable(); updateShipmentsTables(rMap); 
                 }
-
-                renderCalendar(rMap);
 
                 const itb = document.getElementById('dashboard-recent-incoming');
                 if (itb && window.inventory.history) {
@@ -1196,11 +1433,10 @@
                     });
                 }
 
-                updateInventoryTable(); updateShipmentsTables(rMap); updateAdjustmentsTable(); if(currentRole !== 'worker') updateHistoryTable(); updateComponentsDisplay();
+                updateAdjustmentsTable(); if(currentRole !== 'worker') updateHistoryTable(); updateComponentsDisplay();
             } catch (err) { console.error("Błąd Dashboardu:", err); }
         }
 
-        // Bindowanie akcji formularzy na końcu by zapobiec błędom
         document.getElementById('shipmentForm').addEventListener('submit', async function(e) { e.preventDefault(); if (currentRole === 'viewer') return; const btn = this.querySelector('button[type="submit"]'); const txt = btn.innerHTML; btn.innerHTML = 'Przetwarzanie...'; btn.disabled = true; const fd = new FormData(this); const prods = { 1:parseInt(fd.get('p1'))||0, 2:parseInt(fd.get('p2'))||0, 3:parseInt(fd.get('p3'))||0, 4:parseInt(fd.get('p4'))||0, 5:parseInt(fd.get('p5'))||0 }; let loc = fd.get('ship_city').trim(); if(fd.get('ship_street').trim()) loc += `, ${fd.get('ship_street').trim()}`; if(fd.get('ship_target').trim()) loc += ` (${fd.get('ship_target').trim()})`; showLoading(); await window.inventory.addShipment({ date: fd.get('date'), location: loc, company: fd.get('company'), products: prods }); hideLoading(); this.reset(); btn.innerHTML = txt; btn.disabled = false; showToast('Dodano', 'success'); });
         document.getElementById('adjustmentForm').addEventListener('submit', async function(e) { e.preventDefault(); const btn = this.querySelector('button'); const txt = btn.innerHTML; btn.innerHTML = 'Zapisywanie...'; btn.disabled = true; const fd = new FormData(this); let loc = fd.get('adj_city').trim(); if(fd.get('adj_street').trim()) loc += `, ${fd.get('adj_street').trim()}`; if(fd.get('adj_target').trim()) loc += ` (${fd.get('adj_target').trim()})`; showLoading(); await window.inventory.addAdjustment(fd.get('adj_date'), loc); hideLoading(); this.reset(); btn.innerHTML = txt; btn.disabled = false; showToast('Dodano regulację.', 'success'); });
         document.getElementById('incomingForm').addEventListener('submit', async function(e) { e.preventDefault(); const btn = this.querySelector('button'); const txt = btn.innerHTML; btn.innerHTML = 'Zapisywanie...'; btn.disabled = true; const fd = new FormData(this); showLoading(); await window.inventory.addIncomingShipment(fd.get('supplier'), { 1:parseInt(fd.get('p1'))||0, 2:parseInt(fd.get('p2'))||0, 3:parseInt(fd.get('p3'))||0 }); hideLoading(); this.reset(); btn.innerHTML = txt; btn.disabled = false; showToast('Przyjęto oprawy.', 'success'); });
