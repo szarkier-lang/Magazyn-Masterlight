@@ -744,7 +744,7 @@
 
                 <div id="tab-settings" class="tab-content">
                     <div class="section" style="max-width: 700px;">
-                        <div class="section-header"><h2><span class="material-symbols-outlined">settings_suggest</span> Konfiguracja Skanera AI (ChatGPT)</h2></div>
+                        <div class="section-header"><h2><span class="material-symbols-outlined">settings_suggest</span> Konfiguracja Skanera AI</h2></div>
                         <div class="section-content">
                             <div class="alert-banner" style="background:#EFF6FF; border-color:#BFDBFE; border-left-color:#3B82F6; color:#1E3A8A;">
                                 <span class="material-symbols-outlined" style="font-size:2rem;">info</span>
@@ -767,7 +767,7 @@
 
                 <footer class="footer">
                     <p>© 2026 Masterlight Sp. z o.o. - Wszelkie prawa zastrzeżone</p>
-                    <p style="font-size: 0.75rem; color: var(--text-light); margin-top: 5px;">Cloud WMS Engine v2.5 | Zalogowano jako: <span id="footer-user">...</span></p>
+                    <p style="font-size: 0.75rem; color: var(--text-light); margin-top: 5px;">Cloud WMS Engine v2.6 | Zalogowano jako: <span id="footer-user">...</span></p>
                 </footer>
             </div>
         </div>
@@ -807,7 +807,7 @@
         let geocodeCache = {}; 
         let isUpdatingMap = false;
         let inactivityTimer;
-        const INACTIVITY_TIME_MS = 5 * 60 * 1000; // 5 minut
+        const INACTIVITY_TIME_MS = 5 * 60 * 1000;
 
         const db = window.supabase.createClient(supabaseUrl, supabaseKey);
 
@@ -969,7 +969,7 @@
                 setTimeout(() => { 
                     if (!map) initMap();
                     if (map) map.invalidateSize(); 
-                    if(window.inventory && !isUpdatingMap) updateMapMarkers();
+                    if(window.inventory && !isUpdatingMap) updateMapMarkers(window.inventory.shipments, window.inventory.adjustments);
                 }, 150);
             }
             if (tabId === 'tab-adjustments') {
@@ -1200,8 +1200,8 @@
             return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
         }
 
-        async function updateMapMarkers() {
-            if (isUpdatingMap || !window.inventory) return; 
+        async function updateMapMarkers(shipments, adjustments) {
+            if (isUpdatingMap) return; 
             isUpdatingMap = true;
             try {
                 if (!map) initMap();
@@ -1216,8 +1216,8 @@
                 const allPoints = [homeMarker];
                 
                 let tasks = [];
-                (window.inventory.shipments || []).filter(s => s.status !== 'completed').forEach(s => { tasks.push({ ...s, type: 'Wysyłka' }); });
-                (window.inventory.adjustments || []).forEach(a => { tasks.push({ ...a, type: 'Regulacja' }); });
+                (shipments || []).filter(s => s.status !== 'completed').forEach(s => { tasks.push({ ...s, type: 'Wysyłka' }); });
+                (adjustments || []).forEach(a => { tasks.push({ ...a, type: 'Regulacja' }); });
                 tasks.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
                 
                 for (let i = 0; i < tasks.length; i++) {
@@ -1262,7 +1262,7 @@
             try {
                 if (!mapAdj) initMapAdj();
                 mapAdjMarkers.forEach(m => mapAdj.removeLayer(m)); mapAdjMarkers = [];
-                const homeMarker = L.marker([51.7592, 19.4560], {icon: L.divIcon({html: `<div class="custom-map-marker marker-home" style="width:28px; height:28px;"><span class="material-symbols-outlined" style="font-size:16px;">home</span></div>`, className: '', iconSize: [28,28], iconAnchor: [14,14]})}).addTo(mapAdj);
+                const homeMarker = L.marker([51.7592, 19.4560], {icon: L.divIcon({html: `<div class="custom-map-marker marker-home" style="width:28px; height:28px;"><span class="material-symbols-outlined" style="font-size:16px;">home</span></div>`, className: '', iconSize: [28,28], iconAnchor: [14,14]})}).addTo(mapAdj).bindPopup('<b>Baza Masterlight</b>');
                 const allPoints = [homeMarker];
                 
                 for (let i = 0; i < adjustments.length; i++) {
@@ -1279,7 +1279,7 @@
         // --- DASHBOARD UI (KALENDARZ, TRASY) ---
         function changeMonth(dir) { 
             currentCalendarDate.setMonth(currentCalendarDate.getMonth() + dir); 
-            if(window.inventory) renderCalendar(getShipmentsReadinessMap()); 
+            updateDashboard();
         }
 
         function renderCalendar(readinessMap) {
@@ -1317,8 +1317,7 @@
                         
                         let html = `<div class="calendar-date">${dayCounter}</div>`;
                         
-                        // Zlecenia z bazy na dany dzień
-                        if(window.inventory.shipments) {
+                        if(window.inventory && window.inventory.shipments) {
                             window.inventory.shipments.filter(s => s.status !== 'completed' && s.date === ds).forEach(s => {
                                 const tot = s.products ? Object.values(s.products).reduce((a,b)=>parseInt(a||0)+parseInt(b||0),0) : 0;
                                 weekTotal += tot;
@@ -1326,7 +1325,7 @@
                                 html += `<div class="cal-item shipment" onclick="editShipment('${s.id}')"><strong>W: ${escapeHTML(s.location).split('(')[0]}</strong><br>${tot} szt<br>${st}</div>`;
                             });
                         }
-                        if(window.inventory.adjustments) {
+                        if(window.inventory && window.inventory.adjustments) {
                             window.inventory.adjustments.filter(a => a.date === ds).forEach(a => {
                                 html += `<div class="cal-item adjustment"><strong>R: ${escapeHTML(a.location).split('(')[0]}</strong><br>Serwis</div>`;
                             });
@@ -1364,7 +1363,6 @@
                 return; 
             }
 
-            // Pobieranie współrzędnych
             for(let t of tasks) t.coords = await geocodeLocation(t.loc);
             tasks = tasks.filter(t => t.coords !== null);
             tasks.sort((a,b) => a.date.localeCompare(b.date));
@@ -1491,14 +1489,12 @@
             
             async fetchData() {
                 try {
-                    // PANCERNE POBIERANIE DANYCH Z BAZY
                     let prodsRes = await db.from('products').select('*').order('id');
                     let compsRes = await db.from('components').select('*').eq('id', 1).single();
                     let shipsRes = await db.from('shipments').select('*').order('date');
                     let adjsRes  = await db.from('adjustments').select('*').order('date');
                     let histRes  = await db.from('history').select('*').order('created_at', { ascending: false }).limit(40);
 
-                    // Reagowanie na krytyczne błędy sieciowe / wygasłą bazę
                     if (prodsRes.error) throw prodsRes.error;
                     if (shipsRes.error) throw shipsRes.error;
 
@@ -1507,7 +1503,6 @@
                     this.shipments = shipsRes.data || [];
                     this.adjustments = adjsRes.data || [];
                     
-                    // Bezpieczne mapowanie historii (Zabezpieczenie przed pustymi wpisami)
                     this.history = (histRes.data || []).map(x => ({ 
                         timestamp: new Date(x.created_at).toLocaleString('pl-PL'), 
                         action: x.action || 'Nieznana operacja', 
@@ -1526,10 +1521,10 @@
                     }
                     if (upds.length > 0) await Promise.all(upds);
                     
-                    this.updateDashboard();
+                    updateDashboard();
                     
                 } catch(e) { 
-                    console.error("CRITICAL Błąd Bazy Danych:", e);
+                    console.error("Błąd Bazy Danych:", e);
                     hideLoading();
                     const alertsContainer = document.getElementById('dashboard-alerts');
                     if(alertsContainer) {
@@ -1537,12 +1532,12 @@
                             <div class="alert-banner critical" style="background:#FEE2E2; border-left-color:#DC2626; color:#991B1B;">
                                 <span class="material-symbols-outlined" style="font-size: 2.5rem;">cloud_off</span>
                                 <div><strong>Awaria połączenia z bazą danych (Supabase)</strong><br>
-                                System nie mógł załadować Twoich towarów. Projekt Supabase został prawdopodobnie uśpiony po 7 dniach nieaktywności.<br>
+                                Projekt Supabase został prawdopodobnie uśpiony po 7 dniach nieaktywności.<br>
                                 <u>Rozwiązanie: Zaloguj się na stronę supabase.com i kliknij "Restore project" na zielonym tle.</u></div>
                             </div>
                         `;
                     }
-                    showToast('Krytyczny błąd serwera danych.', 'error');
+                    showToast('Błąd serwera danych.', 'error');
                 }
             }
 
@@ -1572,7 +1567,7 @@
                 const p = this.products.find(x => String(x.id) === String(id));
                 if (p) { 
                     Object.assign(p, updates); 
-                    this.updateDashboard(); 
+                    updateDashboard(); 
                     await db.from('products').update(updates).eq('id', id); 
                     if (updates.assembly !== undefined && p.assembly_group) {
                         await db.from('products').update({ assembly: updates.assembly }).eq('assembly_group', p.assembly_group); 
@@ -1592,7 +1587,7 @@
             async deleteAdjustment(id) { 
                 if (currentRole !== 'admin') return; 
                 this.adjustments = this.adjustments.filter(a => String(a.id) !== String(id)); 
-                this.updateDashboard(); 
+                updateDashboard(); 
                 await db.from('adjustments').delete().eq('id', id); 
                 await this.addHistory('Usunięcie regulacji z kalendarza', `Rekord skasowany`); 
                 await this.fetchData(); 
@@ -1610,7 +1605,7 @@
                 const s = this.shipments.find(x => String(x.id) === String(id)); 
                 if (s) { 
                     s.is_confirmed = true; 
-                    this.updateDashboard(); 
+                    updateDashboard(); 
                     await db.from('shipments').update({ is_confirmed: true }).eq('id', id); 
                     await this.addHistory('Potwierdzenie daty wyjazdu', s.location); 
                     await this.fetchData(); 
@@ -1620,7 +1615,7 @@
             async deleteShipment(id) { 
                 if (currentRole !== 'admin') return; 
                 this.shipments = this.shipments.filter(s => String(s.id) !== String(id)); 
-                this.updateDashboard(); 
+                updateDashboard(); 
                 await db.from('shipments').delete().eq('id', id); 
                 await this.addHistory('Anulowanie zamówienia w systemie', `Skasowano`); 
                 await this.fetchData(); 
@@ -1631,7 +1626,7 @@
                 const s = this.shipments.find(x => String(x.id) === String(id)); 
                 if (s) { 
                     Object.assign(s, data); 
-                    this.updateDashboard(); 
+                    updateDashboard(); 
                     await db.from('shipments').update(data).eq('id', id); 
                     await this.addHistory('Edycja szczegółów zamówienia', s.location); 
                     await this.fetchData(); 
@@ -1660,7 +1655,7 @@
                 s.status = Object.keys(mis).length > 0 ? 'partial' : 'completed'; 
                 s.partial_missing = Object.keys(mis).length > 0 ? mis : null; 
                 s.is_confirmed = true; 
-                this.updateDashboard();
+                updateDashboard();
 
                 if(upds.length > 0) await Promise.all(upds); 
                 await db.from('shipments').update({ status: s.status, partial_missing: s.partial_missing, is_confirmed: true }).eq('id', id); 
@@ -1687,41 +1682,12 @@
 
                 s.status = Object.keys(smis).length > 0 ? 'partial' : 'completed'; 
                 s.partial_missing = Object.keys(smis).length > 0 ? smis : null; 
-                this.updateDashboard();
+                updateDashboard();
 
                 if(upds.length > 0) await Promise.all(upds); 
                 await db.from('shipments').update({ status: s.status, partial_missing: s.partial_missing }).eq('id', id); 
                 await this.addHistory(Object.keys(smis).length > 0 ? `Wydano część braków` : `Wydano zaległe braki (komplet)`, s.location); 
                 await this.fetchData();
-            }
-
-            async addIncomingShipment(supplier, newProducts) {
-                if (currentRole === 'viewer') return; 
-                let totalAdded = 0; const dbUpdates = [];
-                for (const [id, qtyStr] of Object.entries(newProducts)) {
-                    let qty = parseInt(qtyStr); 
-                    if (qty > 0) {
-                        const product = this.products.find(p => String(p.id) === String(id));
-                        if (product) {
-                            const newAssembly = (parseInt(product.assembly) || 0) + qty;
-                            if (product.assembly_group) {
-                                dbUpdates.push(db.from('products').update({ assembly: newAssembly }).eq('assembly_group', product.assembly_group));
-                                this.products.filter(p => p.assembly_group === product.assembly_group).forEach(p => p.assembly = newAssembly);
-                            } else {
-                                dbUpdates.push(db.from('products').update({ assembly: newAssembly }).eq('id', product.id));
-                                product.assembly = newAssembly;
-                            }
-                            totalAdded += qty;
-                        }
-                    }
-                }
-                this.updateDashboard(); 
-                if (dbUpdates.length > 0) await Promise.all(dbUpdates);
-                if (totalAdded > 0) {
-                    const p1 = newProducts[1] || 0, p2 = newProducts[2] || 0, p3 = newProducts[3] || 0;
-                    await this.addHistory('Dostawa opraw (Huta)', `${supplier} | 22°:${p1} | 37°:${p2} | 58°:${p3}`); 
-                    await this.fetchData();
-                }
             }
 
             async registerProduction(prod) {
@@ -1775,7 +1741,7 @@
                     this.components.ps_raw -= tp; 
                     this.components.clips_normal -= tp; 
                     this.components.clips_pass -= tp; 
-                    this.updateDashboard(); 
+                    updateDashboard(); 
                     upds.push(db.from('components').update({ps_raw: this.components.ps_raw, clips_normal: this.components.clips_normal, clips_pass: this.components.clips_pass}).eq('id', 1)); 
                     await Promise.all(upds); 
                     await this.addHistory('Raport z produkcji', `Zmontowano i wrzucono na gotowe: ${tp} szt.`); 
@@ -1809,7 +1775,7 @@
                     clips_pass: (parseInt(this.components.clips_pass)||0) + (parseInt(nc.clips_pass)||0) 
                 }; 
                 this.components = u; 
-                this.updateDashboard(); 
+                updateDashboard(); 
                 await db.from('components').update(u).eq('id', 1); 
                 await this.addHistory('Dostawa drobnych komponentów', sup); 
                 await this.fetchData(); 
@@ -1818,115 +1784,42 @@
             async updateComponent(f, v) { 
                 if (currentRole === 'viewer') return; 
                 this.components[f] = v; 
-                this.updateDashboard(); 
+                updateDashboard(); 
                 await db.from('components').update({ [f]: v }).eq('id', 1); 
                 await this.addHistory('Korekta ręczna komponentów', `Zaktualizowano stan bazy.`); 
                 await this.fetchData(); 
             }
+        }
 
-            // GŁÓWNY RENDERER INTERFEJSU
-            updateDashboard() {
-                try {
-                    if(!this.products || this.products.length === 0) return;
-                    
-                    const t = this.getTotals();
-                    document.querySelector('[data-stat="total"]').textContent = t.totalAll; 
-                    document.querySelector('[data-stat="ready"]').textContent = t.totalReady;
-                    document.querySelector('[data-stat="shipments"]').textContent = this.shipments.filter(s => s.status!=='completed'&&s.is_confirmed).length;
-                    document.querySelector('[data-stat="service"]').textContent = t.totalService;
-
-                    const alertsContainer = document.getElementById('dashboard-alerts');
-                    alertsContainer.innerHTML = '';
-                    const c = this.components; let lc = []; 
-                    if(c) { 
-                        if((parseInt(c.ps_raw)||0)<50) lc.push('Zasilacze'); 
-                        if((parseInt(c.clips_normal)||0)<50) lc.push('Klapki Zwykłe'); 
-                        if((parseInt(c.clips_pass)||0)<50) lc.push('Klapki Przelotowe'); 
-                    }
-                    if(lc.length>0) {
-                        alertsContainer.innerHTML = `<div class="alert-banner critical"><span class="material-symbols-outlined">warning_amber</span><div><strong>Krytyczny stan!</strong> Pilnie domów: ${lc.join(', ')}.</div></div>`;
-                    }
-
-                    const rMap = getShipmentsReadinessMap();
-                    
-                    const pt = document.getElementById('products-dashboard'); 
-                    if(pt) { 
-                        pt.innerHTML = '';
-                        this.products.forEach(p => { 
-                            pt.innerHTML += `<tr><td>${escapeHTML(p.name)}</td><td><strong>${p.ready||0} szt</strong></td><td><span class="status-badge ${getStatusClass(p.id)}">${getStatusText(p.id)}</span></td></tr>`; 
-                        }); 
-                    }
-
-                    const ut = document.getElementById('dashboard-upcoming-shipments');
-                    if(ut) {
-                        ut.innerHTML = ''; let uTot = 0; 
-                        const aS = this.shipments.filter(s=>s.status!=='completed').sort((a,b)=>{
-                            const ac = a.is_confirmed===true||a.is_confirmed==='true';
-                            const bc = b.is_confirmed===true||b.is_confirmed==='true';
-                            if(ac&&!bc) return -1;
-                            if(!ac&&bc) return 1;
-                            return (a.date||'').localeCompare(b.date||'');
-                        });
-                        
-                        if(aS.length===0) {
-                            ut.innerHTML='<tr><td colspan="6" style="text-align:center;padding:2rem!important;border:none;">Brak zaplanowanych wysyłek.</td></tr>';
-                        } else { 
-                            aS.forEach((s,i)=>{ 
-                                let tot = s.products ? Object.values(s.products).reduce((a,b)=>parseInt(a||0)+parseInt(b||0),0) : 0; 
-                                uTot += tot; 
-                                let sb = s.status==='partial' ? '<span class="status-badge status-warning">Niepełna</span>' : (s.is_confirmed ? '<span class="status-badge status-neutral">Potw.</span>' : '<span class="status-badge status-warning">Oczek.</span>'); 
-                                let rb = s.status==='completed' ? '-' : (rMap[s.id] ? '<span class="status-badge status-ok">Komplet</span>' : '<span class="status-badge status-error">Braki</span>'); 
-                                ut.innerHTML += `<tr><td><strong>${escapeHTML(s.date||'-')}</strong></td><td>${escapeHTML(s.location)}</td><td>${escapeHTML(s.company||'-')}</td><td><strong>${tot}</strong></td><td>${rb}</td><td>${sb}</td></tr>`; 
-                            }); 
-                        }
-                        const bdg = document.getElementById('upcoming-total-badge'); 
-                        if(bdg) bdg.textContent = `Zapotrzebowanie: ${uTot} szt.`;
-                    }
-
-                    renderCalendar(rMap);
-                    
-                    if(document.getElementById('tab-dashboard').classList.contains('active')) {
-                        updateMapMarkers(this.shipments, this.adjustments);
-                    }
-
-                    const itb = document.getElementById('dashboard-recent-incoming');
-                    if (itb && this.history) {
-                        itb.innerHTML = ''; 
-                        const rI = this.history.filter(h => h && h.action && (h.action.includes('Dostawa opraw') || h.action.includes('Dostawa obudów'))).slice(0, 2);
-                        if(rI.length === 0) {
-                            itb.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 2rem !important; border:none; color: gray;">Brak historii dostaw.</td></tr>';
+        async function addIncomingShipment(supplier, newProducts) {
+            if (currentRole === 'viewer') return; 
+            let totalAdded = 0; const dbUpdates = [];
+            for (const [id, qtyStr] of Object.entries(newProducts)) {
+                let qty = parseInt(qtyStr); 
+                if (qty > 0) {
+                    const product = window.inventory.products.find(p => String(p.id) === String(id));
+                    if (product) {
+                        const newAssembly = (parseInt(product.assembly) || 0) + qty;
+                        if (product.assembly_group) {
+                            dbUpdates.push(db.from('products').update({ assembly: newAssembly }).eq('assembly_group', product.assembly_group));
+                            window.inventory.products.filter(p => p.assembly_group === product.assembly_group).forEach(p => p.assembly = newAssembly);
                         } else {
-                            rI.forEach(e => { 
-                                if(!e||!e.details) return; 
-                                let s="-", p1="?", p2="?", p3="?", t=0, cd=(e.details||"").replace(/\(przez:.*?\)/,'').trim();
-                                
-                                if(cd.includes('|')) { 
-                                    let ps=cd.split('|').map(x=>x.trim()); 
-                                    s=ps[0]; 
-                                    const pq=(str)=>{ let m=(str||"").match(/:(\d+)/); return m ? parseInt(m[1]) : 0; }; 
-                                    p1=pq(ps[1]); p2=pq(ps[2]); p3=pq(ps[3]); 
-                                    t = p1+p2+p3; 
-                                } else { 
-                                    let m=cd.match(/(.*?)\s*\(\+(\d+)\s*szt\.\)/); 
-                                    if(m) { s=m[1].trim(); t=parseInt(m[2]); } else { s=cd; } 
-                                }
-                                
-                                itb.innerHTML += `<tr><td><strong>${(e.timestamp||'').split(',')[0]}</strong></td><td>${escapeHTML(s)}</td><td>${p1!=='?'?`<b>${p1}</b>`:p1}</td><td>${p2!=='?'?`<b>${p2}</b>`:p2}</td><td>${p3!=='?'?`<b>${p3}</b>`:p3}</td><td><strong style="color:var(--success-status);">${t}</strong> szt</td></tr>`;
-                            });
+                            dbUpdates.push(db.from('products').update({ assembly: newAssembly }).eq('id', product.id));
+                            product.assembly = newAssembly;
                         }
+                        totalAdded += qty;
                     }
-
-                    updateInventoryTable(); 
-                    updateShipmentsTables(rMap); 
-                    updateAdjustmentsTable(); 
-                    if(currentRole !== 'worker') updateHistoryTable(); 
-                    updateComponentsDisplay();
-
-                } catch (err) { 
-                    console.error("Błąd rysowania interfejsu:", err); 
                 }
             }
+            updateDashboard(); 
+            if (dbUpdates.length > 0) await Promise.all(dbUpdates);
+            if (totalAdded > 0) {
+                const p1 = newProducts[1] || 0, p2 = newProducts[2] || 0, p3 = newProducts[3] || 0;
+                await window.inventory.addHistory('Dostawa opraw (Huta)', `${supplier} | 22°:${p1} | 37°:${p2} | 58°:${p3}`); 
+                await window.inventory.fetchData();
+            }
         }
+        CloudInventoryManager.prototype.addIncomingShipment = addIncomingShipment;
 
         function getShipmentsReadinessMap() {
             const m = {}; 
@@ -1972,6 +1865,117 @@
                 m[s.id] = ok;
             }); 
             return m;
+        }
+
+        function getStatusClass(id) { const s = window.inventory.getStatus(id); return s==='ok'?'status-ok':s==='warning'?'status-warning':'status-error'; }
+        function getStatusText(id) { const s = window.inventory.getStatus(id); return s==='ok'?'<span class="material-symbols-outlined">check_circle</span> OK':s==='warning'?'<span class="material-symbols-outlined">warning</span> Mało':'<span class="material-symbols-outlined">error</span> Brak'; }
+        
+        function getReadinessBadge(s, rMap) {
+            if (s.status === 'completed') return '<span style="color: var(--text-light); font-size: 0.85em;">-</span>';
+            if (rMap[s.id]) return '<span class="status-badge status-ok" style="background:#ECFDF5; color:#059669; border: 1px solid #10B981;"><span class="material-symbols-outlined">inventory_2</span> Komplet</span>';
+            return '<span class="status-badge status-error" style="background:#FEF2F2; color:#DC2626; border: 1px solid #EF4444;"><span class="material-symbols-outlined">production_quantity_limits</span> Braki</span>';
+        }
+
+        function updateDashboard() {
+            try {
+                if(!window.inventory || window.inventory.products.length === 0) return;
+                
+                const t = window.inventory.getTotals();
+                document.querySelector('[data-stat="total"]').textContent = t.totalAll; 
+                document.querySelector('[data-stat="ready"]').textContent = t.totalReady;
+                document.querySelector('[data-stat="shipments"]').textContent = window.inventory.shipments.filter(s => s.status!=='completed'&&s.is_confirmed).length;
+                document.querySelector('[data-stat="service"]').textContent = t.totalService;
+
+                const alertsContainer = document.getElementById('dashboard-alerts');
+                alertsContainer.innerHTML = '';
+                const c = window.inventory.components; let lc = []; 
+                if(c) { 
+                    if((parseInt(c.ps_raw)||0)<50) lc.push('Zasilacze'); 
+                    if((parseInt(c.clips_normal)||0)<50) lc.push('Klapki Zwykłe'); 
+                    if((parseInt(c.clips_pass)||0)<50) lc.push('Klapki Przelotowe'); 
+                }
+                if(lc.length>0) {
+                    alertsContainer.innerHTML = `<div class="alert-banner critical"><span class="material-symbols-outlined">warning_amber</span><div><strong>Krytyczny stan!</strong> Pilnie domów: ${lc.join(', ')}.</div></div>`;
+                }
+
+                const rMap = getShipmentsReadinessMap();
+                
+                const pt = document.getElementById('products-dashboard'); 
+                if(pt) { 
+                    pt.innerHTML = '';
+                    window.inventory.products.forEach(p => { 
+                        pt.innerHTML += `<tr><td>${escapeHTML(p.name)}</td><td><strong>${p.ready||0} szt</strong></td><td><span class="status-badge ${getStatusClass(p.id)}">${getStatusText(p.id)}</span></td></tr>`; 
+                    }); 
+                }
+
+                const ut = document.getElementById('dashboard-upcoming-shipments');
+                if(ut) {
+                    ut.innerHTML = ''; let uTot = 0; 
+                    const aS = window.inventory.shipments.filter(s=>s.status!=='completed').sort((a,b)=>{
+                        const ac = a.is_confirmed===true||a.is_confirmed==='true';
+                        const bc = b.is_confirmed===true||b.is_confirmed==='true';
+                        if(ac&&!bc) return -1;
+                        if(!ac&&bc) return 1;
+                        return (a.date||'').localeCompare(b.date||'');
+                    });
+                    
+                    if(aS.length===0) {
+                        ut.innerHTML='<tr><td colspan="6" style="text-align:center;padding:2rem!important;border:none;">Brak zaplanowanych wysyłek.</td></tr>';
+                    } else { 
+                        aS.forEach((s,i)=>{ 
+                            let tot = s.products ? Object.values(s.products).reduce((a,b)=>parseInt(a||0)+parseInt(b||0),0) : 0; 
+                            uTot += tot; 
+                            let sb = s.status==='partial' ? '<span class="status-badge status-warning">Niepełna</span>' : (s.is_confirmed ? '<span class="status-badge status-neutral">Potw.</span>' : '<span class="status-badge status-warning">Oczek.</span>'); 
+                            let rb = s.status==='completed' ? '-' : (rMap[s.id] ? '<span class="status-badge status-ok">Komplet</span>' : '<span class="status-badge status-error">Braki</span>'); 
+                            ut.innerHTML += `<tr><td><strong>${escapeHTML(s.date||'-')}</strong></td><td>${escapeHTML(s.location)}</td><td>${escapeHTML(s.company||'-')}</td><td><strong>${tot}</strong></td><td>${rb}</td><td>${sb}</td></tr>`; 
+                        }); 
+                    }
+                    const bdg = document.getElementById('upcoming-total-badge'); 
+                    if(bdg) bdg.textContent = `Zapotrzebowanie: ${uTot} szt.`;
+                }
+
+                renderCalendar(rMap);
+                
+                if(document.getElementById('tab-dashboard').classList.contains('active')) {
+                    updateMapMarkers(window.inventory.shipments, window.inventory.adjustments);
+                }
+
+                const itb = document.getElementById('dashboard-recent-incoming');
+                if (itb && window.inventory.history) {
+                    itb.innerHTML = ''; 
+                    const rI = window.inventory.history.filter(h => h && h.action && (h.action.includes('Dostawa opraw') || h.action.includes('Dostawa obudów'))).slice(0, 2);
+                    if(rI.length === 0) {
+                        itb.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 2rem !important; border:none; color: gray;">Brak historii dostaw.</td></tr>';
+                    } else {
+                        rI.forEach(e => { 
+                            if(!e||!e.details) return; 
+                            let s="-", p1="?", p2="?", p3="?", t=0, cd=(e.details||"").replace(/\(przez:.*?\)/,'').trim();
+                            
+                            if(cd.includes('|')) { 
+                                let ps=cd.split('|').map(x=>x.trim()); 
+                                s=ps[0]; 
+                                const pq=(str)=>{ let m=(str||"").match(/:(\d+)/); return m ? parseInt(m[1]) : 0; }; 
+                                p1=pq(ps[1]); p2=pq(ps[2]); p3=pq(ps[3]); 
+                                t = p1+p2+p3; 
+                            } else { 
+                                let m=cd.match(/(.*?)\s*\(\+(\d+)\s*szt\.\)/); 
+                                if(m) { s=m[1].trim(); t=parseInt(m[2]); } else { s=cd; } 
+                            }
+                            
+                            itb.innerHTML += `<tr><td><strong>${(e.timestamp||'').split(',')[0]}</strong></td><td>${escapeHTML(s)}</td><td>${p1!=='?'?`<b>${p1}</b>`:p1}</td><td>${p2!=='?'?`<b>${p2}</b>`:p2}</td><td>${p3!=='?'?`<b>${p3}</b>`:p3}</td><td><strong style="color:var(--success-status);">${t}</strong> szt</td></tr>`;
+                        });
+                    }
+                }
+
+                updateInventoryTable(); 
+                updateShipmentsTables(rMap); 
+                updateAdjustmentsTable(); 
+                if(currentRole !== 'worker') updateHistoryTable(); 
+                updateComponentsDisplay();
+
+            } catch (err) { 
+                console.error("Błąd rysowania interfejsu:", err); 
+            }
         }
 
         // Bindowanie akcji formularzy na końcu
