@@ -18,9 +18,7 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-    <script>
-        window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
-    </script>
+    <script>window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';</script>
     
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -50,14 +48,7 @@
 
         * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
 
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--background);
-            color: var(--text-dark);
-            line-height: 1.6;
-            margin: 0; padding: 0;
-            overflow-x: hidden;
-        }
+        body { font-family: 'Inter', sans-serif; background-color: var(--background); color: var(--text-dark); line-height: 1.6; overflow-x: hidden; }
 
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: transparent; }
@@ -69,25 +60,12 @@
         .status-badge .material-symbols-outlined { font-size: 1.1em; margin-right: 4px; vertical-align: -0.15em; }
         .sidebar-nav a .material-symbols-outlined { font-size: 1.4em; margin-right: 12px; opacity: 0.9; }
 
-        #loading-screen {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(243, 244, 246, 0.95); z-index: 99999;
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-            transition: opacity 0.4s ease; backdrop-filter: blur(4px);
-        }
-        .spinner {
-            width: 50px; height: 50px; border: 4px solid #E5E7EB;
-            border-top: 4px solid var(--primary-terracotta); border-radius: 50%;
-            animation: spin 1s cubic-bezier(0.55, 0.15, 0.45, 0.85) infinite; margin-bottom: 1.5rem;
-        }
+        #loading-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(243, 244, 246, 0.95); z-index: 99999; display: flex; flex-direction: column; justify-content: center; align-items: center; transition: opacity 0.4s ease; backdrop-filter: blur(4px); }
+        .spinner { width: 50px; height: 50px; border: 4px solid #E5E7EB; border-top: 4px solid var(--primary-terracotta); border-radius: 50%; animation: spin 1s cubic-bezier(0.55, 0.15, 0.45, 0.85) infinite; margin-bottom: 1.5rem; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
         #toast-container { position: fixed; top: 20px; right: 20px; z-index: 100000; display: flex; flex-direction: column; gap: 10px; pointer-events: none;}
-        .toast {
-            background: white; padding: 1rem 1.5rem; border-radius: 12px;
-            box-shadow: var(--shadow-lg); display: flex; align-items: center; gap: 12px;
-            animation: slideInRight 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; max-width: 400px; font-weight: 500; border-left: 6px solid #ccc;
-        }
+        .toast { background: white; padding: 1rem 1.5rem; border-radius: 12px; box-shadow: var(--shadow-lg); display: flex; align-items: center; gap: 12px; animation: slideInRight 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; max-width: 400px; font-weight: 500; border-left: 6px solid #ccc; }
         .toast.success { border-left-color: var(--success-status); color: var(--text-dark); }
         .toast.success .material-symbols-outlined { color: var(--success-status); }
         .toast.error { border-left-color: var(--accent-red); color: var(--text-dark); }
@@ -97,43 +75,25 @@
         @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         @keyframes fadeOutRight { from { transform: translateX(0); opacity: 1; } to { transform: translateX(120%); opacity: 0; } }
 
-        .alert-banner {
-            background: #FEF3C7; border: 1px solid #FDE68A; border-left: 6px solid var(--warning-status); padding: 1rem 1.5rem; border-radius: 12px;
-            margin-bottom: 1.5rem; display: flex; align-items: center; gap: 15px; color: #B45309; font-weight: 500; box-shadow: var(--shadow-sm);
-        }
+        .alert-banner { background: #FEF3C7; border: 1px solid #FDE68A; border-left: 6px solid var(--warning-status); padding: 1rem 1.5rem; border-radius: 12px; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 15px; color: #B45309; font-weight: 500; box-shadow: var(--shadow-sm); }
         .alert-banner.critical { background: #FEE2E2; border-color: #FECACA; border-left-color: var(--accent-red); color: #B91C1C; }
         .alert-banner .material-symbols-outlined { font-size: 1.8rem; }
 
-        #auth-screen {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-terracotta) 100%);
-            display: flex; justify-content: center; align-items: center; z-index: 9999;
-        }
-        .auth-box {
-            background: white; padding: 3rem; border-radius: 16px;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); width: 100%; max-width: 400px; text-align: center;
-        }
+        #auth-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-terracotta) 100%); display: flex; justify-content: center; align-items: center; z-index: 9999; }
+        .auth-box { background: white; padding: 3rem; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); width: 100%; max-width: 400px; text-align: center; }
         .auth-box h2 { color: var(--primary-dark); margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 700; }
         .hidden { display: none !important; }
 
         .mobile-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9998; backdrop-filter: blur(2px); }
         .mobile-overlay.active { display: block; }
 
-        .sidebar {
-            width: 260px; background: linear-gradient(180deg, var(--sidebar-bg) 0%, #6F5A3A 100%);
-            color: #fff; padding: 2rem 0; position: fixed; left: 0; top: 0; height: 100vh;
-            overflow-y: auto; box-shadow: 4px 0 24px rgba(0,0,0,0.1); z-index: 9999;
-            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-        }
+        .sidebar { width: 260px; background: linear-gradient(180deg, var(--sidebar-bg) 0%, #6F5A3A 100%); color: #fff; padding: 2rem 0; position: fixed; left: 0; top: 0; height: 100vh; overflow-y: auto; box-shadow: 4px 0 24px rgba(0,0,0,0.1); z-index: 9999; transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
         .sidebar-logo { padding: 0 1.5rem; margin-bottom: 2rem; border-bottom: 1px solid rgba(255,255,255,0.15); padding-bottom: 1.5rem; }
         .sidebar-logo h2 { font-size: 1.2rem; letter-spacing: 1px; color: #fff; display: flex; align-items: center; gap: 10px; font-weight: 700; text-shadow: 1px 1px 2px rgba(0,0,0,0.2); }
         .sidebar-logo h2 .material-symbols-outlined { color: #fff; opacity: 0.9; }
         .sidebar-nav { list-style: none; padding: 0 1rem; }
         .sidebar-nav li { margin: 0.3rem 0; }
-        .sidebar-nav a {
-            display: flex; align-items: center; padding: 0.9rem 1.2rem; border-radius: 8px;
-            color: rgba(255,255,255,0.8); text-decoration: none; transition: all 0.2s ease; font-weight: 500; font-size: 0.95rem;
-        }
+        .sidebar-nav a { display: flex; align-items: center; padding: 0.9rem 1.2rem; border-radius: 8px; color: rgba(255,255,255,0.8); text-decoration: none; transition: all 0.2s ease; font-weight: 500; font-size: 0.95rem; }
         .sidebar-nav a:hover { background-color: rgba(255,255,255,0.1); color: #fff; }
         .sidebar-nav a.active { background-color: rgba(255,255,255,0.2); color: #fff; box-shadow: var(--shadow-sm); font-weight: 600; border: 1px solid rgba(255,255,255,0.1); }
         .sidebar-nav a.active .material-symbols-outlined { opacity: 1; color: var(--warm-beige); }
@@ -143,11 +103,7 @@
 
         .main-content { margin-left: 260px; flex: 1; overflow-y: auto; display: flex; flex-direction: column; width: calc(100% - 260px); transition: margin 0.3s ease; }
         
-        .header {
-            background: #fff; color: var(--text-dark); padding: 1.2rem 2.5rem; 
-            box-shadow: var(--shadow-sm); border-bottom: 3px solid var(--primary-terracotta);
-            display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 50;
-        }
+        .header { background: #fff; color: var(--text-dark); padding: 1.2rem 2.5rem; box-shadow: var(--shadow-sm); border-bottom: 3px solid var(--primary-terracotta); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 50; }
         .header-left { display: flex; align-items: center; }
         .header-title h1 { font-size: 1.5rem; margin-bottom: 0; font-weight: 700; display: flex; align-items: center; gap: 10px; color: var(--primary-terracotta);}
         .user-badge { background: var(--background); padding: 0.6rem 1rem; border-radius: 12px; font-size: 0.85rem; border: 1px solid var(--border-color); text-align: left; display: flex; align-items: center; gap: 15px; }
@@ -160,11 +116,7 @@
         @keyframes slideUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
 
         .stats-bar { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem; margin-bottom: 2.5rem; }
-        .stat-card {
-            background: #fff; padding: 1.5rem; border-radius: 16px; border: 1px solid var(--border-color);
-            box-shadow: var(--shadow-sm); transition: transform 0.3s ease, box-shadow 0.3s ease;
-            position: relative; overflow: hidden;
-        }
+        .stat-card { background: #fff; padding: 1.5rem; border-radius: 16px; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm); transition: transform 0.3s ease, box-shadow 0.3s ease; position: relative; overflow: hidden; }
         .stat-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: var(--primary-terracotta); border-radius: 5px 0 0 5px; }
         .stat-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); border-color: var(--beige-light); }
         .stat-card h3 { color: var(--text-light); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem; font-weight: 600; }
@@ -179,17 +131,8 @@
 
         .table-responsive { width: 100%; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm); overflow: hidden; }
         table { width: 100%; border-collapse: separate; border-spacing: 0; margin: 0; font-size: 0.9rem; table-layout: auto; }
-        th { 
-            background-color: var(--primary-terracotta); color: #fff; padding: 1rem 0.75rem; text-align: left; 
-            font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px;
-            border-bottom: 1px solid var(--primary-dark);
-            position: sticky; top: 0; z-index: 10;
-        }
-        td { 
-            padding: 0.8rem 0.75rem; border-bottom: 1px solid var(--border-color); 
-            color: var(--text-dark); vertical-align: middle; 
-            word-break: break-word; 
-        }
+        th { background-color: var(--primary-terracotta); color: #fff; padding: 1rem 0.75rem; text-align: left; font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--primary-dark); position: sticky; top: 0; z-index: 10; }
+        td { padding: 0.8rem 0.75rem; border-bottom: 1px solid var(--border-color); color: var(--text-dark); vertical-align: middle; word-break: break-word; }
         tbody tr { transition: background-color 0.2s, opacity 0.2s; }
         tbody tr:last-child td { border-bottom: none; }
         tbody tr:hover { background-color: #FEF6F3; }
@@ -220,11 +163,7 @@
 
         .form-group { margin-bottom: 1.25rem; display: flex; flex-direction: column; gap: 0.5rem; }
         .form-group label { font-weight: 600; color: var(--text-dark); font-size: 0.85rem; letter-spacing: 0.3px; }
-        input[type="text"], input[type="number"], input[type="date"], input[type="email"], input[type="password"] { 
-            padding: 0.75rem 1.1rem; background: #fff; border: 1px solid #D1D5DB; border-radius: 10px; 
-            font-size: 0.95rem; color: var(--text-dark); width: 100%; font-family: 'Inter', sans-serif;
-            transition: all 0.2s ease; outline: none; box-shadow: inset 0 1px 2px rgba(0,0,0,0.03);
-        }
+        input[type="text"], input[type="number"], input[type="date"], input[type="email"], input[type="password"] { padding: 0.75rem 1.1rem; background: #fff; border: 1px solid #D1D5DB; border-radius: 10px; font-size: 0.95rem; color: var(--text-dark); width: 100%; font-family: 'Inter', sans-serif; transition: all 0.2s ease; outline: none; box-shadow: inset 0 1px 2px rgba(0,0,0,0.03); }
         input:focus { border-color: var(--primary-terracotta); box-shadow: 0 0 0 3px rgba(196, 112, 75, 0.15), inset 0 1px 2px rgba(0,0,0,0.03); }
 
         .editable { cursor: pointer; background-color: #F9FAFB; border-radius: 8px; transition: background 0.2s; border: 1px solid transparent; text-align: center;}
@@ -232,20 +171,12 @@
         .editable input { max-width: 90px; text-align: center; padding: 0.4rem; margin: 0 auto; display: block; }
         
         /* STYLE MAPY I KALENDARZA */
-        .map-container {
-            height: 450px; width: 100%; 
-            border-bottom-left-radius: 16px; border-bottom-right-radius: 16px; 
-            z-index: 1; background-color: #f3f4f6;
-        }
+        .map-container { height: 450px; width: 100%; border-bottom-left-radius: 16px; border-bottom-right-radius: 16px; z-index: 1; background-color: #f3f4f6; }
         .leaflet-popup-content-wrapper { border-radius: 12px !important; box-shadow: var(--shadow-lg) !important; padding: 5px !important;}
         .leaflet-popup-content { margin: 12px 16px !important; font-family: 'Inter', sans-serif !important; color: var(--text-dark) !important; font-size: 0.9rem !important; line-height: 1.5 !important;}
         .leaflet-container { font-family: 'Inter', sans-serif !important; }
 
-        .custom-map-marker {
-            display: flex; align-items: center; justify-content: center;
-            border-radius: 50%; color: #fff; font-weight: 700;
-            box-shadow: 0 3px 8px rgba(0,0,0,0.4); border: 2px solid #fff;
-        }
+        .custom-map-marker { display: flex; align-items: center; justify-content: center; border-radius: 50%; color: #fff; font-weight: 700; box-shadow: 0 3px 8px rgba(0,0,0,0.4); border: 2px solid #fff; }
         .marker-home { background-color: #1F2937; }
         .marker-confirmed { background-color: #10B981; } 
         .marker-planned { background-color: #C4704B; }   
@@ -294,22 +225,12 @@
             thead tr { position: absolute; top: -9999px; left: -9999px; }
             tr { border: 1px solid var(--border-color); margin-bottom: 1rem; border-radius: 12px; overflow: hidden; box-shadow: var(--shadow-sm); background: #fff; padding: 0.5rem 0; }
             tr:hover { background-color: #fff !important; }
-            td { 
-                border: none; border-bottom: 1px solid #F3F4F6; position: relative;
-                padding: 0.7rem 1rem 0.7rem 45% !important; text-align: right; min-height: 40px;
-                display: flex; align-items: center; justify-content: flex-end; font-size: 0.85rem;
-                white-space: normal; 
-            }
+            td { border: none; border-bottom: 1px solid #F3F4F6; position: relative; padding: 0.7rem 1rem 0.7rem 45% !important; text-align: right; min-height: 40px; display: flex; align-items: center; justify-content: flex-end; font-size: 0.85rem; white-space: normal; }
             td:last-child { border-bottom: none; }
-            td::before { 
-                content: attr(data-label); position: absolute; left: 1rem; width: 40%; 
-                text-align: left; font-weight: 600; color: var(--text-light);
-                font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px;
-            }
+            td::before { content: attr(data-label); position: absolute; left: 1rem; width: 40%; text-align: left; font-weight: 600; color: var(--text-light); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; }
             .editable input { max-width: 140px; text-align: right; padding: 0.5rem; border-radius: 6px; }
             td[data-label="Akcja"] { justify-content: flex-end; flex-wrap: wrap; gap: 5px; padding-top: 1rem !important; }
             .btn-small { margin-bottom: 0; margin-right: 0; }
-            
             .map-container { height: 400px !important; border-radius: 0 0 12px 12px !important; } 
             .leaflet-popup-content { font-size: 0.8rem !important; }
         }
@@ -338,7 +259,7 @@
             .status-badge { border: 1px solid #666 !important; background: transparent !important; color: #000 !important; padding: 2px 6px !important; font-weight: normal !important; }
             td[data-label="Akcja"], th.admin-only-col { display: none !important; }
             .map-container { display: none !important; }
-            #map-section-container, #adj-map-section-container, #logistics-section { display: none !important; }
+            #map-section-container, #adj-map-section-container { display: none !important; }
         }
     </style>
 </head>
@@ -356,14 +277,8 @@
             <h2><span class="material-symbols-outlined" style="font-size: 2.8rem; color: var(--primary-terracotta);">highlight</span> MASTERLIGHT</h2>
             <p style="margin-bottom: 2.5rem; color: var(--text-light); font-size: 0.95rem;">Zaloguj się do chmury magazynowej WMS</p>
             <form id="login-form">
-                <div class="form-group">
-                    <label>Adres E-mail</label>
-                    <input type="email" id="login-email" required placeholder="np. jan.kowalski@masterlight.pl">
-                </div>
-                <div class="form-group">
-                    <label>Hasło dostępu</label>
-                    <input type="password" id="login-password" required placeholder="••••••••">
-                </div>
+                <div class="form-group"><label>Adres E-mail</label><input type="email" id="login-email" required placeholder="np. jan.kowalski@masterlight.pl"></div>
+                <div class="form-group"><label>Hasło dostępu</label><input type="password" id="login-password" required placeholder="••••••••"></div>
                 <button type="submit" id="login-submit-btn" class="btn-primary" style="width: 100%; margin-top: 1.5rem; padding: 1rem; font-size: 1rem;">
                     <span class="material-symbols-outlined">login</span> Zaloguj bezpiecznie
                 </button>
@@ -372,26 +287,12 @@
         </div>
     </div>
 
-    <div id="api-key-modal" class="modal">
-        <div class="modal-dialog">
-            <div class="modal-header">
-                <h2 style="color: var(--primary-dark); font-size: 1.3rem;"><span class="material-symbols-outlined">smart_toy</span> Aktywacja Skanera AI</h2>
-                <span class="close" onclick="document.getElementById('api-key-modal').style.display='none'"><span class="material-symbols-outlined">close</span></span>
-            </div>
-            <p style="margin-bottom: 1.5rem; color: var(--text-light); font-size: 0.95rem; line-height: 1.6;">Wprowadź swój darmowy klucz API OpenAI (ChatGPT). Zostanie on bezpiecznie zaszyfrowany i zapisany <strong>tylko w pamięci tej przeglądarki</strong>.</p>
-            <input type="text" id="api-key-input" placeholder="Wklej klucz (np. sk-proj-...)" style="margin-bottom: 1.5rem;">
-            <button onclick="saveApiKey()" class="btn-primary" style="width: 100%; padding: 1rem;"><span class="material-symbols-outlined">save</span> Zapisz i Wybierz Plik</button>
-        </div>
-    </div>
-
     <div id="mobile-overlay" class="mobile-overlay" onclick="toggleSidebar()"></div>
 
     <div id="app-container" class="hidden" style="display: flex; width: 100%; height: 100vh;">
         
         <aside class="sidebar">
-            <div class="sidebar-logo">
-                <h2><span class="material-symbols-outlined" style="font-size: 1.8rem;">highlight</span> MASTERLIGHT</h2>
-            </div>
+            <div class="sidebar-logo"><h2><span class="material-symbols-outlined" style="font-size: 1.8rem;">highlight</span> MASTERLIGHT</h2></div>
             <nav class="sidebar-nav">
                 <ul id="nav-list">
                     <li><a href="#" onclick="switchTab('tab-dashboard')" class="nav-item active"><span class="material-symbols-outlined">space_dashboard</span> Dashboard</a></li>
@@ -401,9 +302,6 @@
                     <li id="nav-history"><a href="#" onclick="switchTab('tab-history')" class="nav-item"><span class="material-symbols-outlined">receipt_long</span> Historia Zmian</a></li>
                     <li><a href="#" onclick="switchTab('tab-components')" class="nav-item"><span class="material-symbols-outlined">electrical_services</span> Komponenty</a></li>
                     <li id="nav-reports"><a href="#" onclick="switchTab('tab-reports')" class="nav-item"><span class="material-symbols-outlined">precision_manufacturing</span> Panel Produkcji</a></li>
-                    
-                    <li id="nav-settings"><a href="#" onclick="switchTab('tab-settings')" class="nav-item"><span class="material-symbols-outlined">settings_suggest</span> Ustawienia Systemu (AI)</a></li>
-                    
                     <li class="mobile-only-logout" style="margin-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1rem;">
                         <a href="#" onclick="logoutUser()" class="nav-item" style="color: #FECACA;"><span class="material-symbols-outlined">logout</span> Wyloguj się</a>
                     </li>
@@ -414,12 +312,8 @@
         <div class="main-content">
             <header class="header">
                 <div class="header-left">
-                    <button class="mobile-menu-btn" onclick="toggleSidebar()">
-                        <span class="material-symbols-outlined" style="font-size: 2rem;">menu</span>
-                    </button>
-                    <div class="header-title">
-                        <h1>Magazyn Masterlight</h1>
-                    </div>
+                    <button class="mobile-menu-btn" onclick="toggleSidebar()"><span class="material-symbols-outlined" style="font-size: 2rem;">menu</span></button>
+                    <div class="header-title"><h1>Magazyn Masterlight</h1></div>
                 </div>
                 
                 <div class="user-badge" id="user-info">
@@ -446,7 +340,7 @@
 
                     <div class="section">
                         <div class="section-header">
-                            <h2><span class="material-symbols-outlined">calendar_month</span> Harmonogram (Wysyłki i Regulacje)</h2>
+                            <h2><span class="material-symbols-outlined">calendar_month</span> Harmonogram Działań (Kalendarz)</h2>
                             <div class="cal-month-nav">
                                 <button class="btn-secondary btn-small" onclick="changeMonth(-1)"><span class="material-symbols-outlined">chevron_left</span></button>
                                 <strong id="calendar-month-label" style="margin: 0 15px; font-size: 1.1rem; color: var(--primary-dark);">...</strong>
@@ -455,19 +349,9 @@
                         </div>
                         <div class="section-content" style="padding: 1.5rem;">
                             <div class="calendar-header">
-                                <div>Pn</div><div>Wt</div><div>Śr</div><div>Cz</div><div>Pt</div><div>Sb</div><div>Nd</div><div style="color:var(--primary-terracotta);">SUMA</div>
+                                <div>Pn</div><div>Wt</div><div>Śr</div><div>Cz</div><div>Pt</div><div>Sb</div><div>Nd</div><div style="color:var(--primary-terracotta);">SUMA OPRAW</div>
                             </div>
                             <div id="dashboard-calendar-container" style="display: flex; flex-direction: column; gap: 8px;"></div>
-                        </div>
-                    </div>
-
-                    <div class="section" id="logistics-section">
-                        <div class="section-header">
-                            <h2><span class="material-symbols-outlined">route</span> Asystent Logistyki (AI Trasy)</h2>
-                            <button class="btn-primary btn-small" onclick="generateLogistics()"><span class="material-symbols-outlined">refresh</span> Przelicz Trasy</button>
-                        </div>
-                        <div class="section-content" id="logistics-container">
-                            <p style="color: var(--text-light); font-size: 0.95rem;">Kliknij "Przelicz Trasy", aby zoptymalizować wyjazdy kierowcy (oddzielne dni lub inteligentne łączenie tras).</p>
                         </div>
                     </div>
 
@@ -484,9 +368,7 @@
                     </div>
 
                     <div class="section">
-                        <div class="section-header">
-                            <h2><span class="material-symbols-outlined">conveyor_belt</span> Ostatnie Przyjęcia Opraw</h2>
-                        </div>
+                        <div class="section-header"><h2><span class="material-symbols-outlined">conveyor_belt</span> Ostatnie Przyjęcia Opraw</h2></div>
                         <div class="section-content" style="padding:0;">
                             <div class="table-responsive">
                                 <table>
@@ -514,9 +396,7 @@
                     <div class="section">
                         <div class="section-header">
                             <h2><span class="material-symbols-outlined">inventory_2</span> Pełny Stan Magazynowy Downlightów</h2>
-                            <button class="btn-secondary btn-small" onclick="printInventoryPdf()" style="margin: 0;">
-                                <span class="material-symbols-outlined">print</span> Generuj Raport PDF
-                            </button>
+                            <button class="btn-secondary btn-small" onclick="printInventoryPdf()" style="margin: 0;"><span class="material-symbols-outlined">print</span> Generuj Raport PDF</button>
                         </div>
                         <div class="section-content" style="padding:0;">
                             <div class="table-responsive" style="max-height: 70vh;">
@@ -588,9 +468,9 @@
                         <div class="section-header">
                             <h2><span class="material-symbols-outlined">add_location_alt</span> Dodaj Nowe Zamówienie / Plan Wysyłki</h2>
                             <div style="display:flex; align-items:center; gap:10px;">
-                                <input type="file" id="ai-image-input" accept="image/*,application/pdf" style="display: none;" onchange="scanOfferWithAI(this.files[0])">
-                                <button type="button" id="ai-scan-btn" class="btn-primary btn-small" onclick="triggerAiScan()" style="background-color: #3B82F6; margin: 0; padding: 0.5rem 1rem;">
-                                    <span class="material-symbols-outlined">document_scanner</span> Skanuj Ofertę (AI)
+                                <input type="file" id="pdf-input" accept="application/pdf" style="display: none;" onchange="scanOfferFromPDF(this.files[0])">
+                                <button type="button" id="pdf-scan-btn" class="btn-primary btn-small" onclick="document.getElementById('pdf-input').click()" style="background-color: #3B82F6; margin: 0; padding: 0.5rem 1rem;">
+                                    <span class="material-symbols-outlined">document_scanner</span> Skanuj z PDF
                                 </button>
                             </div>
                         </div>
@@ -667,9 +547,7 @@
                     <div class="section">
                         <div class="section-header">
                             <h2><span class="material-symbols-outlined">receipt_long</span> Rejestr Zmian i Operacji Magazynowych</h2>
-                            <button class="btn-secondary btn-small" onclick="window.print()" style="margin: 0;">
-                                <span class="material-symbols-outlined">print</span> Drukuj Logi
-                            </button>
+                            <button class="btn-secondary btn-small" onclick="window.print()" style="margin: 0;"><span class="material-symbols-outlined">print</span> Drukuj Logi</button>
                         </div>
                         <div class="section-content" style="padding:0;">
                             <div class="table-responsive" style="max-height: 75vh;">
@@ -742,32 +620,9 @@
                     </div>
                 </div>
 
-                <div id="tab-settings" class="tab-content">
-                    <div class="section" style="max-width: 700px;">
-                        <div class="section-header"><h2><span class="material-symbols-outlined">settings_suggest</span> Konfiguracja Skanera AI</h2></div>
-                        <div class="section-content">
-                            <div class="alert-banner" style="background:#EFF6FF; border-color:#BFDBFE; border-left-color:#3B82F6; color:#1E3A8A;">
-                                <span class="material-symbols-outlined" style="font-size:2rem;">info</span>
-                                <div>Aplikacja korzysta z zaawansowanej architektury <strong>Multi-Agent AI</strong>. Algorytmy równoległe zapewniają perfekcyjny odczyt tabel i pisma ręcznego.</div>
-                            </div>
-                            <p style="color: var(--text-dark); font-size: 0.95rem; margin-bottom: 1.5rem; line-height: 1.6;">
-                                Wprowadź poniżej klucz API z platformy OpenAI.
-                            </p>
-                            <div class="form-group">
-                                <label>Twój Klucz API OpenAI</label>
-                                <input type="password" id="settings-api-key" placeholder="Wklej klucz (np. sk-proj-...)">
-                            </div>
-                            <div style="margin-top: 1.5rem; display: flex; flex-wrap: wrap; gap: 15px;">
-                                <button class="btn-primary" onclick="saveSettingsApiKey()"><span class="material-symbols-outlined">save</span> Zapisz Klucz</button>
-                                <button class="btn-secondary" onclick="deleteSettingsApiKey()"><span class="material-symbols-outlined">delete</span> Usuń Klucz z urządzenia</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
                 <footer class="footer">
                     <p>© 2026 Masterlight Sp. z o.o. - Wszelkie prawa zastrzeżone</p>
-                    <p style="font-size: 0.75rem; color: var(--text-light); margin-top: 5px;">Cloud WMS Engine v2.6 | Zalogowano jako: <span id="footer-user">...</span></p>
+                    <p style="font-size: 0.75rem; color: var(--text-light); margin-top: 5px;">Cloud WMS Engine v2.7 | Zalogowano jako: <span id="footer-user">...</span></p>
                 </footer>
             </div>
         </div>
@@ -919,7 +774,7 @@
                 const elsToHide = [
                     'form-shipment-container', 'form-incoming-container', 
                     'form-components-container', 'form-production-container', 
-                    'form-adjustments-container', 'nav-history', 'nav-reports', 'nav-settings'
+                    'form-adjustments-container', 'nav-history', 'nav-reports'
                 ];
                 elsToHide.forEach(id => {
                     const el = document.getElementById(id);
@@ -929,7 +784,7 @@
                 document.querySelectorAll('.admin-only-col').forEach(el => el.style.display = 'none');
             }
             if (currentRole === 'worker') {
-                const elsToHide = ['nav-history', 'nav-settings'];
+                const elsToHide = ['nav-history'];
                 elsToHide.forEach(id => {
                     const el = document.getElementById(id);
                     if (el) el.style.display = 'none';
@@ -979,152 +834,60 @@
                     if(window.inventory) updateAdjMapMarkers(window.inventory.adjustments);
                 }, 150);
             }
-            if (tabId === 'tab-settings') {
-                const savedKey = localStorage.getItem('openai_api_key');
-                document.getElementById('settings-api-key').value = savedKey ? savedKey : '';
-            }
         }
 
-        // --- SKANER AI (MULTI-AGENT) ---
-        function saveSettingsApiKey() {
-            const key = document.getElementById('settings-api-key').value.trim();
-            if(key) {
-                localStorage.setItem('openai_api_key', key);
-                showToast('Klucz API OpenAI został zapisany.', 'success');
-            }
-        }
+        // --- SKANER (TYLKO LOKALNY PDF) ---
+        async function scanOfferFromPDF(file) {
+            if (!file) return;
 
-        function deleteSettingsApiKey() {
-            localStorage.removeItem('openai_api_key');
-            document.getElementById('settings-api-key').value = '';
-            showToast('Klucz API został usunięty.', 'warning');
-        }
-
-        function triggerAiScan() {
-            let apiKey = localStorage.getItem('openai_api_key');
-            if (!apiKey) {
-                showToast('Brak klucza API! Przejdź do zakładki "Ustawienia Systemu".', 'error');
-                switchTab('tab-settings'); 
+            if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+                showToast('Proszę wgrać plik w formacie PDF.', 'error');
+                document.getElementById('pdf-input').value = '';
                 return;
             }
-            document.getElementById('ai-image-input').click();
-        }
 
-        function resizeImage(file, maxWidth = 2400) {
-            return new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const img = new Image();
-                    img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        let w = img.width, h = img.height;
-                        if (w > maxWidth) { h = Math.round((h * maxWidth) / w); w = maxWidth; }
-                        canvas.width = w; canvas.height = h;
-                        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-                        resolve(canvas.toDataURL(file.type || 'image/jpeg', 0.85).split(',')[1]);
-                    };
-                    img.src = e.target.result;
-                };
-                reader.readAsDataURL(file);
-            });
-        }
-
-        async function scanOfferWithAI(file) {
-            if (!file) return;
-            const apiKey = localStorage.getItem('openai_api_key');
-            if (!apiKey) return;
-
-            const btn = document.getElementById('ai-scan-btn');
+            const btn = document.getElementById('pdf-scan-btn');
             const originalText = btn.innerHTML;
-            btn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">autorenew</span> Inicjacja Agentów AI...';
+            btn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">autorenew</span> Skanowanie PDF...';
             btn.disabled = true;
 
             try {
-                const today = new Date().toISOString().split('T')[0];
-                let base64Images = []; 
-                let pdfText = "";
-
-                if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
-                    btn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">autorenew</span> Rysuję układ PDF...';
-                    const arrayBuffer = await file.arrayBuffer();
-                    const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
-                    
-                    for (let i = 1; i <= pdf.numPages; i++) {
-                        const page = await pdf.getPage(i);
-                        const content = await page.getTextContent();
-                        pdfText += content.items.map(item => item.str).join(' ') + '\n';
-                    }
-                    const maxPages = Math.min(pdf.numPages, 3); 
-                    for (let i = 1; i <= maxPages; i++) {
-                        const page = await pdf.getPage(i);
-                        const viewport = page.getViewport({scale: 2.0}); 
-                        const canvas = document.createElement('canvas');
-                        canvas.width = viewport.width; canvas.height = viewport.height;
-                        await page.render({canvasContext: canvas.getContext('2d'), viewport: viewport}).promise;
-                        base64Images.push(canvas.toDataURL('image/jpeg', 0.8).split(',')[1]);
-                    }
-                } else {
-                    btn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">autorenew</span> Optymalizacja zdjęcia...';
-                    base64Images.push(await resizeImage(file, 2400));
+                const arrayBuffer = await file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
+                let fullText = "";
+                
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const content = await page.getTextContent();
+                    fullText += content.items.map(item => item.str).join(' ') + '\n';
                 }
 
-                btn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">autorenew</span> Przesyłam do OpenAI...';
-
-                // AGENT 1 - NAGŁÓWEK
-                const headerPrompt = `Jesteś detektywem analizującym TYLKO i wyłącznie górną część oferty. IGNORUJ całkowicie tabele i ceny. Szukaj pisma odręcznego.
-                Wypełnij zmienne w JSON:
-                1. 'ship_city': Miejscowość nad tekstem 'Sklep nr:'.
-                2. 'ship_target': Numer sklepu w formacie 'ROSSMANN Sklep nr X'.
-                3. 'date': Data dopisana ODRĘCZNIE na górze dokumentu. Format YYYY-MM-DD (rok ${new Date().getFullYear()}). Jeśli brak odręcznej, wpisz: ${today}
-                4. 'company': Odręczny spedytor (np. AMUNET, BUDPOL, ASTORGA, IPP, LAWBUD). Jeśli brak, wpisz: Do ustalenia.
-                {"ship_city":"","ship_target":"","date":"","company":""}`;
-
-                // AGENT 2 - TABELA
-                const tablePrompt = `Jesteś księgowym analizującym WYŁĄCZNIE tabelę pod hasłem 'Sala sprzedaży'. Ignoruj nagłówki. Zignoruj OLITE, ONTEC, CZUJNIKI.
-                1. Znajdź wiersze od 4 do 8 tabeli.
-                2. Z 1 kolumny odczytaj tekst (np. G1 58 15W).
-                3. Z kolumny 'Ilość' (zazwyczaj 5 kolumna) odczytaj liczbę sztuk.
-                Zwróć TYLKO JSON w formacie: { "oprawy": [ { "oznaczenie": "G3 22 15W", "ilosc": 13 } ] }`;
-
-                const hMsgs = [{ type: "text", text: headerPrompt }];
-                const tMsgs = [{ type: "text", text: tablePrompt + (pdfText ? `\n\nŚciągawka z tekstów PDF (użyj do ilości):\n${pdfText}` : "") }];
-                
-                base64Images.forEach(img => {
-                    hMsgs.push({ type: "image_url", image_url: { url: `data:image/jpeg;base64,${img}`, detail: "high" } });
-                    tMsgs.push({ type: "image_url", image_url: { url: `data:image/jpeg;base64,${img}`, detail: "high" } });
-                });
-
-                const fetchAI = (msgs) => fetch('https://api.openai.com/v1/chat/completions', { 
-                    method: 'POST', 
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` }, 
-                    body: JSON.stringify({ model: "gpt-4o", messages: [{ role: "user", content: msgs }], response_format: { type: "json_object" }, temperature: 0.1 }) 
-                });
-
-                // ODPALAMY RÓWNOLEGLE 2 AGENTÓW
-                const [hRes, tRes] = await Promise.all([fetchAI(hMsgs), fetchAI(tMsgs)]);
-                const hData = await hRes.json();
-                const tData = await tRes.json();
-                
-                if (hData.error) throw new Error(hData.error.message);
-                if (tData.error) throw new Error(tData.error.message);
-
-                const headerJson = JSON.parse(hData.choices[0].message.content);
-                const tableJson = JSON.parse(tData.choices[0].message.content);
-
-                // INTERPRETER KODU (Łączenie wyników agentów)
+                // PROSTY LOKALNY PARSER TEKSTOWY
                 let p1 = 0, p2 = 0, p3 = 0, p4 = 0, p5 = 0;
-                
-                if (tableJson.oprawy && Array.isArray(tableJson.oprawy)) {
-                    tableJson.oprawy.forEach(op => {
-                        let text = (op.oznaczenie || "").toUpperCase();
-                        let qty = parseInt(op.ilosc) || 0;
-                        
-                        let is15W = text.includes("15W") || text.includes("15 W");
-                        let is20WPlus = text.includes("20W") || text.includes("26W") || text.includes("33W");
+                let target = "";
+                let city = "";
 
-                        let is22 = text.includes("22") || text.includes("G3");
-                        let is58 = text.includes("58") || text.includes("235") || text.includes("G1") || text.includes("G5");
-                        let is37 = text.includes("37") || text.includes("140") || text.includes("185") || text.includes("G2") || text.includes("G4") || (!is22 && !is58);
+                // Ekstrakcja danych Regexami
+                const matchSklep = fullText.match(/Sklep nr\s*(\d+)/i);
+                if (matchSklep) target = "ROSSMANN Sklep nr " + matchSklep[1];
+
+                const lines = fullText.split('\n');
+                lines.forEach(line => {
+                    // Wyciąganie ilości opraw VIGO z wierszy
+                    if (line.toUpperCase().includes('VIGO')) {
+                        const words = line.trim().split(/\s+/);
+                        // Zakładamy, że ilość to przedostatnie lub ostatnie słowo jako liczba
+                        let qty = parseInt(words[words.length - 1]);
+                        if (isNaN(qty) && words.length > 1) qty = parseInt(words[words.length - 2]);
+                        if (isNaN(qty)) qty = 0;
+
+                        let upperLine = line.toUpperCase();
+                        let is15W = upperLine.includes("15W") || upperLine.includes("15 W");
+                        let is20WPlus = upperLine.includes("20W") || upperLine.includes("26W") || upperLine.includes("33W");
+
+                        let is22 = upperLine.includes("22") || upperLine.includes("G3");
+                        let is58 = upperLine.includes("58") || upperLine.includes("235") || upperLine.includes("G1") || upperLine.includes("G5");
+                        let is37 = upperLine.includes("37") || upperLine.includes("140") || upperLine.includes("185") || upperLine.includes("G2") || upperLine.includes("G4") || (!is22 && !is58);
 
                         if (is15W) {
                             if (is22) p1 += qty;
@@ -1134,15 +897,13 @@
                             if (is58) p5 += qty;
                             else p4 += qty; 
                         }
-                    });
-                }
+                    }
+                });
 
-                // Wrzucanie wyników do formularza strony
-                document.getElementById('form-city').value = headerJson.ship_city || '';
-                document.getElementById('form-street').value = ''; 
-                document.getElementById('form-target').value = headerJson.ship_target || '';
-                document.getElementById('form-date').value = headerJson.date || today;
-                document.getElementById('form-company').value = headerJson.company || 'Do ustalenia';
+                document.getElementById('form-city').value = city;
+                document.getElementById('form-target').value = target;
+                document.getElementById('form-date').value = new Date().toISOString().split('T')[0];
+                document.getElementById('form-company').value = "Do ustalenia";
                 
                 document.getElementById('form-p1').value = p1;
                 document.getElementById('form-p2').value = p2;
@@ -1150,17 +911,18 @@
                 document.getElementById('form-p4').value = p4;
                 document.getElementById('form-p5').value = p5;
 
-                showToast('Zeskanowano pomyślnie!', 'success');
+                showToast('PDF przeskanowany!', 'success');
 
-            } catch (err) { 
-                console.error(err);
-                showModal('Błąd analizy AI', `<p style="color:var(--accent-red); font-weight:500;">${err.message}</p><p style="margin-top:1rem; font-size:0.85rem;">Wystąpił problem z chmurą OpenAI. Spróbuj ponownie.</p>`); 
-            } finally { 
-                btn.innerHTML = originalText; 
-                btn.disabled = false; 
-                document.getElementById('ai-image-input').value = ''; 
+            } catch (error) {
+                console.error("Szczegóły błędu:", error);
+                showModal('Błąd odczytu PDF', `<p style="color:var(--accent-red); font-weight:500;">Nie udało się przetworzyć pliku.</p>`);
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                document.getElementById('pdf-input').value = ''; 
             }
         }
+
 
         // --- LEAFLET MAPS ---
         const boundsPoland = L.latLngBounds(L.latLng(48.9, 14.1), L.latLng(54.9, 24.2));
@@ -1192,14 +954,6 @@
             return null;
         }
 
-        function getDistance(lat1, lon1, lat2, lon2) {
-            const R = 6371; 
-            const dLat = (lat2 - lat1) * Math.PI / 180; 
-            const dLon = (lon2 - lon1) * Math.PI / 180;
-            const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
-            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        }
-
         async function updateMapMarkers(shipments, adjustments) {
             if (isUpdatingMap || !window.inventory) return; 
             isUpdatingMap = true;
@@ -1219,10 +973,8 @@
                 (shipments || []).filter(s => s.status !== 'completed').forEach(s => { tasks.push({ ...s, type: 'Wysyłka' }); });
                 (adjustments || []).forEach(a => { tasks.push({ ...a, type: 'Regulacja' }); });
                 
-                // Sortowanie chronologiczne
                 tasks.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
                 
-                // Niezależne liczniki (rozwiązanie Twojej prośby)
                 let shipCounter = 1;
                 let adjCounter = 1;
 
@@ -1288,10 +1040,10 @@
             } catch(e) {}
         }
 
-        // --- DASHBOARD UI (KALENDARZ, TRASY) ---
+        // --- DASHBOARD UI (KALENDARZ) ---
         function changeMonth(dir) { 
             currentCalendarDate.setMonth(currentCalendarDate.getMonth() + dir); 
-            if(window.inventory) renderCalendar(getShipmentsReadinessMap()); 
+            if(window.inventory) window.inventory.updateDashboard(); 
         }
 
         function renderCalendar(readinessMap) {
@@ -1359,90 +1111,6 @@
             }
         }
 
-        async function generateLogistics() {
-            if(!window.inventory) return;
-            const container = document.getElementById('logistics-container');
-            container.innerHTML = '<div style="display:flex; align-items:center; gap:10px; color:var(--primary-dark);"><span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">autorenew</span> Obliczam optymalne scenariusze logistyczne (AI Trasy)...</div>';
-
-            let tasks = []; 
-            const today = new Date().toISOString().split('T')[0];
-            
-            (window.inventory.shipments || []).forEach(s => { if(s.status !== 'completed' && s.date >= today) tasks.push({ id: s.id, type: 'Wysyłka', date: s.date, loc: s.location }); });
-            (window.inventory.adjustments || []).forEach(a => { if(a.date >= today) tasks.push({ id: a.id, type: 'Regulacja', date: a.date, loc: a.location }); });
-
-            if(tasks.length === 0) { 
-                container.innerHTML = '<p style="color:var(--success-status); font-weight:600;">Super! Brak wyjazdów na najbliższe dni.</p>'; 
-                return; 
-            }
-
-            for(let t of tasks) t.coords = await geocodeLocation(t.loc);
-            tasks = tasks.filter(t => t.coords !== null);
-            tasks.sort((a,b) => a.date.localeCompare(b.date));
-
-            const byDate = {}; 
-            tasks.forEach(t => { if(!byDate[t.date]) byDate[t.date] = []; byDate[t.date].push(t); });
-
-            let html = '<div style="display:flex; flex-direction:column; gap:15px;">';
-
-            // Opcja 1: Sztywne dni
-            html += '<h4 style="color:var(--primary-dark); margin-bottom:5px;">Opcja 1: Zwykłe wyjazdy (Sztywne daty)</h4>';
-            html += '<ul style="list-style:none; padding:0; display:flex; flex-direction:column; gap:10px;">';
-            let totalDistScen1 = 0;
-            for(let date of Object.keys(byDate).sort().slice(0, 4)) {
-                let currentLat = 51.7592, currentLon = 19.4560; // Łódź
-                let route = ['Baza (Łódź)'], unvisited = [...byDate[date]], dayDist = 0;
-                
-                while(unvisited.length > 0) {
-                    let minD = Infinity, best = -1;
-                    for(let i=0; i<unvisited.length; i++) {
-                        let d = getDistance(currentLat, currentLon, unvisited[i].coords[0], unvisited[i].coords[1]);
-                        if(d < minD) { minD = d; best = i; }
-                    }
-                    let n = unvisited[best]; dayDist += minD; currentLat = n.coords[0]; currentLon = n.coords[1];
-                    route.push(`${n.type === 'Wysyłka' ? '📦' : '🔧'} ${escapeHTML(n.loc).split('(')[0]}`);
-                    unvisited.splice(best, 1);
-                }
-                if(route.length > 1) { dayDist += getDistance(currentLat, currentLon, 51.7592, 19.4560); route.push('Baza'); }
-                
-                totalDistScen1 += dayDist;
-                html += `<li style="background:var(--primary-light); padding:1rem; border-radius:8px; border:1px solid var(--border-color);"><strong style="display:block;">${date}</strong><div style="font-size:0.9rem; margin-top:5px;">Trasa: <strong>${route.join(' ➔ ')}</strong></div><div style="font-size:0.8rem; color:var(--text-light); margin-top:5px;">Dystans: ~${Math.round(dayDist)} km</div></li>`;
-            }
-            html += '</ul>';
-
-            // Opcja 2: Smart Combine
-            const first3Dates = Object.keys(byDate).sort().slice(0, 3);
-            if (first3Dates.length > 1) {
-                let multiTasks = [];
-                first3Dates.forEach(d => multiTasks.push(...byDate[d]));
-
-                let currentLat = 51.7592, currentLon = 19.4560, route2 = ['Baza (Łódź)'], unvisited2 = [...multiTasks], totalDistScen2 = 0;
-                while(unvisited2.length > 0) {
-                    let minD = Infinity, best = -1;
-                    for(let i=0; i<unvisited2.length; i++) {
-                        let d = getDistance(currentLat, currentLon, unvisited2[i].coords[0], unvisited2[i].coords[1]);
-                        if(d < minD) { minD = d; best = i; }
-                    }
-                    let n = unvisited2[best]; totalDistScen2 += minD; currentLat = n.coords[0]; currentLon = n.coords[1];
-                    let dateShort = n.date.substring(5); 
-                    route2.push(`${n.type === 'Wysyłka' ? '📦' : '🔧'} ${escapeHTML(n.loc).split('(')[0]} <span style="font-size:0.75em;color:gray;">(${dateShort})</span>`);
-                    unvisited2.splice(best, 1);
-                }
-                if(route2.length > 1) { totalDistScen2 += getDistance(currentLat, currentLon, 51.7592, 19.4560); route2.push('Baza'); }
-
-                let savings = Math.round(totalDistScen1 - totalDistScen2);
-
-                html += '<h4 style="color:var(--success-status); margin-top:20px; margin-bottom:5px;"><span class="material-symbols-outlined" style="vertical-align:middle;">lightbulb</span> Opcja 2: Połączone trasy (Oszczędność czasu i paliwa)</h4>';
-                html += `<div style="background:#ECFDF5; border:1px solid #10B981; padding:1rem; border-radius:8px; color:#065F46;">
-                    <p style="font-size:0.85rem; margin-bottom:10px;">Zamiast wracać do bazy każdego dnia, spróbuj połączyć wyjazdy z najbliższych dni w jedną ciągłą trasę. Zapytaj klientów, czy przyjmą towar w zbliżonym terminie:</p>
-                    <div style="font-size:0.95rem;">Proponowana Trasa: <br><strong>${route2.join(' ➔ ')}</strong></div>
-                    <div style="font-size:0.9rem; margin-top:10px; font-weight:600;">Dystans całkowity: ~${Math.round(totalDistScen2)} km <span style="color:var(--primary-terracotta);">(Zyskujesz ok. ${savings > 0 ? savings : 0} km!)</span></div>
-                </div>`;
-            }
-
-            html += '</div>';
-            container.innerHTML = html;
-        }
-
         // --- PDF GENERATOR ---
         function printInventoryPdf() {
             if(!window.inventory || window.inventory.products.length === 0) return;
@@ -1496,7 +1164,10 @@
                 await this.fetchData(); 
                 this.setupRealtime(); 
                 hideLoading(); 
-                if (this.isFirstLoad) { showToast(`Zalogowano pomyślnie.`, 'success'); this.isFirstLoad = false; } 
+                if (this.isFirstLoad && this.products.length > 0) { 
+                    showToast(`Zalogowano pomyślnie.`, 'success'); 
+                    this.isFirstLoad = false; 
+                } 
             }
             
             async fetchData() {
@@ -2332,7 +2003,7 @@
             showToast('Zmiany zostały zapisane.', 'success');
         }
 
-        // Bindowanie akcji formularzy
+        // Bindowanie akcji formularzy 
         document.getElementById('shipmentForm').addEventListener('submit', async function(e) { 
             e.preventDefault(); if (currentRole === 'viewer') return; 
             const btn = this.querySelector('button[type="submit"]'); const txt = btn.innerHTML; 
@@ -2384,7 +2055,6 @@
             await window.inventory.addComponentsShipment(fd.get('supplier'), { ps_raw:parseInt(fd.get('ps_raw'))||0, clips_normal:parseInt(fd.get('clips_normal'))||0, clips_pass:parseInt(fd.get('clips_pass'))||0 }); 
             hideLoading(); this.reset(); btn.innerHTML = txt; btn.disabled = false; showToast('Zapisano komponenty.', 'success'); 
         });
-
     </script>
 </body>
 </html>
