@@ -52,6 +52,7 @@
         .sidebar { width: 260px; background: linear-gradient(180deg, var(--sidebar-bg) 0%, #6F5A3A 100%); color: #fff; padding: 2rem 0; position: fixed; left: 0; top: 0; height: 100vh; overflow-y: auto; box-shadow: 4px 0 24px rgba(0,0,0,0.1); z-index: 9999; transition: transform 0.3s ease; }
         .sidebar-logo { padding: 0 1.5rem; margin-bottom: 2rem; border-bottom: 1px solid rgba(255,255,255,0.15); padding-bottom: 1.5rem; }
         .sidebar-logo h2 { font-size: 1.2rem; letter-spacing: 1px; color: #fff; display: flex; align-items: center; gap: 10px; font-weight: 700; text-shadow: 1px 1px 2px rgba(0,0,0,0.2); }
+        .sidebar-logo h2 .material-symbols-outlined { color: #fff; opacity: 0.9; }
         .sidebar-nav { list-style: none; padding: 0 1rem; }
         .sidebar-nav li { margin: 0.3rem 0; }
         .sidebar-nav a { display: flex; align-items: center; padding: 0.9rem 1.2rem; border-radius: 8px; color: rgba(255,255,255,0.8); text-decoration: none; transition: all 0.2s ease; font-weight: 500; font-size: 0.95rem; }
@@ -563,42 +564,48 @@
         async function updateMapMarkers(shipments, adjustments) {
             if (isUpdatingMap) return; isUpdatingMap = true;
             try {
-                if (!map) initMap(); mapMarkers.forEach(m => map.removeLayer(m)); mapMarkers = [];
-                const homeMarker = L.marker([51.7592, 19.4560], {icon: L.divIcon({html: `<div class="custom-map-marker marker-home" style="width:28px; height:28px;"><span class="material-symbols-outlined" style="font-size:16px;">home</span></div>`, className: '', iconSize: [28,28], iconAnchor: [14,14]})}).addTo(map);
+                if (!map) initMap(); 
+                mapMarkers.forEach(m => map.removeLayer(m)); mapMarkers = [];
+                const homeMarker = L.marker([51.7592, 19.4560], {icon: L.divIcon({html: `<div class="custom-map-marker marker-home" style="width:28px; height:28px;"><span class="material-symbols-outlined" style="font-size:16px;">home</span></div>`, className: '', iconSize: [28,28], iconAnchor: [14,14]})}).addTo(map).bindPopup('<b>Baza Masterlight</b>');
                 const allPoints = [homeMarker];
-                const activeShips = (shipments||[]).filter(s => s.status !== 'completed');
-                for (let i = 0; i < activeShips.length; i++) {
-                    const coords = await geocodeLocation(activeShips[i].location);
+                
+                let tasks = [];
+                (shipments||[]).filter(s => s.status !== 'completed').forEach(s => { tasks.push({...s, type: 'Wysyłka'}); });
+                (adjustments||[]).forEach(a => { tasks.push({...a, type: 'Regulacja'}); });
+                tasks.sort((a,b) => (a.date||'').localeCompare(b.date||''));
+
+                for (let i = 0; i < tasks.length; i++) {
+                    const t = tasks[i];
+                    if (!t.location) continue;
+                    const coords = await geocodeLocation(t.location);
                     if (coords) {
-                        const mClass = activeShips[i].is_confirmed ? 'marker-confirmed' : 'marker-planned';
-                        const marker = L.marker(coords, { icon: L.divIcon({html: `<div class="custom-map-marker ${mClass}" style="width:24px; height:24px; font-size:11px;">W</div>`, className: '', iconSize: [24,24], iconAnchor: [12,12]})}).addTo(map);
+                        let mClass = t.type === 'Wysyłka' ? (t.is_confirmed ? 'marker-confirmed' : 'marker-planned') : 'marker-adjustment';
+                        let popupText = `<b>${escapeHTML(t.location)}</b><br><span style="font-size:0.85rem;color:#666;">[#${i + 1}] ${t.type} (${escapeHTML(t.date)})</span>`;
+                        const marker = L.marker(coords, { icon: L.divIcon({html: `<div class="custom-map-marker ${mClass}" style="width:24px; height:24px; font-size:11px;">${i+1}</div>`, className: '', iconSize: [24,24], iconAnchor: [12,12]})}).addTo(map).bindPopup(popupText);
                         mapMarkers.push(marker); allPoints.push(marker);
                     }
+                    await new Promise(r => setTimeout(r, 100)); // Zapobiega blokadzie API
                 }
-                const activeAdjs = (adjustments||[]);
-                for (let i = 0; i < activeAdjs.length; i++) {
-                    const coords = await geocodeLocation(activeAdjs[i].location);
-                    if (coords) {
-                        const marker = L.marker(coords, { icon: L.divIcon({html: `<div class="custom-map-marker marker-adjustment" style="width:24px; height:24px; font-size:11px;">R</div>`, className: '', iconSize: [24,24], iconAnchor: [12,12]})}).addTo(map);
-                        mapMarkers.push(marker); allPoints.push(marker);
-                    }
-                }
+                
                 if (allPoints.length > 1) map.fitBounds(new L.featureGroup(allPoints).getBounds(), { padding: [50, 50], maxZoom: 9 });
-                document.getElementById('map-status').innerHTML = '<span class="material-symbols-outlined" style="color: var(--success-status);">check_circle</span> Gotowa';
-            } catch(e) {} finally { isUpdatingMap = false; }
+                const st = document.getElementById('map-status'); if(st) st.innerHTML = '<span class="material-symbols-outlined" style="color: var(--success-status);">check_circle</span> Mapa gotowa';
+            } catch(e) { console.error(e); } finally { isUpdatingMap = false; }
         }
 
         async function updateAdjMapMarkers(adjustments) {
             try {
                 if (!mapAdj) initMapAdj(); mapAdjMarkers.forEach(m => mapAdj.removeLayer(m)); mapAdjMarkers = [];
-                const homeMarker = L.marker([51.7592, 19.4560], {icon: L.divIcon({html: `<div class="custom-map-marker marker-home" style="width:28px; height:28px;"><span class="material-symbols-outlined" style="font-size:16px;">home</span></div>`, className: '', iconSize: [28,28], iconAnchor: [14,14]})}).addTo(mapAdj);
+                const homeMarker = L.marker([51.7592, 19.4560], {icon: L.divIcon({html: `<div class="custom-map-marker marker-home" style="width:28px; height:28px;"><span class="material-symbols-outlined" style="font-size:16px;">home</span></div>`, className: '', iconSize: [28,28], iconAnchor: [14,14]})}).addTo(mapAdj).bindPopup('<b>Baza Masterlight</b>');
                 const allPoints = [homeMarker];
-                for (let i = 0; i < adjustments.length; i++) {
-                    const coords = await geocodeLocation(adjustments[i].location);
+                
+                let sortedAdjs = [...(adjustments||[])].sort((a,b) => (a.date||'').localeCompare(b.date||''));
+                for (let i = 0; i < sortedAdjs.length; i++) {
+                    const coords = await geocodeLocation(sortedAdjs[i].location);
                     if (coords) {
-                        const marker = L.marker(coords, { icon: L.divIcon({html: `<div class="custom-map-marker marker-adjustment" style="width:24px; height:24px; font-size:11px;">R</div>`, className: '', iconSize: [24,24], iconAnchor: [12,12]})}).addTo(mapAdj);
+                        const marker = L.marker(coords, { icon: L.divIcon({html: `<div class="custom-map-marker marker-adjustment" style="width:24px; height:24px; font-size:11px;">${i+1}</div>`, className: '', iconSize: [24,24], iconAnchor: [12,12]})}).addTo(mapAdj).bindPopup(`<b>${escapeHTML(sortedAdjs[i].location)}</b><br>Serwis: ${escapeHTML(sortedAdjs[i].date)}`);
                         mapAdjMarkers.push(marker); allPoints.push(marker);
                     }
+                    await new Promise(r => setTimeout(r, 100));
                 }
                 if (allPoints.length > 1) mapAdj.fitBounds(new L.featureGroup(allPoints).getBounds(), { padding: [50, 50], maxZoom: 9 });
             } catch(e) {}
@@ -668,15 +675,19 @@
                         if (ds === new Date().toISOString().split('T')[0]) cell.classList.add('today');
                         let html = `<div class="calendar-date">${dayCounter}</div>`;
                         
-                        window.inventory.shipments.filter(s => s.status !== 'completed' && s.date === ds).forEach(s => {
-                            const tot = s.products ? Object.values(s.products).reduce((a,b)=>parseInt(a||0)+parseInt(b||0),0) : 0;
-                            weekTotal += tot;
-                            let st = s.status === 'partial' ? '<span style="color:var(--warning-status);">Braki (Część.)</span>' : (readinessMap[s.id] ? '<span style="color:var(--success-status);">Komplet</span>' : '<span style="color:var(--accent-red);">Braki</span>');
-                            html += `<div class="cal-item shipment" onclick="editShipment('${s.id}')"><strong>W: ${escapeHTML(s.location).split('(')[0]}</strong><br>${tot} szt<br>${st}</div>`;
-                        });
-                        window.inventory.adjustments.filter(a => a.date === ds).forEach(a => {
-                            html += `<div class="cal-item adjustment"><strong>R: ${escapeHTML(a.location).split('(')[0]}</strong><br>Serwis</div>`;
-                        });
+                        if(window.inventory && window.inventory.shipments) {
+                            window.inventory.shipments.filter(s => s.status !== 'completed' && s.date === ds).forEach(s => {
+                                const tot = s.products ? Object.values(s.products).reduce((a,b)=>parseInt(a||0)+parseInt(b||0),0) : 0;
+                                weekTotal += tot;
+                                let st = s.status === 'partial' ? '<span style="color:var(--warning-status);">Braki (Część.)</span>' : (readinessMap[s.id] ? '<span style="color:var(--success-status);">Komplet</span>' : '<span style="color:var(--accent-red);">Braki</span>');
+                                html += `<div class="cal-item shipment" onclick="editShipment('${s.id}')"><strong>W: ${escapeHTML(s.location).split('(')[0]}</strong><br>${tot} szt<br>${st}</div>`;
+                            });
+                        }
+                        if(window.inventory && window.inventory.adjustments) {
+                            window.inventory.adjustments.filter(a => a.date === ds).forEach(a => {
+                                html += `<div class="cal-item adjustment"><strong>R: ${escapeHTML(a.location).split('(')[0]}</strong><br>Serwis</div>`;
+                            });
+                        }
                         cell.innerHTML = html; dayCounter++;
                     }
                     row.appendChild(cell);
@@ -692,36 +703,70 @@
         async function generateLogistics() {
             if(!window.inventory) return;
             const container = document.getElementById('logistics-container');
-            container.innerHTML = 'Obliczam optymalne trasy...';
+            container.innerHTML = '<div style="display:flex; align-items:center; gap:10px; color:var(--primary-dark);"><span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">autorenew</span> Obliczam scenariusze logistyczne...</div>';
             
             let tasks = []; const today = new Date().toISOString().split('T')[0];
-            window.inventory.shipments.forEach(s => { if(s.status !== 'completed' && s.date >= today) tasks.push({ type: 'Wysyłka', date: s.date, loc: s.location }); });
-            window.inventory.adjustments.forEach(a => { if(a.date >= today) tasks.push({ type: 'Regulacja', date: a.date, loc: a.location }); });
+            (window.inventory.shipments||[]).forEach(s => { if(s.status !== 'completed' && s.date >= today) tasks.push({ type: 'Wysyłka', date: s.date, loc: s.location }); });
+            (window.inventory.adjustments||[]).forEach(a => { if(a.date >= today) tasks.push({ type: 'Regulacja', date: a.date, loc: a.location }); });
             
             if(tasks.length === 0) { container.innerHTML = '<p style="color:var(--success-status); font-weight:600;">Brak wyjazdów na najbliższe dni.</p>'; return; }
             
+            for(let t of tasks) t.coords = await geocodeLocation(t.loc);
+            tasks = tasks.filter(t => t.coords !== null);
+            tasks.sort((a,b) => a.date.localeCompare(b.date));
+
             const byDate = {}; tasks.forEach(t => { if(!byDate[t.date]) byDate[t.date] = []; byDate[t.date].push(t); });
-            let html = '<ul style="list-style:none; padding:0; display:flex; flex-direction:column; gap:10px;">';
+            let html = '<div style="display:flex; flex-direction:column; gap:15px;">';
             
+            // Opcja 1
+            html += '<h4 style="color:var(--primary-dark); margin-bottom:5px;">Opcja 1: Klasyczne wyjazdy (dzień po dniu)</h4>';
+            html += '<ul style="list-style:none; padding:0; display:flex; flex-direction:column; gap:10px;">';
+            let totalDistScen1 = 0;
             for(let date of Object.keys(byDate).sort().slice(0, 4)) {
-                let currentLat = 51.7592, currentLon = 19.4560, route = ['Baza Łódź'], unvisited = byDate[date], totalDist = 0;
-                for(let t of unvisited) t.coords = await geocodeLocation(t.loc);
-                unvisited = unvisited.filter(t => t.coords !== null);
-                
+                let currentLat = 51.7592, currentLon = 19.4560, route = ['Baza (Łódź)'], unvisited = [...byDate[date]], dayDist = 0;
                 while(unvisited.length > 0) {
                     let minD = Infinity, best = -1;
                     for(let i=0; i<unvisited.length; i++) {
                         let d = getDistance(currentLat, currentLon, unvisited[i].coords[0], unvisited[i].coords[1]);
                         if(d < minD) { minD = d; best = i; }
                     }
-                    let n = unvisited[best]; totalDist += minD; currentLat = n.coords[0]; currentLon = n.coords[1];
+                    let n = unvisited[best]; dayDist += minD; currentLat = n.coords[0]; currentLon = n.coords[1];
                     route.push(`${n.type === 'Wysyłka' ? '📦' : '🔧'} ${escapeHTML(n.loc).split('(')[0]}`);
                     unvisited.splice(best, 1);
                 }
-                if(route.length > 1) { totalDist += getDistance(currentLat, currentLon, 51.7592, 19.4560); route.push('Baza'); }
-                html += `<li style="background:var(--primary-light); padding:1rem; border-radius:8px;"><strong style="display:block;">${date}</strong><div>Trasa: <strong>${route.join(' ➔ ')}</strong></div><div style="font-size:0.8rem; margin-top:5px;">Dystans: ~${Math.round(totalDist)} km</div></li>`;
+                if(route.length > 1) { dayDist += getDistance(currentLat, currentLon, 51.7592, 19.4560); route.push('Baza'); }
+                totalDistScen1 += dayDist;
+                html += `<li style="background:var(--primary-light); padding:1rem; border-radius:8px; border:1px solid var(--border-color);"><strong style="display:block;">${date}</strong><div style="font-size:0.9rem; margin-top:5px;">Trasa: <strong>${route.join(' ➔ ')}</strong></div><div style="font-size:0.8rem; color:var(--text-light); margin-top:5px;">Dystans: ~${Math.round(dayDist)} km</div></li>`;
             }
-            container.innerHTML = html + '</ul>';
+            html += '</ul>';
+
+            // Opcja 2
+            const first3Dates = Object.keys(byDate).sort().slice(0, 3);
+            if (first3Dates.length > 1) {
+                let multiTasks = [];
+                first3Dates.forEach(d => multiTasks.push(...byDate[d]));
+                let currentLat = 51.7592, currentLon = 19.4560, route2 = ['Baza (Łódź)'], unvisited2 = [...multiTasks], totalDistScen2 = 0;
+                while(unvisited2.length > 0) {
+                    let minD = Infinity, best = -1;
+                    for(let i=0; i<unvisited2.length; i++) {
+                        let d = getDistance(currentLat, currentLon, unvisited2[i].coords[0], unvisited2[i].coords[1]);
+                        if(d < minD) { minD = d; best = i; }
+                    }
+                    let n = unvisited2[best]; totalDistScen2 += minD; currentLat = n.coords[0]; currentLon = n.coords[1];
+                    let dateShort = n.date.substring(5); 
+                    route2.push(`${n.type === 'Wysyłka' ? '📦' : '🔧'} ${escapeHTML(n.loc).split('(')[0]} <span style="font-size:0.75em;color:gray;">(${dateShort})</span>`);
+                    unvisited2.splice(best, 1);
+                }
+                if(route2.length > 1) { totalDistScen2 += getDistance(currentLat, currentLon, 51.7592, 19.4560); route2.push('Baza'); }
+                let savings = Math.round(totalDistScen1 - totalDistScen2);
+                html += '<h4 style="color:var(--success-status); margin-top:20px; margin-bottom:5px;"><span class="material-symbols-outlined" style="vertical-align:middle;">lightbulb</span> Opcja 2: Połączone trasy (Zaoszczędź czas)</h4>';
+                html += `<div style="background:#ECFDF5; border:1px solid #10B981; padding:1rem; border-radius:8px; color:#065F46;">
+                    <p style="font-size:0.85rem; margin-bottom:10px;">Zamiast wracać do bazy, spróbuj połączyć wyjazdy z najbliższych dni w jedną trasę. Ustal z klientami małe przesunięcia terminów:</p>
+                    <div style="font-size:0.95rem;">Proponowana Trasa: <br><strong>${route2.join(' ➔ ')}</strong></div>
+                    <div style="font-size:0.9rem; margin-top:10px; font-weight:600;">Dystans całkowity: ~${Math.round(totalDistScen2)} km <span style="color:var(--primary-terracotta);">(Zyskujesz ok. ${savings > 0 ? savings : 0} km!)</span></div>
+                </div>`;
+            }
+            container.innerHTML = html + '</div>';
         }
 
         // --- MANAGERS & HELPERS ---
@@ -912,7 +957,7 @@
                 const itb = document.getElementById('dashboard-recent-incoming');
                 if (itb && window.inventory.history) {
                     itb.innerHTML = ''; const rI = window.inventory.history.filter(h => h && h.action && (h.action.includes('Dostawa opraw') || h.action.includes('Dostawa obudów'))).slice(0, 2);
-                    if(rI.length === 0) itb.innerHTML = '<tr><td colspan="6" style="text-align:center;">Brak historii dostaw.</td></tr>';
+                    if(rI.length === 0) itb.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 2rem !important; border:none; color: gray;">Brak historii dostaw.</td></tr>';
                     else rI.forEach(e => { if(!e||!e.details) return; let s="-",p1="?",p2="?",p3="?",t=0,cd=(e.details||"").replace(/\(przez:.*?\)/,'').trim();
                         if(cd.includes('|')) { let ps=cd.split('|').map(x=>x.trim()); s=ps[0]; const pq=(str)=>{let m=(str||"").match(/:(\d+)/);return m?parseInt(m[1]):0;}; p1=pq(ps[1]); p2=pq(ps[2]); p3=pq(ps[3]); t=p1+p2+p3; }
                         else { let m=cd.match(/(.*?)\s*\(\+(\d+)\s*szt\.\)/); if(m){s=m[1].trim();t=parseInt(m[2]);} else s=cd; }
@@ -924,154 +969,52 @@
             } catch (err) { console.error("Błąd Dashboardu:", err); }
         }
 
+        // INIT UI TABLES
         function updateInventoryTable() {
-            const tbody = document.getElementById('products-table'), tbodyService = document.getElementById('service-table');
-            if(!tbody || !tbodyService) return;
-            tbody.innerHTML = ''; tbodyService.innerHTML = ''; const isViewer = currentRole === 'viewer';
+            const tb = document.getElementById('products-table'), ts = document.getElementById('service-table'); 
+            if(!tb || !ts) return; tb.innerHTML=''; ts.innerHTML='';
             window.inventory.products.forEach(p => {
-                const total = (parseInt(p.ready) || 0) + (parseInt(p.assembly) || 0) + (parseInt(p.service) || 0);
-                const readyCell = isViewer ? `<strong>${p.ready || 0}</strong>` : `<td data-label="Gotowe" onclick="editCell(this, 'ready', '${p.id}')" class="editable"><strong>${p.ready || 0}</strong></td>`;
-                const assemblyCell = isViewer ? (p.assembly || 0) : `<td data-label="W Montażu" onclick="editCell(this, 'assembly', '${p.id}')" class="editable">${p.assembly || 0}</td>`;
-                tbody.innerHTML += `<tr><td>${escapeHTML(p.name)}</td><td style="color:var(--text-light); font-size:0.85em;">${escapeHTML(p.sku)}</td>${isViewer ? `<td data-label="Gotowe">${readyCell}</td><td data-label="W Montażu">${assemblyCell}</td>` : readyCell + assemblyCell}<td><strong>${total}</strong></td><td><span class="status-badge ${getStatusClass(p.id)}">${getStatusText(p.id)}</span></td></tr>`;
-                const serviceCell = isViewer ? (p.service || 0) : `<td data-label="Ilość (szt)" onclick="editCell(this, 'service', '${p.id}')" class="editable">${p.service || 0}</td>`;
-                tbodyService.innerHTML += `<tr><td>${escapeHTML(p.name)}</td>${isViewer ? `<td>${serviceCell}</td>` : serviceCell}</tr>`;
+                const tot = (parseInt(p.ready)||0) + (parseInt(p.assembly)||0) + (parseInt(p.service)||0);
+                tb.innerHTML+=`<tr><td>${escapeHTML(p.name)}</td><td>${escapeHTML(p.sku)}</td>${currentRole==='viewer'?`<td>${p.ready||0}</td><td>${p.assembly||0}</td>`:`<td onclick="editCell(this,'ready','${p.id}')" class="editable">${p.ready||0}</td><td onclick="editCell(this,'assembly','${p.id}')" class="editable">${p.assembly||0}</td>`}<td><strong>${tot}</strong></td><td><span class="status-badge ${getStatusClass(p.id)}">${getStatusText(p.id)}</span></td></tr>`;
+                ts.innerHTML+=`<tr><td>${escapeHTML(p.name)}</td>${currentRole==='viewer'?`<td>${p.service||0}</td>`:`<td onclick="editCell(this,'service','${p.id}')" class="editable">${p.service||0}</td>`}</tr>`;
             });
         }
-
-        function renderShipmentRow(s, readinessMap) {
-            let total = s.products ? Object.values(s.products).reduce((a, b) => parseInt(a) + parseInt(b), 0) : 0;
-            let statusBadge = s.status === 'completed' ? '<span class="status-badge status-ok"><span class="material-symbols-outlined">check_circle</span> Zrealizowana</span>' : s.status === 'partial' ? '<span class="status-badge status-warning"><span class="material-symbols-outlined">warning</span> Niepełna</span>' : s.is_confirmed ? '<span class="status-badge status-neutral"><span class="material-symbols-outlined">event_available</span> Potwierdzona</span>' : '<span class="status-badge status-warning"><span class="material-symbols-outlined">pending_actions</span> Oczekująca</span>';
-            const readinessBadge = getReadinessBadge(s, readinessMap);
-            let actionButtons = '';
-            if (currentRole !== 'viewer') {
-                actionButtons += `<button class="btn-small btn-secondary" onclick="editShipment('${s.id}')"><span class="material-symbols-outlined">edit</span></button>`;
-                if (currentRole === 'admin') actionButtons += `<button class="btn-small btn-secondary" onclick="deleteShipment('${s.id}')"><span class="material-symbols-outlined" style="color:var(--accent-red);">delete</span></button>`;
-                if (s.status === 'planned' && !s.is_confirmed) actionButtons = `<button class="btn-small btn-primary" onclick="confirmShipmentDateUI('${s.id}')"><span class="material-symbols-outlined">event_available</span> Zatwierdź</button>` + actionButtons;
-                else if (s.status === 'planned' && s.is_confirmed) actionButtons = `<button class="btn-small btn-primary" onclick="completeShipmentUI('${s.id}')">Wydaj</button>` + actionButtons;
-                else if (s.status === 'partial') actionButtons = `<button class="btn-small btn-primary" onclick="completeRemainingShipmentUI('${s.id}')">Wydaj braki</button>` + actionButtons;
-            }
-            if (s.status === 'partial') actionButtons += `<button class="btn-small btn-secondary" onclick="showMissingItems('${s.id}')"><span class="material-symbols-outlined">list_alt</span> Braki</button>`;
-            return `<tr class="${s.status === 'completed' ? 'row-completed' : ''}"><td><strong>${escapeHTML(s.date || '-')}</strong></td><td>${escapeHTML(s.location)}</td><td style="color:var(--text-light);">${escapeHTML(s.company || '-')}</td><td><strong>${total}</strong></td><td><button class="btn-small btn-secondary" onclick="showAnglesDemand('${s.id}')" style="margin:0;">Pokaż</button></td><td>${readinessBadge}</td><td>${statusBadge}</td>${currentRole !== 'viewer' || s.status === 'partial' ? `<td>${actionButtons}</td>` : '<td class="admin-only-col"></td>'}</tr>`;
-        }
-
-        function updateShipmentsTables(readinessMap) {
-            const tu = document.getElementById('shipments-unconfirmed-table'), tc = document.getElementById('shipments-confirmed-table');
-            if(!tu || !tc) return; tu.innerHTML = ''; tc.innerHTML = ''; let confCount = 0;
-            [...window.inventory.shipments].sort((a, b) => (a.date || '').localeCompare(b.date || '')).forEach(s => {
-                const rowHTML = renderShipmentRow(s, readinessMap);
-                if (!s.is_confirmed && s.status === 'planned') tu.innerHTML += rowHTML;
-                else { tc.innerHTML += rowHTML; if (s.status !== 'completed') confCount++; }
-            });
-            document.getElementById('shipments-count').textContent = confCount + ' rekordów';
-        }
-
-        function updateAdjustmentsTable() {
-            const tb = document.getElementById('adjustments-table'); if(!tb) return; tb.innerHTML = '';
-            window.inventory.adjustments.forEach(a => {
-                let action = currentRole === 'admin' ? `<td><button class="btn-small btn-secondary" onclick="deleteAdjustment('${a.id}')" style="margin:0;"><span class="material-symbols-outlined" style="color:var(--accent-red);">delete</span></button></td>` : `<td class="admin-only-col"></td>`;
-                tb.innerHTML += `<tr><td><strong>${escapeHTML(a.date || '-')}</strong></td><td>${escapeHTML(a.location)}</td>${action}</tr>`;
-            });
-        }
-
-        function updateHistoryTable() {
-            const tb = document.getElementById('history-table'); if(!tb) return; tb.innerHTML = '';
-            window.inventory.history.forEach(h => {
-                const match = h.details.match(/\(przez: (.*?)\)/), worker = match ? match[1] : 'System', cleanDetails = h.details.replace(/\(przez:.*?\)/, '').trim();
-                tb.innerHTML += `<tr><td style="color:var(--text-light); font-size:0.85em;">${escapeHTML(h.timestamp)}</td><td><strong>${escapeHTML(worker)}</strong></td><td>${escapeHTML(h.action)}</td><td>${escapeHTML(cleanDetails)}</td></tr>`;
-            });
-        }
-
-        function updateComponentsDisplay() {
-            if(!window.inventory.components) return; const comps = window.inventory.components;
-            const e1=document.getElementById('ps-raw-cell'), e2=document.getElementById('clips-normal-cell'), e3=document.getElementById('clips-pass-cell');
-            if(e1) e1.innerHTML = `<strong>${comps.ps_raw || 0} szt.</strong>`; if(e2) e2.innerHTML = `<strong>${comps.clips_normal || 0} szt.</strong>`; if(e3) e3.innerHTML = `<strong>${comps.clips_pass || 0} szt.</strong>`;
-            if (currentRole !== 'viewer') document.querySelectorAll('#tab-components .table-responsive td:last-child').forEach(td => td.classList.add('editable'));
-        }
-
-        function editCell(cell, field, productId) {
-            if (currentRole === 'viewer' || cell.querySelector('input')) return;
-            const product = window.inventory.products.find(p => String(p.id) === String(productId));
-            const input = document.createElement('input'), originalHTML = cell.innerHTML;
-            input.type = 'number'; input.value = product[field] || 0; input.style.width = '100%'; input.style.textAlign = 'inherit';
-            cell.innerHTML = ''; cell.appendChild(input); cell.classList.remove('editable'); input.focus(); input.select();
-            const save = async () => {
-                const newValue = parseInt(input.value);
-                if (!isNaN(newValue) && newValue !== (product[field]||0)) { cell.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite; color: var(--primary-terracotta);">autorenew</span>'; await window.inventory.updateProduct(productId, { [field]: newValue }); } 
-                else cell.innerHTML = originalHTML;
-                cell.classList.add('editable');
-            };
-            input.addEventListener('blur', save); input.addEventListener('keypress', (e) => { if (e.key === 'Enter') input.blur(); });
-        }
-
-        function editComponentCell(cell, field) {
-            if (currentRole === 'viewer' || cell.querySelector('input')) return;
-            const currentVal = window.inventory.components[field] || 0, input = document.createElement('input'), originalHTML = cell.innerHTML;
-            input.type = 'number'; input.value = currentVal; input.style.width = '100%'; input.style.textAlign = 'inherit';
-            cell.innerHTML = ''; cell.appendChild(input); cell.classList.remove('editable'); input.focus(); input.select();
-            const save = async () => {
-                const newValue = parseInt(input.value);
-                if (!isNaN(newValue) && newValue !== currentVal) { cell.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite; color: var(--primary-terracotta);">autorenew</span>'; await window.inventory.updateComponent(field, newValue); } 
-                else cell.innerHTML = originalHTML;
-                cell.classList.add('editable');
-            };
-            input.addEventListener('blur', save); input.addEventListener('keypress', (e) => { if (e.key === 'Enter') input.blur(); });
-        }
-
-        async function confirmShipmentDateUI(id) { if (confirm('Zatwierdzić termin wysyłki i przenieść do kolejki realizacji?')) { showLoading(); await window.inventory.confirmShipment(id); hideLoading(); showToast('Termin wysyłki został zatwierdzony.', 'success'); } }
-        async function completeShipmentUI(id) { const s = window.inventory.shipments.find(x => String(x.id) === String(id)); if (!s) return; const total = s.products ? Object.values(s.products).reduce((a, b) => parseInt(a) + parseInt(b), 0) : 0; if (confirm(`Wydano towar z magazynu (${total} szt.)? \nStany zostaną zaktualizowane.`)) { showLoading(); await window.inventory.completeShipment(id); hideLoading(); showToast('Towar wydany, zaktualizowano stany.', 'success'); } }
-        async function completeRemainingShipmentUI(id) { if (confirm('Wydano brakującą część towaru? \nZamówienie zostanie zamknięte jako kompletne.')) { showLoading(); await window.inventory.completeRemainingShipment(id); hideLoading(); showToast('Zamówienie sfinalizowane.', 'success'); } }
-        async function deleteShipment(id) { if (currentRole === 'admin' && confirm('⚠️ Uwaga: Czy na pewno trwale usunąć to zamówienie z bazy danych? Operacji nie można cofnąć.')) { showLoading(); await window.inventory.deleteShipment(id); hideLoading(); showToast('Zamówienie usunięte z bazy.', 'warning'); } }
-        async function deleteAdjustment(id) { if (currentRole === 'admin' && confirm('Usunąć ten wpis z regulacji?')) { showLoading(); await window.inventory.deleteAdjustment(id); hideLoading(); showToast('Termin usunięty.', 'success'); } }
         
-        function showAnglesDemand(id) {
-            const s = window.inventory.shipments.find(x => String(x.id) === String(id)); if(!s) return;
-            const p = s.products || {}, a22 = parseInt(p[1]) || 0, a37 = (parseInt(p[2]) || 0) + (parseInt(p[4]) || 0), a58 = (parseInt(p[3]) || 0) + (parseInt(p[5]) || 0);
-            showModal('Zapotrzebowanie Kątowe', `<div style="text-align: center;"><p style="color: var(--text-light); margin-bottom: 1.5rem; font-size:0.95rem;">Zapotrzebowanie dla: <br><strong style="color:var(--text-dark); font-size:1.2rem;">${escapeHTML(s.location)}</strong></p><div style="display:flex; justify-content: space-around; background: var(--background); padding: 2rem 1rem; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: inset 0 2px 4px rgba(0,0,0,0.03);"><div><div style="font-size: 0.8rem; color: var(--text-light); text-transform:uppercase; letter-spacing:1px; margin-bottom:5px; font-weight:600;">Kąt 22°</div><div style="font-size: 2.5rem; font-weight: 700; color:var(--primary-dark);">${a22}</div></div><div><div style="font-size: 0.8rem; color: var(--text-light); text-transform:uppercase; letter-spacing:1px; margin-bottom:5px; font-weight:600;">Kąt 37°</div><div style="font-size: 2.5rem; font-weight: 700; color:var(--primary-dark);">${a37}</div></div><div><div style="font-size: 0.8rem; color: var(--text-light); text-transform:uppercase; letter-spacing:1px; margin-bottom:5px; font-weight:600;">Kąt 58°</div><div style="font-size: 2.5rem; font-weight: 700; color:var(--primary-dark);">${a58}</div></div></div></div>`);
+        function updateShipmentsTables(rMap) {
+            const tu=document.getElementById('shipments-unconfirmed-table'), tc=document.getElementById('shipments-confirmed-table'); 
+            if(!tu || !tc) return; tu.innerHTML=''; tc.innerHTML=''; let c=0;
+            [...window.inventory.shipments].sort((a,b)=>(a.date||'').localeCompare(b.date||'')).forEach(s => {
+                let tot=s.products?Object.values(s.products).reduce((a,b)=>parseInt(a||0)+parseInt(b||0),0):0;
+                let sb=s.status==='completed'?'<span class="status-badge status-ok">Zreal.</span>':(s.status==='partial'?'<span class="status-badge status-warning">Niepełna</span>':(s.is_confirmed?'<span class="status-badge status-neutral">Potw.</span>':'<span class="status-badge status-warning">Oczek.</span>'));
+                let rb=s.status==='completed'?'-':(rMap[s.id]?'<span class="status-badge status-ok">Komplet</span>':'<span class="status-badge status-error">Braki</span>');
+                let ab=''; if(currentRole!=='viewer'){ab+=`<button class="btn-small btn-secondary" onclick="editShipment('${s.id}')"><span class="material-symbols-outlined">edit</span></button>`;if(currentRole==='admin')ab+=`<button class="btn-small btn-secondary" onclick="deleteShipment('${s.id}')"><span class="material-symbols-outlined" style="color:var(--accent-red);">delete</span></button>`;if(s.status==='planned'&&!s.is_confirmed)ab=`<button class="btn-small btn-primary" onclick="confirmShipmentDateUI('${s.id}')"><span class="material-symbols-outlined">event_available</span> Zatwierdź</button>`+ab;else if(s.status==='planned'&&s.is_confirmed)ab=`<button class="btn-small btn-primary" onclick="completeShipmentUI('${s.id}')">Wydaj</button>`+ab;else if(s.status==='partial')ab=`<button class="btn-small btn-primary" onclick="completeRemainingShipmentUI('${s.id}')">Wydaj braki</button>`+ab;}if(s.status==='partial')ab+=`<button class="btn-small btn-secondary" onclick="showMissingItems('${s.id}')"><span class="material-symbols-outlined">list_alt</span> Braki</button>`;
+                let tr=`<tr class="${s.status==='completed'?'row-completed':''}"><td><strong>${escapeHTML(s.date||'-')}</strong></td><td>${escapeHTML(s.location)}</td><td>${escapeHTML(s.company||'-')}</td><td><strong>${tot}</strong></td><td><button class="btn-small btn-secondary" onclick="showAnglesDemand('${s.id}')">Pokaż</button></td><td>${rb}</td><td>${sb}</td><td class="${currentRole==='viewer'?'admin-only-col':''}">${ab}</td></tr>`;
+                if(!s.is_confirmed&&s.status==='planned') tu.innerHTML+=tr; else { tc.innerHTML+=tr; if(s.status!=='completed')c++; }
+            }); document.getElementById('shipments-count').textContent=c+' rekordów';
+        }
+        
+        function updateAdjustmentsTable() {
+            const tb = document.getElementById('adjustments-table'); if(!tb) return; tb.innerHTML='';
+            window.inventory.adjustments.forEach(a => { tb.innerHTML+=`<tr><td><strong>${escapeHTML(a.date||'-')}</strong></td><td>${escapeHTML(a.location)}</td><td class="${currentRole==='admin'?'':'admin-only-col'}">${currentRole==='admin'?`<button class="btn-small btn-secondary" onclick="deleteAdjustment('${a.id}')"><span class="material-symbols-outlined" style="color:var(--accent-red);">delete</span></button>`:''}</td></tr>`; });
+        }
+        
+        function updateHistoryTable() {
+            const tb = document.getElementById('history-table'); if(!tb) return; tb.innerHTML='';
+            window.inventory.history.forEach(h => { let m=h.details.match(/\(przez: (.*?)\)/), w=m?m[1]:'System', cd=h.details.replace(/\(przez:.*?\)/,'').trim(); tb.innerHTML+=`<tr><td>${escapeHTML(h.timestamp)}</td><td><strong>${escapeHTML(w)}</strong></td><td>${escapeHTML(h.action)}</td><td>${escapeHTML(cd)}</td></tr>`; });
+        }
+        
+        function updateComponentsDisplay() {
+            if(!window.inventory.components) return; const c=window.inventory.components;
+            document.getElementById('ps-raw-cell').innerHTML=`<strong>${c.ps_raw||0} szt.</strong>`; document.getElementById('clips-normal-cell').innerHTML=`<strong>${c.clips_normal||0} szt.</strong>`; document.getElementById('clips-pass-cell').innerHTML=`<strong>${c.clips_pass||0} szt.</strong>`;
+            if(currentRole!=='viewer') document.querySelectorAll('#tab-components td:last-child').forEach(t=>t.classList.add('editable'));
         }
 
-        function editShipment(id) {
-            if (currentRole === 'viewer') return; const s = window.inventory.shipments.find(x => String(x.id) === String(id)); if (!s) return;
-            const p = s.products || {}, p1 = p[1] || 0, p2 = p[2] || 0, p3 = p[3] || 0, p4 = p[4] || 0, p5 = p[5] || 0;
-            const dis = s.status === 'partial' ? 'disabled' : '';
-            showModal('Edycja Zamówienia', `<div style="display: grid; gap: 1.25rem;"><div class="form-group"><label>Data Wysyłki</label><input type="date" id="edit_shipment_date" value="${escapeHTML(s.date)}"></div><div class="form-group"><label>Pełny Cel / Adresat</label><input type="text" id="edit_shipment_location" value="${escapeHTML(s.location)}"></div><div class="form-group"><label>Spedytor / Firma Przewozowa</label><input type="text" id="edit_shipment_company" value="${escapeHTML(s.company || '')}"></div><div style="margin-top: 0.5rem; background-color: var(--background); padding: 1.25rem; border-radius: 12px; border: 1px solid var(--border-color);"><h3 style="margin-bottom: 1rem; font-size: 0.85rem; color: var(--text-light); text-transform:uppercase; letter-spacing:1px;">Ilości Opraw (szt.)</h3>${dis ? '<p style="color: var(--accent-red); font-size:0.8rem; margin-top:-10px; margin-bottom:10px; font-weight:500;">Edycja ilości zablokowana dla wysyłki częściowej.</p>' : ''}<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;"><div class="form-group" style="margin:0;"><label>Oprawy 22°</label><input type="number" id="edit_p1" value="${p1}" min="0" ${dis}></div><div class="form-group" style="margin:0;"><label>Oprawy 37°</label><input type="number" id="edit_p2" value="${p2}" min="0" ${dis}></div><div class="form-group" style="margin:0;"><label>Oprawy 58°</label><input type="number" id="edit_p3" value="${p3}" min="0" ${dis}></div><div class="form-group" style="margin:0;"><label>37°-20W</label><input type="number" id="edit_p4" value="${p4}" min="0" ${dis}></div><div class="form-group" style="margin:0;"><label>58°-20W</label><input type="number" id="edit_p5" value="${p5}" min="0" ${dis}></div></div></div><div style="margin-top: 1rem;"><button class="btn-primary" onclick="saveShipment('${id}')" style="width:100%; padding: 1rem;"><span class="material-symbols-outlined">save</span> Zapisz Zmiany w Zamówieniu</button></div></div>`);
-        }
-
-        async function saveShipment(id) {
-            const date = document.getElementById('edit_shipment_date').value, loc = document.getElementById('edit_shipment_location').value, comp = document.getElementById('edit_shipment_company').value;
-            if (!date || !loc) { showToast('Data i cel są wymagane.', 'error'); return; }
-            const s = window.inventory.shipments.find(x => String(x.id) === String(id)); const data = { date, location: loc, company: comp };
-            if (s.status !== 'partial') { data.products = { 1: parseInt(document.getElementById('edit_p1').value) || 0, 2: parseInt(document.getElementById('edit_p2').value) || 0, 3: parseInt(document.getElementById('edit_p3').value) || 0, 4: parseInt(document.getElementById('edit_p4').value) || 0, 5: parseInt(document.getElementById('edit_p5').value) || 0 }; }
-            closeModal(); showLoading(); await window.inventory.updateShipmentInDB(id, data); hideLoading(); showToast('Zapisano.', 'success');
-        }
-
-        document.getElementById('shipmentForm').addEventListener('submit', async function(e) {
-            e.preventDefault(); if (currentRole === 'viewer') return; const btn = this.querySelector('button[type="submit"]'), txt = btn.innerHTML; btn.innerHTML = 'Przetwarzanie...'; btn.disabled = true;
-            const fd = new FormData(this); const products = { 1: parseInt(fd.get('p1')) || 0, 2: parseInt(fd.get('p2')) || 0, 3: parseInt(fd.get('p3')) || 0, 4: parseInt(fd.get('p4')) || 0, 5: parseInt(fd.get('p5')) || 0 };
-            let loc = fd.get('ship_city').trim(); if (fd.get('ship_street').trim()) loc += `, ${fd.get('ship_street').trim()}`; if (fd.get('ship_target').trim()) loc += ` (${fd.get('ship_target').trim()})`;
-            showLoading(); await window.inventory.addShipment({ date: fd.get('date'), location: loc, company: fd.get('company'), products }); hideLoading(); this.reset(); btn.innerHTML = txt; btn.disabled = false; showToast('Dodano.', 'success');
-        });
-
-        document.getElementById('adjustmentForm').addEventListener('submit', async function(e) {
-            e.preventDefault(); const btn = this.querySelector('button'), txt = btn.innerHTML; btn.innerHTML = 'Zapisywanie...'; btn.disabled = true;
-            const fd = new FormData(this); let loc = fd.get('adj_city').trim(); if (fd.get('adj_street').trim()) loc += `, ${fd.get('adj_street').trim()}`; if (fd.get('adj_target').trim()) loc += ` (${fd.get('adj_target').trim()})`;
-            showLoading(); await window.inventory.addAdjustment(fd.get('adj_date'), loc); hideLoading(); this.reset(); btn.innerHTML = txt; btn.disabled = false; showToast('Dodano.', 'success');
-        });
-
-        document.getElementById('incomingForm').addEventListener('submit', async function(e) {
-            e.preventDefault(); const btn = this.querySelector('button'), txt = btn.innerHTML; btn.innerHTML = 'Zapisywanie...'; btn.disabled = true;
-            showLoading(); await window.inventory.addIncomingShipment(new FormData(this).get('supplier'), { 1: parseInt(new FormData(this).get('p1')) || 0, 2: parseInt(new FormData(this).get('p2')) || 0, 3: parseInt(new FormData(this).get('p3')) || 0 }); hideLoading(); this.reset(); btn.innerHTML = txt; btn.disabled = false; showToast('Przyjęto.', 'success');
-        });
-
-        document.getElementById('productionForm').addEventListener('submit', async function(e) {
-            e.preventDefault(); const btn = this.querySelector('button'), txt = btn.innerHTML; btn.innerHTML = 'Przetwarzanie...'; btn.disabled = true;
-            showLoading(); await window.inventory.registerProduction({ 1: parseInt(new FormData(this).get('p1')) || 0, 2: parseInt(new FormData(this).get('p2')) || 0, 3: parseInt(new FormData(this).get('p3')) || 0, 4: parseInt(new FormData(this).get('p4')) || 0, 5: parseInt(new FormData(this).get('p5')) || 0 }); hideLoading(); this.reset(); btn.innerHTML = txt; btn.disabled = false;
-        });
-
-        document.getElementById('componentsIncomingForm').addEventListener('submit', async function(e) {
-            e.preventDefault(); const btn = this.querySelector('button'), txt = btn.innerHTML; btn.innerHTML = 'Zapisywanie...'; btn.disabled = true;
-            showLoading(); await window.inventory.addComponentsShipment(new FormData(this).get('supplier'), { ps_raw: parseInt(new FormData(this).get('ps_raw')) || 0, clips_normal: parseInt(new FormData(this).get('clips_normal')) || 0, clips_pass: parseInt(new FormData(this).get('clips_pass')) || 0 }); hideLoading(); this.reset(); btn.innerHTML = txt; btn.disabled = false; showToast('Przyjęto.', 'success');
-        });
-
+        // BINDOWANIE ZDARZEŃ FORMULARZY
+        document.getElementById('shipmentForm').addEventListener('submit', async function(e) { e.preventDefault(); if (currentRole === 'viewer') return; const btn = this.querySelector('button[type="submit"]'); const txt = btn.innerHTML; btn.innerHTML = 'Przetwarzanie...'; btn.disabled = true; const fd = new FormData(this); const prods = { 1:parseInt(fd.get('p1'))||0, 2:parseInt(fd.get('p2'))||0, 3:parseInt(fd.get('p3'))||0, 4:parseInt(fd.get('p4'))||0, 5:parseInt(fd.get('p5'))||0 }; let loc = fd.get('ship_city').trim(); if(fd.get('ship_street').trim()) loc += `, ${fd.get('ship_street').trim()}`; if(fd.get('ship_target').trim()) loc += ` (${fd.get('ship_target').trim()})`; showLoading(); await window.inventory.addShipment({ date: fd.get('date'), location: loc, company: fd.get('company'), products: prods }); hideLoading(); this.reset(); btn.innerHTML = txt; btn.disabled = false; showToast('Dodano', 'success'); });
+        document.getElementById('adjustmentForm').addEventListener('submit', async function(e) { e.preventDefault(); const btn = this.querySelector('button'); const txt = btn.innerHTML; btn.innerHTML = 'Zapisywanie...'; btn.disabled = true; const fd = new FormData(this); let loc = fd.get('adj_city').trim(); if(fd.get('adj_street').trim()) loc += `, ${fd.get('adj_street').trim()}`; if(fd.get('adj_target').trim()) loc += ` (${fd.get('adj_target').trim()})`; showLoading(); await window.inventory.addAdjustment(fd.get('adj_date'), loc); hideLoading(); this.reset(); btn.innerHTML = txt; btn.disabled = false; showToast('Dodano regulację.', 'success'); });
+        document.getElementById('incomingForm').addEventListener('submit', async function(e) { e.preventDefault(); const btn = this.querySelector('button'); const txt = btn.innerHTML; btn.innerHTML = 'Zapisywanie...'; btn.disabled = true; const fd = new FormData(this); showLoading(); await window.inventory.addIncomingShipment(fd.get('supplier'), { 1:parseInt(fd.get('p1'))||0, 2:parseInt(fd.get('p2'))||0, 3:parseInt(fd.get('p3'))||0 }); hideLoading(); this.reset(); btn.innerHTML = txt; btn.disabled = false; showToast('Przyjęto oprawy.', 'success'); });
+        document.getElementById('productionForm').addEventListener('submit', async function(e) { e.preventDefault(); const btn = this.querySelector('button'); const txt = btn.innerHTML; btn.innerHTML = 'Przetwarzanie...'; btn.disabled = true; const fd = new FormData(this); showLoading(); await window.inventory.registerProduction({ 1:parseInt(fd.get('p1'))||0, 2:parseInt(fd.get('p2'))||0, 3:parseInt(fd.get('p3'))||0, 4:parseInt(fd.get('p4'))||0, 5:parseInt(fd.get('p5'))||0 }); hideLoading(); this.reset(); btn.innerHTML = txt; btn.disabled = false; });
+        document.getElementById('componentsIncomingForm').addEventListener('submit', async function(e) { e.preventDefault(); const btn = this.querySelector('button'); const txt = btn.innerHTML; btn.innerHTML = 'Zapisywanie...'; btn.disabled = true; const fd = new FormData(this); showLoading(); await window.inventory.addComponentsShipment(fd.get('supplier'), { ps_raw:parseInt(fd.get('ps_raw'))||0, clips_normal:parseInt(fd.get('clips_normal'))||0, clips_pass:parseInt(fd.get('clips_pass'))||0 }); hideLoading(); this.reset(); btn.innerHTML = txt; btn.disabled = false; showToast('Przyjęto komponenty.', 'success'); });
     </script>
 </body>
 </html>
