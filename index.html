@@ -1045,28 +1045,68 @@
             currentCalendarDate.setMonth(currentCalendarDate.getMonth() + dir); 
             if(window.inventory) window.inventory.updateDashboard(); 
         }
-
+        // --- FUNKCJE DRAG & DROP DO KALENDARZA ---
+        function handleDragStart(event, type, id) {
+            // Zapisujemy tylko typ (wysyłka/serwis) i ID obiektu
+            event.dataTransfer.setData('application/json', JSON.stringify({ type, id }));
+            event.dataTransfer.effectAllowed = 'move';
+        }
+        
+        async function handleCalendarDrop(event, targetDate) {
+            event.preventDefault();
+            
+            if (currentRole === 'viewer') {
+                showToast('Brak uprawnień do zmiany daty.', 'warning');
+                return;
+            }
+            
+            try {
+                const dataStr = event.dataTransfer.getData('application/json');
+                if (!dataStr) return;
+                
+                const data = JSON.parse(dataStr);
+                if (!data.type || !data.id) return;
+                
+                showLoading();
+                
+                if (data.type === 'shipment') {
+                    // W updateShipmentInDB wysyłamy TYLKO pole {date: targetDate}. 
+                    // Chroni to przed nadpisaniem produktów (Supabase zaktualizuje tylko datę).
+                    await window.inventory.updateShipmentInDB(data.id, { date: targetDate });
+                    showToast('Termin wysyłki został przesunięty.', 'success');
+                    
+                } else if (data.type === 'adjustment') {
+                    await window.inventory.updateAdjustmentDate(data.id, targetDate);
+                    showToast('Termin wyjazdu serwisowego zaktualizowany.', 'success');
+                }
+            } catch (e) {
+                console.error('Błąd drag&drop:', e);
+                showToast('Wystąpił błąd przy przenoszeniu.', 'error');
+            } finally {
+                hideLoading();
+            }
+        }
         function renderCalendar(readinessMap) {
             const container = document.getElementById('dashboard-calendar-container'); 
             const monthLabel = document.getElementById('calendar-month-label');
             if(!container) return;
-
+        
             const year = currentCalendarDate.getFullYear();
             const month = currentCalendarDate.getMonth();
             const monthNames = ["Styczeń","Luty","Marzec","Kwiecień","Maj","Czerwiec","Lipiec","Sierpień","Wrzesień","Październik","Listopad","Grudzień"];
             monthLabel.textContent = `${monthNames[month]} ${year}`;
             container.innerHTML = '';
-
+        
             let firstDay = new Date(year, month, 1).getDay(); 
             firstDay = firstDay === 0 ? 6 : firstDay - 1; 
             const daysInMonth = new Date(year, month + 1, 0).getDate();
             let dayCounter = 1, isMonthFinished = false;
-
+        
             while (!isMonthFinished) {
                 const row = document.createElement('div'); 
                 row.className = 'calendar-grid'; 
                 let weekTotal = 0;
-
+        
                 for (let j = 0; j < 7; j++) {
                     const cell = document.createElement('div');
                     if (dayCounter === 1 && j < firstDay) { 
@@ -1077,6 +1117,11 @@
                     } else {
                         cell.className = 'calendar-cell';
                         const ds = `${year}-${String(month + 1).padStart(2,'0')}-${String(dayCounter).padStart(2,'0')}`;
+                        
+                        // --- NASŁUCHIWANIE NA UPUSZCZENIE KAFELKA W KOMÓRCE ---
+                        cell.ondragover = (e) => e.preventDefault();
+                        cell.ondrop = (e) => handleCalendarDrop(e, ds);
+        
                         if (ds === new Date().toISOString().split('T')[0]) cell.classList.add('today');
                         
                         let html = `<div class="calendar-date">${dayCounter}</div>`;
@@ -1086,12 +1131,15 @@
                                 const tot = s.products ? Object.values(s.products).reduce((a,b)=>parseInt(a||0)+parseInt(b||0),0) : 0;
                                 weekTotal += tot;
                                 let st = s.status === 'partial' ? '<span style="color:var(--warning-status);">Braki (Część.)</span>' : (readinessMap[s.id] ? '<span style="color:var(--success-status);">Komplet</span>' : '<span style="color:var(--accent-red);">Braki</span>');
-                                html += `<div class="cal-item shipment" onclick="editShipment('${s.id}')"><strong>W: ${escapeHTML(s.location).split('(')[0]}</strong><br>${tot} szt<br>${st}</div>`;
+                                
+                                // --- DODANO DRAGGABLE DO WYSYŁKI ---
+                                html += `<div class="cal-item shipment" draggable="true" ondragstart="handleDragStart(event, 'shipment', '${s.id}')" onclick="editShipment('${s.id}')"><strong>W: ${escapeHTML(s.location).split('(')[0]}</strong><br>${tot} szt<br>${st}</div>`;
                             });
                         }
                         if(window.inventory && window.inventory.adjustments) {
                             window.inventory.adjustments.filter(a => a.date === ds).forEach(a => {
-                                html += `<div class="cal-item adjustment"><strong>R: ${escapeHTML(a.location).split('(')[0]}</strong><br>Serwis</div>`;
+                                // --- DODANO DRAGGABLE DO SERWISU ---
+                                html += `<div class="cal-item adjustment" draggable="true" ondragstart="handleDragStart(event, 'adjustment', '${a.id}')"><strong>R: ${escapeHTML(a.location).split('(')[0]}</strong><br>Serwis</div>`;
                             });
                         }
                         
@@ -1100,7 +1148,7 @@
                     }
                     row.appendChild(cell);
                 }
-
+        
                 if (!isMonthFinished || row.childNodes[0].className !== 'calendar-cell empty') {
                     const sum = document.createElement('div'); 
                     sum.className = 'cal-summary';
@@ -1110,7 +1158,6 @@
                 }
             }
         }
-
         // --- PDF GENERATOR ---
         function printInventoryPdf() {
             if(!window.inventory || window.inventory.products.length === 0) return;
@@ -1267,6 +1314,21 @@
                 await this.fetchData(); 
             }
 
+            async updateAdjustmentDate(id, newDate) { 
+                if (currentRole === 'viewer') return; 
+                const a = this.adjustments.find(x => String(x.id) === String(id)); 
+                if (a) { 
+                    a.date = newDate; 
+                    this.updateDashboard(); 
+                
+                // BEZPIECZNY UPDATE: Zmieniamy tylko kolumnę 'date'. Reszta zostaje nienaruszona.
+                await db.from('adjustments').update({ date: newDate }).eq('id', id); 
+                
+                await this.addHistory('Zmiana terminu serwisu (Przeciągnięcie)', `${a.location} na ${newDate}`); 
+                await this.fetchData(); 
+            } 
+        }
+            
             async deleteAdjustment(id) { 
                 if (currentRole !== 'admin') return; 
                 this.adjustments = this.adjustments.filter(a => String(a.id) !== String(id)); 
