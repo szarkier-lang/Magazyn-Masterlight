@@ -131,8 +131,8 @@
 
         .table-responsive { width: 100%; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm); overflow: hidden; }
         table { width: 100%; border-collapse: separate; border-spacing: 0; margin: 0; font-size: 0.9rem; table-layout: auto; }
-        th { background-color: var(--primary-terracotta); color: #fff; padding: 1.1rem 1rem; text-align: left; font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--primary-dark); position: sticky; top: 0; z-index: 10; white-space: nowrap; }
-        td { padding: 0.85rem 1rem; border-bottom: 1px solid var(--border-color); color: var(--text-dark); vertical-align: middle; word-break: break-word; }
+        th { background-color: var(--primary-terracotta); color: #fff; padding: 1rem 0.75rem; text-align: left; font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--primary-dark); position: sticky; top: 0; z-index: 10; }
+        td { padding: 0.8rem 0.75rem; border-bottom: 1px solid var(--border-color); color: var(--text-dark); vertical-align: middle; word-break: break-word; }
         tbody tr { transition: background-color 0.2s, opacity 0.2s; }
         tbody tr:last-child td { border-bottom: none; }
         tbody tr:hover { background-color: #FEF6F3; }
@@ -140,50 +140,37 @@
         .row-completed { opacity: 0.6; background-color: #F9FAFB; }
         .row-completed:hover { opacity: 1; background-color: #F3F4F6 !important; }
 
-        .status-badge { display: inline-flex; align-items: center; justify-content: center; padding: 0.4rem 0.8rem; border-radius: 8px; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.3px; white-space: nowrap;}
+        .status-badge { display: inline-flex; align-items: center; padding: 0.4rem 0.8rem; border-radius: 8px; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.3px;}
         .status-ok { background-color: #ECFDF5; color: #059669; border: 1px solid #A7F3D0; }
         .status-warning { background-color: #FFFBEB; color: #D97706; border: 1px solid #FDE68A; }
         .status-error { background-color: #FEF2F2; color: #DC2626; border: 1px solid #FECACA; }
         .status-neutral { background-color: #EFF6FF; color: #2563EB; border: 1px solid #BFDBFE; }
 
-        .form-group { margin-bottom: 0; display: flex; flex-direction: column; gap: 0.5rem; justify-content: flex-end;}
-        .form-group label { font-weight: 600; color: var(--text-dark); font-size: 0.85rem; letter-spacing: 0.3px; }
-        input[type="text"], input[type="number"], input[type="date"], input[type="email"], input[type="password"], select { 
-            padding: 0.75rem 1.1rem; background: #fff; border: 1px solid #D1D5DB; border-radius: 10px; 
-            font-size: 0.95rem; color: var(--text-dark); width: 100%; font-family: 'Inter', sans-serif; 
-            transition: all 0.2s ease; outline: none; box-shadow: inset 0 1px 2px rgba(0,0,0,0.03); 
-            height: 46px; 
-        }
-        input:focus, select:focus { border-color: var(--primary-terracotta); box-shadow: 0 0 0 3px rgba(196, 112, 75, 0.15), inset 0 1px 2px rgba(0,0,0,0.03); }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; backdrop-filter: blur(4px); }
+        .modal-dialog { background: white; padding: 2.5rem; border-radius: 20px; max-width: 550px; margin: 8vh auto; box-shadow: var(--shadow-lg); animation: slideUp 0.3s ease; border: 1px solid var(--border-color); }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-color); }
+        .modal-header h2 { color: var(--primary-dark); font-weight: 700; }
+        .close { font-size: 2rem; cursor: pointer; color: var(--text-light); transition: color 0.2s ease; line-height: 1; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; }
+        .close:hover { color: var(--accent-red); background-color: #FEF2F2; }
 
-        button { display: inline-flex; align-items: center; justify-content: center; padding: 0.75rem 1.5rem; height: 46px; border: none; border-radius: 10px; cursor: pointer; font-size: 0.9rem; font-weight: 600; transition: all 0.2s ease; font-family: 'Inter', sans-serif; box-shadow: var(--shadow-sm); letter-spacing: 0.3px; white-space: nowrap; }
+        button { display: inline-flex; align-items: center; justify-content: center; padding: 0.75rem 1.5rem; border: none; border-radius: 10px; cursor: pointer; font-size: 0.9rem; font-weight: 600; transition: all 0.2s ease; font-family: 'Inter', sans-serif; box-shadow: var(--shadow-sm); letter-spacing: 0.3px; }
         .btn-primary { background-color: var(--primary-terracotta); color: white; }
         .btn-primary:hover:not(:disabled) { background-color: var(--primary-dark); transform: translateY(-1px); box-shadow: 0 7px 14px rgba(196, 112, 75, 0.2); }
         .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
-        
         .btn-secondary { background-color: white; color: var(--text-dark); border: 1px solid var(--border-color); }
         .btn-secondary:hover:not(:disabled) { background-color: #F9FAFB; border-color: #D1D5DB; transform: translateY(-1px); box-shadow: var(--shadow-sm); }
-        
-        .btn-small { padding: 0.4rem 0.8rem; font-size: 0.75rem; height: 32px; border-radius: 6px; }
-        
-        .action-cell-flex { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+        .btn-small { padding: 0.5rem 0.8rem; font-size: 0.75rem; margin-right: 0.3rem; margin-bottom: 0.3rem; border-radius: 6px; }
+
+        .form-group { margin-bottom: 1.25rem; display: flex; flex-direction: column; gap: 0.5rem; }
+        .form-group label { font-weight: 600; color: var(--text-dark); font-size: 0.85rem; letter-spacing: 0.3px; }
+        input[type="text"], input[type="number"], input[type="date"], input[type="email"], input[type="password"], select { padding: 0.75rem 1.1rem; background: #fff; border: 1px solid #D1D5DB; border-radius: 10px; font-size: 0.95rem; color: var(--text-dark); width: 100%; font-family: 'Inter', sans-serif; transition: all 0.2s ease; outline: none; box-shadow: inset 0 1px 2px rgba(0,0,0,0.03); }
+        input:focus, select:focus { border-color: var(--primary-terracotta); box-shadow: 0 0 0 3px rgba(196, 112, 75, 0.15), inset 0 1px 2px rgba(0,0,0,0.03); }
 
         .editable { cursor: pointer; background-color: #F9FAFB; border-radius: 8px; transition: background 0.2s; border: 1px solid transparent; text-align: center;}
         .editable:hover { background-color: #FEF6F3; border-color: var(--beige-light); }
-        .editable input { max-width: 90px; text-align: center; padding: 0.4rem; height: 34px; margin: 0 auto; display: block; }
-
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.55); z-index: 2000; backdrop-filter: blur(4px); }
-        .modal-dialog { background: white; padding: 2.5rem; border-radius: 20px; max-width: 550px; margin: 8vh auto; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); border: 1px solid var(--border-color); }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-color); }
-        .modal-header h2 { color: var(--primary-dark); font-weight: 700; font-size: 1.3rem; }
-        .close { font-size: 2rem; cursor: pointer; color: var(--text-light); transition: color 0.2s ease, background-color 0.2s ease; line-height: 1; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; }
-        .close:hover { color: var(--accent-red); background-color: #FEF2F2; }
-
-        .checkbox-wrapper { display: flex; align-items: center; gap: 12px; background-color: #FEF2F2; border: 1px solid #FECACA; padding: 1rem 1.25rem; border-radius: 10px; cursor: pointer; transition: background-color 0.2s; }
-        .checkbox-wrapper:hover { background-color: #FEE2E2; }
-        .checkbox-wrapper input[type="checkbox"] { width: 22px; height: 22px; cursor: pointer; accent-color: var(--accent-red-dark); margin: 0; box-shadow: none; }
-        .checkbox-wrapper label { color: var(--accent-red-dark); font-weight: 700; cursor: pointer; margin: 0; font-size: 0.9rem; }
-
+        .editable input { max-width: 90px; text-align: center; padding: 0.4rem; margin: 0 auto; display: block; }
+        
+        /* STYLE MAPY I KALENDARZA */
         .map-container { height: 450px; width: 100%; border-bottom-left-radius: 16px; border-bottom-right-radius: 16px; z-index: 1; background-color: #f3f4f6; }
         .leaflet-popup-content-wrapper { border-radius: 12px !important; box-shadow: var(--shadow-lg) !important; padding: 5px !important;}
         .leaflet-popup-content { margin: 12px 16px !important; font-family: 'Inter', sans-serif !important; color: var(--text-dark) !important; font-size: 0.9rem !important; line-height: 1.5 !important;}
@@ -210,6 +197,7 @@
 
         .footer { text-align: center; padding: 3rem 2rem; color: var(--text-light); font-size: 0.85rem; margin-top: 2rem; border-top: 1px solid var(--border-color); background: #fff; }
 
+        /* --- MOBILE OPTYMALIZACJA --- */
         @media (max-width: 768px) {
             .mobile-menu-btn { display: block; }
             .sidebar { transform: translateX(-100%); } 
@@ -242,6 +230,7 @@
             td::before { content: attr(data-label); position: absolute; left: 1rem; width: 40%; text-align: left; font-weight: 600; color: var(--text-light); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; }
             .editable input { max-width: 140px; text-align: right; padding: 0.5rem; border-radius: 6px; }
             td[data-label="Akcja"] { justify-content: flex-end; flex-wrap: wrap; gap: 5px; padding-top: 1rem !important; }
+            .btn-small { margin-bottom: 0; margin-right: 0; }
             .map-container { height: 400px !important; border-radius: 0 0 12px 12px !important; } 
             .leaflet-popup-content { font-size: 0.8rem !important; }
         }
@@ -287,10 +276,10 @@
         <div class="auth-box">
             <h2><span class="material-symbols-outlined" style="font-size: 2.8rem; color: var(--primary-terracotta);">highlight</span> MASTERLIGHT</h2>
             <p style="margin-bottom: 2.5rem; color: var(--text-light); font-size: 0.95rem;">Zaloguj się do chmury magazynowej WMS</p>
-            <form id="login-form" style="display:flex; flex-direction:column; gap:1.2rem;">
-                <div class="form-group" style="text-align:left;"><label>Adres E-mail</label><input type="email" id="login-email" required placeholder="np. jan.kowalski@masterlight.pl"></div>
-                <div class="form-group" style="text-align:left;"><label>Hasło dostępu</label><input type="password" id="login-password" required placeholder="••••••••"></div>
-                <button type="submit" id="login-submit-btn" class="btn-primary" style="width: 100%; margin-top: 0.5rem; font-size: 1rem;">
+            <form id="login-form">
+                <div class="form-group"><label>Adres E-mail</label><input type="email" id="login-email" required placeholder="np. jan.kowalski@masterlight.pl"></div>
+                <div class="form-group"><label>Hasło dostępu</label><input type="password" id="login-password" required placeholder="••••••••"></div>
+                <button type="submit" id="login-submit-btn" class="btn-primary" style="width: 100%; margin-top: 1.5rem; padding: 1rem; font-size: 1rem;">
                     <span class="material-symbols-outlined">login</span> Zaloguj bezpiecznie
                 </button>
             </form>
@@ -332,7 +321,7 @@
                         <p><span class="material-symbols-outlined" style="font-size: 1.2rem; color: var(--primary-terracotta);">account_circle</span> <strong id="logged-email">...</strong></p>
                         <p style="font-size: 0.75rem; color: var(--text-light); padding-left: 24px;"><span id="logged-role">...</span></p>
                     </div>
-                    <button onclick="logoutUser()" class="btn-secondary btn-small" style="margin: 0; margin-left: 10px; width: 36px; height: 36px; border-radius: 8px;" title="Wyloguj się">
+                    <button onclick="logoutUser()" class="btn-secondary btn-small" style="margin: 0; padding: 0.6rem; border-radius: 8px;" title="Wyloguj się">
                         <span class="material-symbols-outlined" style="margin:0; color: var(--accent-red);">logout</span>
                     </button>
                 </div>
@@ -353,9 +342,9 @@
                         <div class="section-header">
                             <h2><span class="material-symbols-outlined">calendar_month</span> Harmonogram Działań (Kalendarz)</h2>
                             <div class="cal-month-nav">
-                                <button class="btn-secondary btn-small" onclick="changeMonth(-1)" style="margin:0; height:auto; padding:0.4rem;"><span class="material-symbols-outlined" style="margin:0;">chevron_left</span></button>
+                                <button class="btn-secondary btn-small" onclick="changeMonth(-1)"><span class="material-symbols-outlined">chevron_left</span></button>
                                 <strong id="calendar-month-label" style="margin: 0 15px; font-size: 1.1rem; color: var(--primary-dark);">...</strong>
-                                <button class="btn-secondary btn-small" onclick="changeMonth(1)" style="margin:0; height:auto; padding:0.4rem;"><span class="material-symbols-outlined" style="margin:0;">chevron_right</span></button>
+                                <button class="btn-secondary btn-small" onclick="changeMonth(1)"><span class="material-symbols-outlined">chevron_right</span></button>
                             </div>
                         </div>
                         <div class="section-content" style="padding: 1.5rem;">
@@ -407,7 +396,7 @@
                     <div class="section">
                         <div class="section-header">
                             <h2><span class="material-symbols-outlined">inventory_2</span> Pełny Stan Magazynowy Downlightów</h2>
-                            <button class="btn-secondary btn-small" onclick="printInventoryPdf()" style="margin: 0; height: auto;"><span class="material-symbols-outlined">print</span> Generuj PDF</button>
+                            <button class="btn-secondary btn-small" onclick="printInventoryPdf()" style="margin: 0;"><span class="material-symbols-outlined">print</span> Generuj Raport PDF</button>
                         </div>
                         <div class="section-content" style="padding:0;">
                             <div class="table-responsive" style="max-height: 70vh;">
@@ -419,30 +408,16 @@
                         </div>
                     </div>
 
-                    <div class="section" style="max-width: 1200px;">
+                    <div class="section" style="max-width: 900px;">
                         <div class="section-header">
                             <h2><span class="material-symbols-outlined">plumbing</span> Stan Serwisowy Opraw (RMA)</h2>
-                            <button class="btn-primary btn-small" onclick="openReceiveDamagedUI()" style="margin: 0; background-color:#3B82F6; height:auto; padding:0.5rem 1rem;"><span class="material-symbols-outlined">assignment_return</span> Przyjmij zwrot ze sklepu</button>
+                            <button class="btn-secondary btn-small" onclick="openReceiveDamagedUI()" style="margin: 0;"><span class="material-symbols-outlined">assignment_return</span> Przyjmij ze sklepu</button>
                         </div>
                         <div class="section-content" style="padding:0;">
                             <div class="table-responsive">
                                 <table style="min-width: 0;">
-                                    <thead><tr><th>Model Oprawy</th><th>Uszkodzone (Oczekują)</th><th>W Serwisie (Wysyłka)</th><th class="admin-only-col" style="width:240px;">Akcja</th></tr></thead>
+                                    <thead><tr><th>Model Oprawy</th><th>Uszkodzone (Oczekują)</th><th>W Serwisie (Wysyłka)</th><th class="admin-only-col">Akcja</th></tr></thead>
                                     <tbody id="service-table"></tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="section" style="max-width: 1200px;">
-                        <div class="section-header">
-                            <h2><span class="material-symbols-outlined">history</span> Rejestr Przypadków Serwisowych</h2>
-                        </div>
-                        <div class="section-content" style="padding:0;">
-                            <div class="table-responsive" style="max-height: 400px; overflow-y:auto;">
-                                <table style="min-width: 0;">
-                                    <thead><tr><th>Data</th><th>Typ Akcji</th><th>Model Oprawy</th><th>Ilość</th><th>Opis usterki / Notatka</th></tr></thead>
-                                    <tbody id="service-cases-table"></tbody>
                                 </table>
                             </div>
                         </div>
@@ -454,14 +429,12 @@
                         <div class="section-header"><h2><span class="material-symbols-outlined">move_to_inbox</span> Przyjęcie Dostawy Opraw (Huta)</h2></div>
                         <div class="section-content">
                             <form id="incomingForm">
-                                <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 1rem; align-items: end;">
-                                    <div class="form-group"><label>Huta / Dostawca</label><input type="text" name="supplier" required placeholder="np. Alumetal"></div>
-                                    <div class="form-group"><label>Surowe 22°</label><input type="number" name="p1" value="0" min="0"></div>
-                                    <div class="form-group"><label>Surowe 37°</label><input type="number" name="p2" value="0" min="0"></div>
-                                    <div class="form-group"><label>Surowe 58°</label><input type="number" name="p3" value="0" min="0"></div>
-                                    <div class="form-group">
-                                        <button type="submit" class="btn-primary" style="width:100%;"><span class="material-symbols-outlined">add_circle</span> Przyjmij</button>
-                                    </div>
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; align-items: end;">
+                                    <div class="form-group" style="margin:0;"><label>Huta / Dostawca</label><input type="text" name="supplier" required placeholder="np. Alumetal"></div>
+                                    <div class="form-group" style="margin:0;"><label>Surowe 22°</label><input type="number" name="p1" value="0" min="0"></div>
+                                    <div class="form-group" style="margin:0;"><label>Surowe 37°</label><input type="number" name="p2" value="0" min="0"></div>
+                                    <div class="form-group" style="margin:0;"><label>Surowe 58°</label><input type="number" name="p3" value="0" min="0"></div>
+                                    <button type="submit" class="btn-primary" style="height: 47px;"><span class="material-symbols-outlined">add_circle</span> Przyjmij</button>
                                 </div>
                             </form>
                         </div>
@@ -472,36 +445,35 @@
                             <h2><span class="material-symbols-outlined">add_location_alt</span> Dodaj Nowe Zamówienie / Plan Wysyłki</h2>
                             <div style="display:flex; align-items:center; gap:10px;">
                                 <input type="file" id="pdf-input" accept="application/pdf" style="display: none;" onchange="scanOfferFromPDF(this.files[0])">
-                                <button type="button" id="pdf-scan-btn" class="btn-primary btn-small" onclick="document.getElementById('pdf-input').click()" style="background-color: #3B82F6; margin: 0; padding: 0.5rem 1rem; height:auto;">
+                                <button type="button" id="pdf-scan-btn" class="btn-primary btn-small" onclick="document.getElementById('pdf-input').click()" style="background-color: #3B82F6; margin: 0; padding: 0.5rem 1rem;">
                                     <span class="material-symbols-outlined">document_scanner</span> Skanuj z PDF
                                 </button>
                             </div>
                         </div>
                         <div class="section-content">
                             <form id="shipmentForm">
-                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.25rem;">
+                                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.25rem;">
                                     <div class="form-group"><label>Miejscowość *</label><input type="text" name="ship_city" id="form-city" required placeholder="np. Warszawa"></div>
                                     <div class="form-group"><label>Ulica i nr (opcjonalnie)</label><input type="text" name="ship_street" id="form-street" placeholder="np. Złota 44"></div>
                                     <div class="form-group"><label>Obiekt / Inwestycja (opcjonalnie)</label><input type="text" name="ship_target" id="form-target" placeholder="np. Biurowiec Skylight"></div>
                                 </div>
-                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.25rem; margin-top: 1.25rem;">
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-top: 0.5rem;">
                                     <div class="form-group"><label>Data Wstępna</label><input type="date" name="date" id="form-date" required></div>
                                     <div class="form-group"><label>Spedytor / Odbiór</label><input type="text" name="company" id="form-company" placeholder="np. DPD, Własny" required></div>
                                 </div>
-                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem; margin-top: 1.25rem; background-color: var(--background); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border-color);">
-                                    <div class="form-group"><label>22° - 15W</label><input type="number" name="p1" id="form-p1" value="0" min="0"></div>
-                                    <div class="form-group"><label>37° - 15W</label><input type="number" name="p2" id="form-p2" value="0" min="0"></div>
-                                    <div class="form-group"><label>58° - 15W</label><input type="number" name="p3" id="form-p3" value="0" min="0"></div>
-                                    <div class="form-group"><label>37° - 20W</label><input type="number" name="p4" id="form-p4" value="0" min="0"></div>
-                                    <div class="form-group"><label>58° - 20W</label><input type="number" name="p5" id="form-p5" value="0" min="0"></div>
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 1.25rem; margin-top: 0.5rem; background-color: var(--background); padding: 1.25rem; border-radius: 12px; border: 1px solid var(--border-color);">
+                                    <div class="form-group" style="margin:0;"><label>22° - 15W</label><input type="number" name="p1" id="form-p1" value="0" min="0"></div>
+                                    <div class="form-group" style="margin:0;"><label>37° - 15W</label><input type="number" name="p2" id="form-p2" value="0" min="0"></div>
+                                    <div class="form-group" style="margin:0;"><label>58° - 15W</label><input type="number" name="p3" id="form-p3" value="0" min="0"></div>
+                                    <div class="form-group" style="margin:0;"><label>37° - 20W</label><input type="number" name="p4" id="form-p4" value="0" min="0"></div>
+                                    <div class="form-group" style="margin:0;"><label>58° - 20W</label><input type="number" name="p5" id="form-p5" value="0" min="0"></div>
                                 </div>
-                                
-                                <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; margin-top: 1.5rem; gap: 1rem;">
-                                    <label class="checkbox-wrapper">
-                                        <input type="checkbox" id="form-is-replacement">
-                                        Wysyłka zastępująca oprawy uszkodzone (Serwis / Wymiana RMA)
-                                    </label>
-                                    <button type="submit" class="btn-primary" style="padding: 0 2.5rem;"><span class="material-symbols-outlined">save</span> Zapisz i Dodaj do Kolejki</button>
+                                <div class="form-group" style="margin-top: 1rem; flex-direction: row; align-items: center; gap: 10px;">
+                                    <input type="checkbox" id="form-is-replacement" style="width: auto; box-shadow: none;">
+                                    <label for="form-is-replacement" style="margin: 0; color: var(--accent-red-dark);">Wysyłka zastępująca oprawy uszkodzone (Serwis / Wymiana)</label>
+                                </div>
+                                <div style="margin-top: 1.5rem; text-align: right;">
+                                    <button type="submit" class="btn-primary" style="padding: 0.9rem 2rem;"><span class="material-symbols-outlined">save</span> Zapisz i Dodaj do Kolejki</button>
                                 </div>
                             </form>
                         </div>
@@ -512,7 +484,7 @@
                         <div class="section-content" style="padding:0;">
                             <div class="table-responsive">
                                 <table>
-                                    <thead><tr><th>Data Wstępna</th><th>Cel</th><th>Typ</th><th>Sztuk</th><th>Kąty</th><th>Wirtualny Magazyn</th><th>Status</th><th class="admin-only-col" style="width:200px;">Akcja</th></tr></thead>
+                                    <thead><tr><th>Data Wstępna</th><th>Cel</th><th>Typ</th><th>Sztuk</th><th>Kąty</th><th>Wirtualny Magazyn</th><th>Status</th><th class="admin-only-col">Akcja</th></tr></thead>
                                     <tbody id="shipments-unconfirmed-table"></tbody>
                                 </table>
                             </div>
@@ -527,7 +499,7 @@
                         <div class="section-content" style="padding:0;">
                             <div class="table-responsive">
                                 <table>
-                                    <thead><tr><th>Data Potw.</th><th>Cel</th><th>Typ</th><th>Sztuk</th><th>Kąty</th><th>Wirtualny Magazyn</th><th>Status</th><th class="admin-only-col" style="width:200px;">Akcja</th></tr></thead>
+                                    <thead><tr><th>Data Potw.</th><th>Cel</th><th>Typ</th><th>Sztuk</th><th>Kąty</th><th>Wirtualny Magazyn</th><th>Status</th><th class="admin-only-col">Akcja</th></tr></thead>
                                     <tbody id="shipments-confirmed-table"></tbody>
                                 </table>
                             </div>
@@ -579,14 +551,14 @@
                         <div class="section-header"><h2><span class="material-symbols-outlined">add_circle</span> Dodaj Nowy Termin Regulacji</h2></div>
                         <div class="section-content">
                             <form id="adjustmentForm">
-                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.25rem;">
+                                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.25rem;">
                                     <div class="form-group"><label>Miejscowość *</label><input type="text" name="adj_city" required placeholder="np. Gdańsk"></div>
                                     <div class="form-group"><label>Ulica i nr</label><input type="text" name="adj_street" placeholder="np. Długa 5"></div>
                                     <div class="form-group"><label>Obiekt / Klient</label><input type="text" name="adj_target" placeholder="np. Hotel Seaside"></div>
                                 </div>
-                                <div style="display: grid; grid-template-columns: 1fr auto; gap: 1rem; align-items: end; margin-top: 1.25rem;">
-                                    <div class="form-group"><label>Data Wyjazdu</label><input type="date" name="adj_date" required></div>
-                                    <div class="form-group"><button type="submit" class="btn-primary" style="width:100%; padding: 0 2rem;"><span class="material-symbols-outlined">save</span> Zaplanuj Wyjazd</button></div>
+                                <div style="display: flex; gap: 1rem; align-items: end; margin-top: 0.5rem;">
+                                    <div class="form-group" style="margin:0; width: 200px;"><label>Data Wyjazdu</label><input type="date" name="adj_date" required></div>
+                                    <button type="submit" class="btn-primary" style="height: 47px;"><span class="material-symbols-outlined">save</span> Zaplanuj Wyjazd</button>
                                 </div>
                             </form>
                         </div>
@@ -597,7 +569,7 @@
                     <div class="section">
                         <div class="section-header">
                             <h2><span class="material-symbols-outlined">receipt_long</span> Rejestr Zmian i Operacji Magazynowych</h2>
-                            <button class="btn-secondary btn-small" onclick="window.print()" style="margin: 0; height:auto;"><span class="material-symbols-outlined">print</span> Drukuj Logi</button>
+                            <button class="btn-secondary btn-small" onclick="window.print()" style="margin: 0;"><span class="material-symbols-outlined">print</span> Drukuj Logi</button>
                         </div>
                         <div class="section-content" style="padding:0;">
                             <div class="table-responsive" style="max-height: 75vh;">
@@ -615,12 +587,12 @@
                         <div class="section-header"><h2><span class="material-symbols-outlined">inventory</span> Przyjęcie Dostawy Komponentów</h2></div>
                         <div class="section-content">
                             <form id="componentsIncomingForm">
-                                <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 1rem; align-items: end;">
-                                    <div class="form-group"><label>Dostawca</label><input type="text" name="supplier" required placeholder="np. Osram, Tridonic"></div>
-                                    <div class="form-group"><label>Zasilacze (szt)</label><input type="number" name="ps_raw" value="0" min="0"></div>
-                                    <div class="form-group"><label>Klapki Zwykłe</label><input type="number" name="clips_normal" value="0" min="0"></div>
-                                    <div class="form-group"><label>Klapki Przelot.</label><input type="number" name="clips_pass" value="0" min="0"></div>
-                                    <div class="form-group"><button type="submit" class="btn-primary" style="width:100%;"><span class="material-symbols-outlined">add_circle</span> Dodaj</button></div>
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; align-items: end;">
+                                    <div class="form-group" style="margin:0;"><label>Dostawca</label><input type="text" name="supplier" required placeholder="np. Osram, Tridonic"></div>
+                                    <div class="form-group" style="margin:0;"><label>Zasilacze (szt)</label><input type="number" name="ps_raw" value="0" min="0"></div>
+                                    <div class="form-group" style="margin:0;"><label>Klapki Zwykłe</label><input type="number" name="clips_normal" value="0" min="0"></div>
+                                    <div class="form-group" style="margin:0;"><label>Klapki Przelot.</label><input type="number" name="clips_pass" value="0" min="0"></div>
+                                    <button type="submit" class="btn-primary" style="height: 47px;"><span class="material-symbols-outlined">add_circle</span> Dodaj</button>
                                 </div>
                             </form>
                         </div>
@@ -650,20 +622,20 @@
                             <form id="productionForm">
                                 <div style="background-color: var(--background); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 1.5rem;">
                                     <h3 style="font-size: 0.9rem; color: var(--text-light); text-transform:uppercase; letter-spacing:1px; margin-bottom: 1rem;">Wprowadź ilość zmontowanych opraw</h3>
-                                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1.25rem;">
-                                        <div class="form-group"><label>22° - 15W</label><input type="number" name="p1" value="0" min="0"></div>
-                                        <div class="form-group"><label>37° - 15W</label><input type="number" name="p2" value="0" min="0"></div>
-                                        <div class="form-group"><label>58° - 15W</label><input type="number" name="p3" value="0" min="0"></div>
-                                        <div class="form-group"><label>37° - 20W</label><input type="number" name="p4" value="0" min="0"></div>
-                                        <div class="form-group"><label>58° - 20W</label><input type="number" name="p5" value="0" min="0"></div>
+                                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 1.25rem;">
+                                        <div class="form-group" style="margin:0;"><label>22° - 15W</label><input type="number" name="p1" value="0" min="0"></div>
+                                        <div class="form-group" style="margin:0;"><label>37° - 15W</label><input type="number" name="p2" value="0" min="0"></div>
+                                        <div class="form-group" style="margin:0;"><label>58° - 15W</label><input type="number" name="p3" value="0" min="0"></div>
+                                        <div class="form-group" style="margin:0;"><label>37° - 20W</label><input type="number" name="p4" value="0" min="0"></div>
+                                        <div class="form-group" style="margin:0;"><label>58° - 20W</label><input type="number" name="p5" value="0" min="0"></div>
                                     </div>
                                 </div>
                                 <div style="text-align: right;">
-                                    <button type="submit" class="btn-primary" style="padding: 0 2.5rem;"><span class="material-symbols-outlined">task_alt</span> Zarejestruj Produkcję w Bazie</button>
+                                    <button type="submit" class="btn-primary" style="padding: 1rem 2.5rem;"><span class="material-symbols-outlined">task_alt</span> Zarejestruj Produkcję w Bazie</button>
                                 </div>
                             </form>
                             <div style="margin-top: 2rem; background: var(--primary-light); padding: 1.25rem; border-radius: 12px; font-size: 0.85rem; color: var(--primary-dark); border: 1px solid var(--beige-light); line-height: 1.6;">
-                                <p style="margin-bottom:6px;"><strong><span class="material-symbols-outlined" style="font-size: 1.2em; vertical-align:-0.2em;">info</span> Automatyzacja:</strong> System zdejmie z puli surowe obudowy z danego kąta. Z puli komponentów zostanie pobrane po 1 szt.: zasilacza, klapki zwykłej i klapki przelotowej za każdą sztukę gotowej oprawy.</p>
+                                <p style="margin-bottom:6px;"><strong>ℹ️ Automatyzacja:</strong> System zdejmie z puli surowe obudowy z danego kąta. Z puli komponentów zostanie pobrane po 1 szt.: zasilacza, klapki zwykłej i klapki przelotowej za każdą sztukę gotowej oprawy.</p>
                                 <p><strong>⚠️ Uwaga:</strong> Upewnij się, że stany komponentów są wystarczające przed rejestracją.</p>
                             </div>
                         </div>
@@ -896,7 +868,7 @@
 
             const btn = document.getElementById('pdf-scan-btn');
             const originalText = btn.innerHTML;
-            btn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">autorenew</span> Skanowanie...';
+            btn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">autorenew</span> Skanowanie PDF...';
             btn.disabled = true;
             
             try {
@@ -1219,13 +1191,13 @@
             if (!window.inventory) return;
             const s = window.inventory.shipments.find(x => String(x.id) === String(id));
             if (!s || !s.partial_missing) return;
-            let c = `<div style="margin-bottom:1rem; padding:1.5rem; background:#F9FAFB; border-radius:12px; border:1px solid #E5E7EB;">Cel wysyłki: <b>${escapeHTML(s.location)}</b><br>Data wyjazdu: ${s.date}</div><div class="table-responsive" style="margin-bottom:1.5rem;"><table style="width:100%;"><thead><tr><th style="text-align:left;">Model Oprawy</th><th>Ilość Brakująca</th></tr></thead><tbody>`;
+            let c = `<div style="margin-bottom:1rem; padding:1rem; background:#f9fafb; border-radius:8px;">Cel: <b>${escapeHTML(s.location)}</b><br>Data: ${s.date}</div><div class="table-responsive"><table style="width:100%;"><thead><tr><th style="text-align:left;">Model Oprawy</th><th>Ilość Brakująca</th></tr></thead><tbody>`;
             let tot = 0;
             Object.entries(s.partial_missing).forEach(([pid, qty]) => {
                 const p = window.inventory.products.find(x => String(x.id) === String(pid));
                 if(p) { c += `<tr><td>${p.name}</td><td style="color:var(--accent-red); font-weight:bold; text-align:center;">${qty} szt.</td></tr>`; tot += qty; }
             });
-            c += `</tbody></table></div><div style="display:flex; justify-content:space-between; align-items:center;"><b>Łącznie do dosłania: <span style="color:var(--accent-red); font-size:1.2em;">${tot} szt.</span></b><button class="btn-primary" onclick="printMissingPdf('${id}')"><span class="material-symbols-outlined">print</span> Drukuj Raport Braków</button></div>`;
+            c += `</tbody></table></div><div style="margin-top:1rem; display:flex; justify-content:space-between; align-items:center;"><b>Łącznie do dosłania: <span style="color:var(--accent-red); font-size:1.2em;">${tot} szt.</span></b><button class="btn-primary" onclick="printMissingPdf('${id}')"><span class="material-symbols-outlined">print</span> Drukuj PDF</button></div>`;
             showModal('Szczegóły Braków', c);
         }
 
@@ -1247,7 +1219,6 @@
         class CloudInventoryManager {
             constructor() { 
                 this.products = []; this.shipments = []; this.history = []; this.adjustments = []; 
-                this.serviceCases = []; 
                 this.components = { ps_raw: 0, clips_normal: 0, clips_pass: 0 };
                 this.realtimeTimeout = null; this.isFirstLoad = true; 
             }
@@ -1266,16 +1237,15 @@
                     let shipsRes = await db.from('shipments').select('*').order('date');
                     let adjsRes  = await db.from('adjustments').select('*').order('date');
                     let histRes  = await db.from('history').select('*').order('created_at', { ascending: false }).limit(40);
-                    let servRes  = await db.from('service_history').select('*').order('created_at', { ascending: false }).limit(50);
 
                     if (prodsRes.error) throw prodsRes.error;
+                    if (shipsRes.error) throw shipsRes.error;
                     
                     this.products = prodsRes.data || [];
                     this.components = compsRes.data || { ps_raw: 0, clips_normal: 0, clips_pass: 0 };
                     this.shipments = shipsRes.data || [];
                     this.adjustments = adjsRes.data || [];
                     this.history = (histRes.data || []).map(x => ({ timestamp: new Date(x.created_at).toLocaleString('pl-PL'), action: x.action || 'Nieznana operacja', details: x.details || '' }));
-                    this.serviceCases = servRes.error ? [] : (servRes.data || []);
                     
                     const t = new Date().toISOString().split('T')[0];
                     const upds = [];
@@ -1293,6 +1263,18 @@
                 } catch(e) { 
                     console.error("CRITICAL Błąd Bazy Danych:", e);
                     hideLoading();
+                    const alertsContainer = document.getElementById('dashboard-alerts');
+                    if(alertsContainer) {
+                        alertsContainer.innerHTML = `
+                            <div class="alert-banner critical" style="background:#FEE2E2; border-left-color:#DC2626; color:#991B1B;">
+                                <span class="material-symbols-outlined" style="font-size: 2.5rem;">cloud_off</span>
+                                <div><strong>Awaria połączenia z bazą danych (Supabase)</strong><br>
+                                System nie mógł załadować Twoich towarów. Projekt Supabase został prawdopodobnie uśpiony po 7 dniach nieaktywności.<br>
+                                <u>Rozwiązanie: Zaloguj się na stronę supabase.com i kliknij "Restore project" na zielonym tle.</u></div>
+                            </div>
+                        `;
+                    }
+                    showToast('Krytyczny błąd serwera danych.', 'error');
                 }
             }
 
@@ -1308,10 +1290,6 @@
                 const d = `${details} (przez: ${u})`; 
                 this.history.unshift({ timestamp: new Date().toLocaleString('pl-PL'), action, details: d }); 
                 await db.from('history').insert([{ action, details: d }]);
-            }
-
-            async addServiceCase(actionType, productName, qty, desc) {
-                await db.from('service_history').insert([{ action_type: actionType, product_name: productName, quantity: qty, description: desc }]);
             }
 
             getStatus(id) { 
@@ -1364,8 +1342,8 @@
                 await this.fetchData();
             }
 
-            // --- LOGIKA: ZWROTY I SERWIS Z HISTORIĄ ---
-            async processDamagedReturn(productId, qty, salvagedPsQty, desc) {
+            // --- NOWA LOGIKA: ZWROTY I SERWIS ---
+            async processDamagedReturn(productId, qty, salvagedPsQty) {
                 const p = this.products.find(x => String(x.id) === String(productId));
                 if (!p) return;
                 p.damaged = (parseInt(p.damaged) || 0) + qty;
@@ -1375,10 +1353,899 @@
                 if(salvagedPsQty > 0) {
                     this.components.ps_raw = (parseInt(this.components.ps_raw)||0) + salvagedPsQty;
                     updates.push(db.from('components').update({ps_raw: this.components.ps_raw}).eq('id', 1));
-                    histMsg += ` Odzyskano zasilaczy: ${salvagedPsQty}.`;
+                    histMsg += ` Odzyskano sprawnych zasilaczy: ${salvagedPsQty}.`;
                 }
                 
                 this.updateDashboard(); 
                 await Promise.all(updates);
-                await this.addHistory(`Zwrot z RMA [${p.name}]`, histMsg);
-                await this.addServiceCase('Przyjęcie z RMA', p.name, qty
+                await this.addHistory(`Zwrot uszkodzonych [${p.name}]`, histMsg);
+                await this.fetchData();
+            }
+
+            async sendToService(productId, qty) {
+                const p = this.products.find(x => String(x.id) === String(productId));
+                if (!p || (parseInt(p.damaged)||0) < qty) return;
+                p.damaged = parseInt(p.damaged) - qty;
+                p.service = (parseInt(p.service)||0) + qty;
+                
+                this.updateDashboard();
+                await db.from('products').update({ damaged: p.damaged, service: p.service }).eq('id', productId);
+                await this.addHistory(`Wydano na zewnętrzny Serwis`, `Model: ${p.name}, Ilość: ${qty}`);
+                await this.fetchData();
+            }
+
+            async receiveFromService(productId, qty, newPsUsed) {
+                const p = this.products.find(x => String(x.id) === String(productId));
+                if (!p || (parseInt(p.service)||0) < qty) return;
+                p.service = parseInt(p.service) - qty;
+                p.ready = (parseInt(p.ready)||0) + qty;
+                
+                const updates = [ db.from('products').update({ service: p.service, ready: p.ready }).eq('id', productId) ];
+                let histMsg = `Naprawiono opraw: ${qty}.`;
+                
+                if(newPsUsed > 0) {
+                    this.components.ps_raw = (parseInt(this.components.ps_raw)||0) - newPsUsed;
+                    updates.push(db.from('components').update({ps_raw: this.components.ps_raw}).eq('id', 1));
+                    histMsg += ` Zużyto nowych zasilaczy: ${newPsUsed}.`;
+                }
+
+                this.updateDashboard(); 
+                await Promise.all(updates);
+                await this.addHistory(`Zakończono naprawę [${p.name}]`, histMsg);
+                await this.fetchData();
+            }
+
+            // --- FUNKCJE WYSYŁEK ---
+            async addShipment(s) { 
+                if (currentRole === 'viewer') return;
+                await db.from('shipments').insert([{ 
+                    date: s.date, 
+                    location: s.location, 
+                    company: s.company, 
+                    products: s.products, 
+                    status: 'planned', 
+                    is_confirmed: false,
+                    is_replacement: s.is_replacement 
+                }]); 
+                await this.addHistory(s.is_replacement ? 'Utworzono Wysyłkę SERWISOWĄ (Wymiana)' : 'Nowe zamówienie dopisane', s.location);
+                await this.fetchData(); 
+            }
+
+            async confirmShipment(id) { 
+                if (currentRole === 'viewer') return;
+                const s = this.shipments.find(x => String(x.id) === String(id)); 
+                if (s) { 
+                    s.is_confirmed = true;
+                    this.updateDashboard(); 
+                    await db.from('shipments').update({ is_confirmed: true }).eq('id', id); 
+                    await this.addHistory('Potwierdzenie daty wyjazdu', s.location); 
+                    await this.fetchData();
+                } 
+            }
+
+            async deleteShipment(id) { 
+                if (currentRole !== 'admin') return;
+                this.shipments = this.shipments.filter(s => String(s.id) !== String(id)); 
+                this.updateDashboard(); 
+                await db.from('shipments').delete().eq('id', id); 
+                await this.addHistory('Anulowanie zamówienia w systemie', `Skasowano`); 
+                await this.fetchData();
+            }
+
+            async updateShipmentInDB(id, data) { 
+                if (currentRole === 'viewer') return;
+                const s = this.shipments.find(x => String(x.id) === String(id)); 
+                if (s) { 
+                    Object.assign(s, data);
+                    this.updateDashboard(); 
+                    await db.from('shipments').update(data).eq('id', id); 
+                    await this.addHistory('Edycja szczegółów zamówienia', s.location); 
+                    await this.fetchData();
+                } 
+            }
+            
+            async completeShipment(id) {
+                if (currentRole === 'viewer') return;
+                const s = this.shipments.find(x => String(x.id) === String(id)); 
+                if (!s) return;
+                
+                const mis = {}, upds = [];
+                for (const [pId, qty] of Object.entries(s.products || {})) {
+                    let q = parseInt(qty);
+                    if(q > 0) { 
+                        const p = this.products.find(x => String(x.id) === String(pId));
+                        if(p) { 
+                            let ded = Math.min(q, parseInt(p.ready)||0);
+                            p.ready = (parseInt(p.ready)||0) - ded; 
+                            if(q - ded > 0) mis[pId] = q - ded;
+                            if(ded > 0) upds.push(db.from('products').update({ ready: p.ready }).eq('id', p.id)); 
+                        } 
+                    }
+                }
+
+                s.status = Object.keys(mis).length > 0 ? 'partial' : 'completed'; 
+                s.partial_missing = Object.keys(mis).length > 0 ? mis : null; 
+                s.is_confirmed = true; 
+                this.updateDashboard();
+                if(upds.length > 0) await Promise.all(upds); 
+                await db.from('shipments').update({ status: s.status, partial_missing: s.partial_missing, is_confirmed: true }).eq('id', id);
+                await this.addHistory(Object.keys(mis).length > 0 ? `Wydano oprawy (niepełna przesyłka)` : `Wydano pełny komplet`, s.location); 
+                await this.fetchData();
+            }
+
+            async completeRemainingShipment(id) {
+                if (currentRole === 'viewer') return;
+                const s = this.shipments.find(x => String(x.id) === String(id)); 
+                if (!s || s.status !== 'partial' || !s.partial_missing) return;
+                const mis = s.partial_missing, smis = {}, upds = [];
+                for (const [pId, needStr] of Object.entries(mis)) {
+                    let need = parseInt(needStr);
+                    const p = this.products.find(x => String(x.id) === String(pId)); 
+                    if(p) { 
+                        let ded = Math.min(need, parseInt(p.ready)||0);
+                        p.ready = (parseInt(p.ready)||0) - ded; 
+                        if(need - ded > 0) smis[pId] = need - ded;
+                        if(ded > 0) upds.push(db.from('products').update({ ready: p.ready }).eq('id', p.id)); 
+                    }
+                }
+
+                s.status = Object.keys(smis).length > 0 ? 'partial' : 'completed'; 
+                s.partial_missing = Object.keys(smis).length > 0 ? smis : null; 
+                this.updateDashboard();
+
+                if(upds.length > 0) await Promise.all(upds);
+                await db.from('shipments').update({ status: s.status, partial_missing: s.partial_missing }).eq('id', id); 
+                await this.addHistory(Object.keys(smis).length > 0 ? `Wydano część braków` : `Wydano zaległe braki (komplet)`, s.location);
+                await this.fetchData();
+            }
+
+            async addIncomingShipment(supplier, newProducts) {
+                if (currentRole === 'viewer') return;
+                let totalAdded = 0; const dbUpdates = [];
+                for (const [id, qtyStr] of Object.entries(newProducts)) {
+                    let qty = parseInt(qtyStr);
+                    if (qty > 0) {
+                        const product = this.products.find(p => String(p.id) === String(id));
+                        if (product) {
+                            const newAssembly = (parseInt(product.assembly) || 0) + qty;
+                            if (product.assembly_group) {
+                                dbUpdates.push(db.from('products').update({ assembly: newAssembly }).eq('assembly_group', product.assembly_group));
+                                this.products.filter(p => p.assembly_group === product.assembly_group).forEach(p => p.assembly = newAssembly);
+                            } else {
+                                dbUpdates.push(db.from('products').update({ assembly: newAssembly }).eq('id', product.id));
+                                product.assembly = newAssembly;
+                            }
+                            totalAdded += qty;
+                        }
+                    }
+                }
+                this.updateDashboard();
+                if (dbUpdates.length > 0) await Promise.all(dbUpdates);
+                if (totalAdded > 0) {
+                    const p1 = newProducts[1] || 0, p2 = newProducts[2] || 0, p3 = newProducts[3] || 0;
+                    await this.addHistory('Dostawa opraw (Huta)', `${supplier} | 22°:${p1} | 37°:${p2} | 58°:${p3}`); 
+                    await this.fetchData();
+                }
+            }
+
+            // --- NOWA LOGIKA PRODUKCJI (1 oprawa = 1 zasilacz, 1 klapka zwykła, 1 przelotowa) ---
+            async registerProduction(prod) {
+                if (currentRole === 'viewer') return;
+                const tp = Object.values(prod).reduce((a,b)=>a+parseInt(b||0),0); 
+                if (tp === 0) return;
+                
+                const minC = Math.min(parseInt(this.components.ps_raw)||0, parseInt(this.components.clips_normal)||0, parseInt(this.components.clips_pass)||0);
+                if (tp > minC) { showToast('Brak zasilaczy lub klapek na magazynie!', 'error'); return; }
+                
+                const req = {};
+                for(const [id, q] of Object.entries(prod)) { 
+                    let qq = parseInt(q);
+                    if(qq>0) { 
+                        const p = this.products.find(x=>String(x.id)===String(id));
+                        if(p) { let k = p.assembly_group||`s_${p.id}`; req[k] = (req[k]||0)+qq; } 
+                    } 
+                }
+                
+                for(const [k, q] of Object.entries(req)) { 
+                    let av = 0; 
+                    if(k.startsWith('s_')) { 
+                        const p = this.products.find(x=>String(x.id)===k.split('_')[1]);
+                        av=parseInt(p.assembly)||0; 
+                    } else { 
+                        const p = this.products.find(x=>x.assembly_group===k);
+                        av=parseInt(p.assembly)||0; 
+                    } 
+                    if(q>av) { showToast('Brak surowych opraw "W Montażu" dla tego wariantu!', 'error'); return; } 
+                }
+                
+                const upds = [];
+                let tpReal = 0;
+                for (const [id, q] of Object.entries(prod)) {
+                    let qq = parseInt(q);
+                    if(qq>0) { 
+                        const p = this.products.find(x=>String(x.id)===String(id));
+                        if(p) { 
+                            p.ready = (parseInt(p.ready)||0)+qq;
+                            p.assembly = (parseInt(p.assembly)||0)-qq; 
+                            upds.push(db.from('products').update({ ready: p.ready }).eq('id', p.id)); 
+                            if(p.assembly_group) { 
+                                upds.push(db.from('products').update({ assembly: p.assembly }).eq('assembly_group', p.assembly_group));
+                                this.products.filter(x=>x.assembly_group===p.assembly_group).forEach(x=>x.assembly=p.assembly); 
+                            } else { 
+                                upds.push(db.from('products').update({ assembly: p.assembly }).eq('id', p.id));
+                            } 
+                            tpReal += qq;
+                        } 
+                    }
+                }
+                
+                if(tpReal > 0) { 
+                    this.components.ps_raw -= tpReal;
+                    this.components.clips_normal -= tpReal; 
+                    this.components.clips_pass -= tpReal; 
+                    this.updateDashboard(); 
+                    upds.push(db.from('components').update({ps_raw: this.components.ps_raw, clips_normal: this.components.clips_normal, clips_pass: this.components.clips_pass}).eq('id', 1)); 
+                    await Promise.all(upds);
+                    await this.addHistory('Raport z produkcji', `Zmontowano i wrzucono na gotowe: ${tpReal} szt.`); 
+                    showToast('Sukces! Oprawy zmontowane.', 'success'); 
+                    await this.fetchData();
+                }
+            }
+
+            getTotals() {
+                const s = new Set();
+                let tA = 0; 
+                this.products.forEach(p => { 
+                    if (p.assembly_group) { 
+                        if (!s.has(p.assembly_group)) { tA += parseInt(p.assembly)||0; s.add(p.assembly_group); } 
+                    } else { 
+                        tA += parseInt(p.assembly)||0; 
+                    } 
+                });
+                return { 
+                    totalReady: this.products.reduce((sum, p) => sum + (parseInt(p.ready)||0), 0), 
+                    totalAssembly: tA, 
+                    totalService: this.products.reduce((sum, p) => sum + (parseInt(p.service)||0) + (parseInt(p.damaged)||0), 0), 
+                    totalAll: this.products.reduce((sum, p) => sum + (parseInt(p.ready)||0), 0) + tA + this.products.reduce((sum, p) => sum + (parseInt(p.service)||0) + (parseInt(p.damaged)||0), 0) 
+                };
+            }
+
+            async addComponentsShipment(sup, nc) { 
+                if (currentRole === 'viewer') return;
+                const u = { 
+                    ps_raw: (parseInt(this.components.ps_raw)||0) + (parseInt(nc.ps_raw)||0), 
+                    clips_normal: (parseInt(this.components.clips_normal)||0) + (parseInt(nc.clips_normal)||0), 
+                    clips_pass: (parseInt(this.components.clips_pass)||0) + (parseInt(nc.clips_pass)||0) 
+                };
+                this.components = u; 
+                this.updateDashboard(); 
+                await db.from('components').update(u).eq('id', 1); 
+                await this.addHistory('Dostawa drobnych komponentów', sup); 
+                await this.fetchData();
+            }
+
+            async updateComponent(f, v) { 
+                if (currentRole === 'viewer') return;
+                this.components[f] = v; 
+                this.updateDashboard(); 
+                await db.from('components').update({ [f]: v }).eq('id', 1); 
+                await this.addHistory('Korekta ręczna komponentów', `Zaktualizowano stan bazy.`); 
+                await this.fetchData();
+            }
+
+            // GŁÓWNY RENDERER INTERFEJSU
+            updateDashboard() {
+                try {
+                    if(!this.products || this.products.length === 0) return;
+                    const t = this.getTotals();
+                    document.querySelector('[data-stat="total"]').textContent = t.totalAll; 
+                    document.querySelector('[data-stat="ready"]').textContent = t.totalReady;
+                    document.querySelector('[data-stat="shipments"]').textContent = this.shipments.filter(s => s.status!=='completed'&&s.is_confirmed).length;
+                    document.querySelector('[data-stat="service"]').textContent = t.totalService;
+                    
+                    const alertsContainer = document.getElementById('dashboard-alerts');
+                    alertsContainer.innerHTML = '';
+                    const c = this.components; let lc = [];
+                    if(c) { 
+                        if((parseInt(c.ps_raw)||0)<50) lc.push('Zasilacze');
+                        if((parseInt(c.clips_normal)||0)<50) lc.push('Klapki Zwykłe'); 
+                        if((parseInt(c.clips_pass)||0)<50) lc.push('Klapki Przelotowe'); 
+                    }
+                    if(lc.length>0) {
+                        alertsContainer.innerHTML = `<div class="alert-banner critical"><span class="material-symbols-outlined">warning_amber</span><div><strong>Krytyczny stan!</strong> Pilnie domów: ${lc.join(', ')}.</div></div>`;
+                    }
+
+                    const rMap = getShipmentsReadinessMap();
+                    const pt = document.getElementById('products-dashboard'); 
+                    if(pt) { 
+                        pt.innerHTML = '';
+                        this.products.forEach(p => { 
+                            pt.innerHTML += `<tr><td>${escapeHTML(p.name)}</td><td><strong>${p.ready||0} szt</strong></td><td><span class="status-badge ${getStatusClass(p.id)}">${getStatusText(p.id)}</span></td></tr>`; 
+                        });
+                    }
+
+                    renderCalendar(rMap);
+                    if(document.getElementById('tab-dashboard').classList.contains('active')) {
+                        updateMapMarkers(this.shipments, this.adjustments);
+                    }
+
+                    const itb = document.getElementById('dashboard-recent-incoming');
+                    if (itb && this.history) {
+                        itb.innerHTML = '';
+                        const rI = this.history.filter(h => h && h.action && (h.action.includes('Dostawa opraw') || h.action.includes('Dostawa obudów'))).slice(0, 2);
+                        if(rI.length === 0) {
+                            itb.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 2rem !important; border:none; color: gray;">Brak historii dostaw.</td></tr>';
+                        } else {
+                            rI.forEach(e => { 
+                                if(!e||!e.details) return; 
+                                let s="-", p1="?", p2="?", p3="?", tv=0, cd=(e.details||"").replace(/\(przez:.*?\)/,'').trim();
+                                
+                                if(cd.includes('|')) { 
+                                    let ps=cd.split('|').map(x=>x.trim()); 
+                                    s=ps[0]; 
+                                    const pq=(str)=>{ let m=(str||"").match(/:(\d+)/); return m ? parseInt(m[1]) : 0; }; 
+                                    p1=pq(ps[1]); p2=pq(ps[2]); p3=pq(ps[3]); 
+                                    tv = p1+p2+p3; 
+                                } else { 
+                                    let m=cd.match(/(.*?)\s*\(\+(\d+)\s*szt\.\)/); 
+                                    if(m) { s=m[1].trim(); tv=parseInt(m[2]); } else { s=cd; } 
+                                }
+                                
+                                itb.innerHTML += `<tr><td><strong>${(e.timestamp||'').split(',')[0]}</strong></td><td>${escapeHTML(s)}</td><td>${p1!=='?'?`<b>${p1}</b>`:p1}</td><td>${p2!=='?'?`<b>${p2}</b>`:p2}</td><td>${p3!=='?'?`<b>${p3}</b>`:p3}</td><td><strong style="color:var(--success-status);">${tv}</strong> szt</td></tr>`;
+                            });
+                        }
+                    }
+
+                    updateInventoryTable();
+                    updateShipmentsTables(rMap); 
+                    updateAdjustmentsTable(); 
+                    if(currentRole !== 'worker') updateHistoryTable(); 
+                    updateComponentsDisplay();
+
+                } catch (err) { 
+                    console.error("Błąd rysowania interfejsu:", err);
+                }
+            }
+        }
+
+        function getShipmentsReadinessMap() {
+            const m = {};
+            if (!window.inventory || !window.inventory.products) return m;
+            
+            let vR = {}, vA = {};
+            window.inventory.products.forEach(p => { 
+                vR[String(p.id)] = parseInt(p.ready)||0; 
+                const g = p.assembly_group ? String(p.assembly_group) : `s_${p.id}`; 
+                if(vA[g]===undefined) vA[g]=parseInt(p.assembly)||0; 
+            });
+            let pend = (window.inventory.shipments || []).filter(s => s.status !== 'completed').sort((a,b)=>{
+                const ac=a.is_confirmed===true||a.is_confirmed==='true', bc=b.is_confirmed===true||b.is_confirmed==='true';
+                if(ac&&!bc) return -1;
+                if(!ac&&bc) return 1;
+                return(a.date||'').localeCompare(b.date||'');
+            });
+            pend.forEach(s => {
+                let ok = true; 
+                let rq = s.status === 'partial' ? s.partial_missing : s.products;
+                if(rq) {
+                    for(const [pid, q] of Object.entries(rq)) {
+                        let n = parseInt(q)||0; 
+                        if(n>0) { 
+                            const p = window.inventory.products.find(x=>String(x.id)===String(pid)); 
+                            if(!p) { ok=false; continue; }
+                            
+                            if(vR[pid]>=n) { 
+                                vR[pid]-=n; n=0; 
+                            } else { 
+                                n-=vR[pid]; vR[pid]=0; 
+                            }
+                            
+                            if(n>0) { 
+                                const g = p.assembly_group ? String(p.assembly_group) : `s_${p.id}`; 
+                                if(vA[g]>=n) { vA[g]-=n; } else { vA[g]-=n; ok=false; } 
+                            } 
+                        }
+                    }
+                } 
+                m[s.id] = ok;
+            }); 
+            return m;
+        }
+
+        function getStatusClass(productId) {
+            const status = window.inventory.getStatus(productId);
+            return status === 'ok' ? 'status-ok' : status === 'warning' ? 'status-warning' : 'status-error';
+        }
+
+        function getStatusText(productId) {
+            const status = window.inventory.getStatus(productId);
+            return status === 'ok' ? '<span class="material-symbols-outlined">check_circle</span> OK' : status === 'warning' ? '<span class="material-symbols-outlined">warning</span> Mało' : '<span class="material-symbols-outlined">error</span> Brak';
+        }
+
+        // --- ZMIANA: Tabela Inwentarza grupująca moce ---
+        function updateInventoryTable() {
+            const tbodyMain = document.getElementById('products-table');
+            const tbodyService = document.getElementById('service-table');
+            if(!tbodyMain || !tbodyService) return;
+            
+            tbodyMain.innerHTML = ''; tbodyService.innerHTML = ''; 
+            const isViewer = currentRole === 'viewer';
+            const getP = (id) => window.inventory.products.find(x => String(x.id) === String(id)) || {};
+            
+            const angles = [
+                { name: 'Kąt 22°', id15: 1, id20: null, idAssm: 1 },
+                { name: 'Kąt 37°', id15: 2, id20: 4, idAssm: 2 },
+                { name: 'Kąt 58°', id15: 3, id20: 5, idAssm: 3 }
+            ];
+
+            // Renderowanie tabeli głównej (Kąty, 15W, 20W, Surowe)
+            angles.forEach(a => {
+                const p15 = getP(a.id15);
+                const p20 = a.id20 ? getP(a.id20) : null;
+                const pAssm = getP(a.idAssm);
+
+                const r15 = parseInt(p15.ready) || 0;
+                const r20 = p20 ? (parseInt(p20.ready) || 0) : 0;
+                const assm = parseInt(pAssm.assembly) || 0;
+                const s15 = (parseInt(p15.service)||0) + (parseInt(p15.damaged)||0);
+                const s20 = p20 ? ((parseInt(p20.service)||0) + (parseInt(p20.damaged)||0)) : 0;
+                const totSer = s15 + s20;
+                const total = r15 + r20 + assm + totSer;
+
+                const c15 = isViewer ? `<strong>${r15}</strong>` : `<td data-label="Gotowe 15W" onclick="editCell(this, 'ready', '${a.id15}')" class="editable"><strong>${r15}</strong></td>`;
+                const c20 = a.id20 ? (isViewer ? `<strong>${r20}</strong>` : `<td data-label="Gotowe 20W" onclick="editCell(this, 'ready', '${a.id20}')" class="editable"><strong>${r20}</strong></td>`) : `<td data-label="Gotowe 20W">-</td>`;
+                const cAssm = isViewer ? assm : `<td data-label="Surowe (W Montażu)" onclick="editCell(this, 'assembly', '${a.idAssm}')" class="editable">${assm}</td>`;
+
+                const rowHTML = `
+                    <td data-label="Kąt Oprawy">${a.name}</td>
+                    ${isViewer ? `<td data-label="Gotowe 15W">${c15}</td>` : c15}
+                    ${isViewer ? (a.id20 ? `<td data-label="Gotowe 20W">${c20}</td>` : c20) : c20}
+                    ${isViewer ? `<td data-label="Surowe (W Montażu)">${cAssm}</td>` : cAssm}
+                    <td data-label="Serwis (Suma)">${totSer}</td>
+                    <td data-label="Łącznie Suma"><strong>${total}</strong></td>
+                    <td data-label="Dostępność"><span class="status-badge ${getStatusClass(a.id15)}">${getStatusText(a.id15)}</span></td>
+                `;
+                const tr = document.createElement('tr'); tr.innerHTML = rowHTML; tbodyMain.appendChild(tr);
+            });
+
+            // Renderowanie tabeli serwisowej
+            window.inventory.products.forEach(p => {
+                const damaged = parseInt(p.damaged) || 0;
+                const inService = parseInt(p.service) || 0;
+                
+                let actionButtons = '';
+                if (!isViewer) {
+                    actionButtons = `
+                        <button class="btn-small btn-secondary" onclick="openSendToServiceUI('${p.id}', '${p.name}', ${damaged})">Na naprawę</button>
+                        <button class="btn-small btn-secondary" onclick="openReceiveFromServiceUI('${p.id}', '${p.name}', ${inService})">Odbierz</button>
+                    `;
+                }
+
+                const serviceRowHTML = `
+                    <td data-label="Model Oprawy">${escapeHTML(p.name)}</td>
+                    <td data-label="Uszkodzone (Oczekują)" style="color:var(--accent-red); font-weight:700;">${damaged}</td>
+                    <td data-label="W Serwisie (Wysyłka)" style="color:var(--info-status); font-weight:700;">${inService}</td>
+                    <td data-label="Akcja" class="${isViewer ? 'admin-only-col' : ''}">${actionButtons}</td>
+                `;
+                const trS = document.createElement('tr'); trS.innerHTML = serviceRowHTML; tbodyService.appendChild(trS);
+            });
+        }
+
+        // --- ZMIANA: Podział tabel dla wysyłek ---
+        function renderShipmentRow(s, readinessMap, showActions = true) {
+            let total = s.products ? Object.values(s.products).reduce((a, b) => parseInt(a) + parseInt(b), 0) : 0;
+            
+            let statusBadge = '';
+            if (s.status === 'completed') statusBadge = '<span class="status-badge status-ok"><span class="material-symbols-outlined">check_circle</span> Zrealizowana</span>';
+            else if (s.status === 'partial') statusBadge = '<span class="status-badge status-warning"><span class="material-symbols-outlined">warning</span> Niepełna</span>';
+            else if (s.is_confirmed) statusBadge = '<span class="status-badge status-neutral"><span class="material-symbols-outlined">event_available</span> Potwierdzona</span>';
+            else statusBadge = '<span class="status-badge status-warning"><span class="material-symbols-outlined">pending_actions</span> Oczekująca</span>';
+            
+            let readinessBadge = '';
+            if (s.status === 'completed') readinessBadge = '<span style="color: var(--text-light); font-size: 0.85em;">-</span>';
+            else if (readinessMap && readinessMap[s.id]) readinessBadge = '<span class="status-badge status-ok" style="background:#ECFDF5; color:#059669; border: 1px solid #10B981;"><span class="material-symbols-outlined">inventory_2</span> Komplet</span>';
+            else readinessBadge = '<span class="status-badge status-error" style="background:#FEF2F2; color:#DC2626; border: 1px solid #EF4444;"><span class="material-symbols-outlined">production_quantity_limits</span> Braki</span>';
+
+            let typeBadge = s.is_replacement 
+                ? `<span class="status-badge" style="background:#FEE2E2; color:#B91C1C; border:1px solid #FECACA;"><span class="material-symbols-outlined">sync_problem</span> Wymiana</span>` 
+                : `<span class="status-badge status-neutral">Standard</span>`;
+
+            let actionButtons = '';
+            if (currentRole !== 'viewer' && showActions) {
+                actionButtons += `<button class="btn-small btn-secondary" onclick="editShipment('${s.id}')" title="Edytuj dane"><span class="material-symbols-outlined">edit</span></button>`;
+                if (currentRole === 'admin') actionButtons += `<button class="btn-small btn-secondary" onclick="deleteShipment('${s.id}')" title="Usuń trwale"><span class="material-symbols-outlined" style="color:var(--accent-red);">delete</span></button>`;
+                if (s.status === 'planned' && !s.is_confirmed) {
+                    actionButtons = `<button class="btn-small btn-primary" onclick="confirmShipmentDateUI('${s.id}')"><span class="material-symbols-outlined">event_available</span> Zatwierdź</button>` + actionButtons;
+                } else if (s.status === 'planned' && s.is_confirmed) {
+                    actionButtons = `<button class="btn-small btn-primary" onclick="completeShipmentUI('${s.id}')">Wydaj</button>` + actionButtons;
+                } else if (s.status === 'partial') {
+                    actionButtons = `<button class="btn-small btn-primary" onclick="completeRemainingShipmentUI('${s.id}')">Wydaj braki</button>` + actionButtons;
+                }
+            }
+            if (s.status === 'partial' && showActions) {
+                actionButtons += `<button class="btn-small btn-secondary" onclick="showMissingItems('${s.id}')" title="Pokaż listę braków"><span class="material-symbols-outlined">list_alt</span> Braki</button>`;
+            }
+
+            let dateLabel = s.status === 'completed' ? 'Data Wysłania' : (s.is_confirmed ? 'Data Potw.' : 'Data Wstępna');
+
+            return `
+                <tr class="${s.status === 'completed' ? 'row-completed' : ''}">
+                    <td data-label="${dateLabel}"><strong>${escapeHTML(s.date || '-')}</strong></td>
+                    <td data-label="Cel">${escapeHTML(s.location)}</td>
+                    <td data-label="Typ">${typeBadge}</td>
+                    <td data-label="Sztuk"><strong>${total}</strong></td>
+                    <td data-label="Kąty"><button class="btn-small btn-secondary" onclick="showAnglesDemand('${s.id}')" style="margin:0;">Pokaż</button></td>
+                    ${s.status !== 'completed' ? `<td data-label="Wirtualny Magazyn">${readinessBadge}</td>` : ''}
+                    <td data-label="Status">${statusBadge}</td>
+                    ${showActions ? `<td data-label="Akcja" class="${currentRole === 'viewer' ? 'admin-only-col' : ''}">${actionButtons}</td>` : ''}
+                </tr>
+            `;
+        }
+
+        function updateShipmentsTables(readinessMap) {
+            const tbodyUnconf = document.getElementById('shipments-unconfirmed-table');
+            const tbodyConf = document.getElementById('shipments-confirmed-table');
+            const tbodyComp = document.getElementById('shipments-completed-table');
+            if(!tbodyUnconf || !tbodyConf || !tbodyComp) return;
+            
+            tbodyUnconf.innerHTML = ''; tbodyConf.innerHTML = ''; tbodyComp.innerHTML = '';
+
+            let confCount = 0;
+            const sortedShipments = [...window.inventory.shipments].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+            
+            sortedShipments.forEach(s => {
+                if (s.status === 'completed') {
+                    tbodyComp.innerHTML += renderShipmentRow(s, readinessMap, false);
+                } else if (s.is_confirmed) {
+                    tbodyConf.innerHTML += renderShipmentRow(s, readinessMap, true);
+                    confCount++;
+                } else {
+                    tbodyUnconf.innerHTML += renderShipmentRow(s, readinessMap, true);
+                }
+            });
+            document.getElementById('shipments-count').textContent = confCount + ' rekordów';
+        }
+
+        function updateAdjustmentsTable() {
+            const tbody = document.getElementById('adjustments-table');
+            if(!tbody) return;
+            tbody.innerHTML = '';
+            window.inventory.adjustments.forEach(a => {
+                const tr = document.createElement('tr');
+                let action = currentRole === 'admin' ? `<td data-label="Akcja"><button class="btn-small btn-secondary" onclick="deleteAdjustment('${a.id}')" style="margin:0;"><span class="material-symbols-outlined" style="color:var(--accent-red);">delete</span></button></td>` : `<td class="admin-only-col"></td>`;
+                tr.innerHTML = `<td data-label="Data Wyjazdu"><strong>${escapeHTML(a.date || '-')}</strong></td><td data-label="Miejscowość / Obiekt">${escapeHTML(a.location)}</td>${action}`;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function updateHistoryTable() {
+            const tbody = document.getElementById('history-table');
+            if(!tbody) return;
+            tbody.innerHTML = '';
+            window.inventory.history.forEach(h => {
+                const tr = document.createElement('tr');
+                const detailsStr = h.details || '';
+                const match = detailsStr.match(/\(przez: (.*?)\)/);
+                const worker = match ? match[1] : 'System';
+                const cleanDetails = detailsStr.replace(/\(przez:.*?\)/, '').trim();
+
+                tr.innerHTML = `<td data-label="Data i Czas" style="color:var(--text-light); font-size:0.85em;">${escapeHTML(h.timestamp)}</td><td data-label="Pracownik"><strong>${escapeHTML(worker)}</strong></td><td data-label="Typ Operacji">${escapeHTML(h.action)}</td><td data-label="Szczegóły">${escapeHTML(cleanDetails)}</td>`;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function updateComponentsDisplay() {
+            if(!window.inventory.components) return;
+            const comps = window.inventory.components;
+            
+            const elRaw = document.getElementById('ps-raw-cell');
+            const elNorm = document.getElementById('clips-normal-cell');
+            const elPass = document.getElementById('clips-pass-cell');
+            
+            if(elRaw) elRaw.innerHTML = `<strong>${comps.ps_raw || 0} szt.</strong>`;
+            if(elNorm) elNorm.innerHTML = `<strong>${comps.clips_normal || 0} szt.</strong>`;
+            if(elPass) elPass.innerHTML = `<strong>${comps.clips_pass || 0} szt.</strong>`;
+            
+            if (currentRole !== 'viewer') {
+                document.querySelectorAll('#tab-components .table-responsive td:last-child').forEach(td => td.classList.add('editable'));
+            }
+        }
+
+        function editCell(cell, field, productId) {
+            if (currentRole === 'viewer') return;
+            if (cell.querySelector('input')) return;
+            
+            const product = window.inventory.products.find(p => String(p.id) === String(productId));
+            const input = document.createElement('input');
+            input.type = 'number';
+            input.value = product[field] || 0; 
+            input.style.width = '100%'; input.style.textAlign = 'inherit';
+            
+            const originalHTML = cell.innerHTML;
+            cell.innerHTML = ''; cell.appendChild(input);
+            cell.classList.remove('editable');
+            input.focus(); input.select();
+
+            const save = async () => {
+                const newValue = parseInt(input.value);
+                if (!isNaN(newValue) && newValue !== (product[field]||0)) {
+                    cell.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite; color: var(--primary-terracotta);">autorenew</span>';
+                    await window.inventory.updateProduct(productId, { [field]: newValue });
+                } else {
+                    cell.innerHTML = originalHTML;
+                }
+                cell.classList.add('editable');
+            };
+
+            input.addEventListener('blur', save);
+            input.addEventListener('keypress', (e) => { if (e.key === 'Enter') input.blur(); });
+        }
+
+        function editComponentCell(cell, field) {
+            if (currentRole === 'viewer') return;
+            if (cell.querySelector('input')) return;
+            
+            const currentVal = window.inventory.components[field] || 0;
+            const input = document.createElement('input');
+            input.type = 'number'; input.value = currentVal;
+            input.style.width = '100%'; input.style.textAlign = 'inherit';
+            
+            const originalHTML = cell.innerHTML;
+            cell.innerHTML = ''; cell.appendChild(input);
+            cell.classList.remove('editable');
+            input.focus(); input.select();
+            
+            const save = async () => {
+                const newValue = parseInt(input.value);
+                if (!isNaN(newValue) && newValue !== currentVal) {
+                    cell.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite; color: var(--primary-terracotta);">autorenew</span>';
+                    await window.inventory.updateComponent(field, newValue);
+                } else {
+                    cell.innerHTML = originalHTML;
+                }
+                cell.classList.add('editable');
+            };
+
+            input.addEventListener('blur', save);
+            input.addEventListener('keypress', (e) => { if (e.key === 'Enter') input.blur(); });
+        }
+
+        // --- FUNKCJE UI: SERWIS/RMA ---
+        function openReceiveDamagedUI() {
+            let opts = window.inventory.products.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+            let html = `
+                <div class="form-group"><label>Model oprawy (zwrot ze sklepu)</label><select id="rma_prod_id" style="width:100%; padding:0.75rem; border-radius:10px; font-family:'Inter',sans-serif; border:1px solid #D1D5DB;">${opts}</select></div>
+                <div class="form-group"><label>Liczba zwróconych (uszkodzonych) sztuk</label><input type="number" id="rma_qty" min="1" value="1"></div>
+                <div class="form-group" style="background:#ECFDF5; padding:1rem; border-radius:8px; border:1px solid #A7F3D0;"><label style="color:#065F46; font-size:0.8rem;">Ile z nich miało w pełni sprawne zasilacze (odzyskiwane do puli komponentów)?</label><input type="number" id="rma_salvaged" min="0" value="0"></div>
+                <button class="btn-primary" onclick="submitDamagedReturn()" style="width:100%; margin-top:10px;"><span class="material-symbols-outlined">assignment_return</span> Przyjmij zwrot</button>
+            `;
+            showModal('Przyjęcie zwrotu RMA', html);
+        }
+
+        async function submitDamagedReturn() {
+            let id = document.getElementById('rma_prod_id').value;
+            let qty = parseInt(document.getElementById('rma_qty').value)||0;
+            let sal = parseInt(document.getElementById('rma_salvaged').value)||0;
+            if(qty>0) { closeModal(); showLoading(); await window.inventory.processDamagedReturn(id, qty, sal); hideLoading(); }
+        }
+
+        function openSendToServiceUI(id, name, available) {
+            let html = `
+                <p style="margin-bottom:1rem; font-size:0.95rem;">Wysyłasz oprawy <strong>${name}</strong> na naprawę. Dostępne na magazynie (uszkodzone): <strong>${available}</strong> szt.</p>
+                <div class="form-group"><label>Ilość do wydania na serwis:</label><input type="number" id="rma_send_qty" min="1" max="${available}" value="1"></div>
+                <button class="btn-primary" onclick="submitSendService('${id}')" style="width:100%;"><span class="material-symbols-outlined">handyman</span> Wydaj do Serwisu</button>
+            `;
+            showModal('Wydanie na naprawę', html);
+        }
+
+        async function submitSendService(id) {
+            let qty = parseInt(document.getElementById('rma_send_qty').value)||0;
+            if(qty>0) { closeModal(); showLoading(); await window.inventory.sendToService(id, qty); hideLoading(); }
+        }
+
+        function openReceiveFromServiceUI(id, name, inService) {
+            let html = `
+                <p style="margin-bottom:1rem; font-size:0.95rem;">Odbierasz oprawy <strong>${name}</strong> po naprawie. Obecnie w serwisie: <strong>${inService}</strong> szt.</p>
+                <div class="form-group"><label>Ilość odebranych (naprawionych) sztuk:</label><input type="number" id="rma_rec_qty" min="1" max="${inService}" value="1"></div>
+                <div class="form-group" style="background:#FEF2F2; padding:1rem; border-radius:8px; border:1px solid #FECACA;"><label style="color:#991B1B; font-size:0.8rem;">Ile NOWYCH zasilaczy (z puli komponentów) zużyto do naprawy?</label><input type="number" id="rma_used_ps" min="0" value="0"></div>
+                <button class="btn-primary" onclick="submitReceiveService('${id}')" style="width:100%; margin-top:10px;"><span class="material-symbols-outlined">task_alt</span> Zakończ Naprawę</button>
+            `;
+            showModal('Odbiór z naprawy', html);
+        }
+
+        async function submitReceiveService(id) {
+            let qty = parseInt(document.getElementById('rma_rec_qty').value)||0;
+            let used = parseInt(document.getElementById('rma_used_ps').value)||0;
+            if(qty>0) { closeModal(); showLoading(); await window.inventory.receiveFromService(id, qty, used); hideLoading(); }
+        }
+
+        async function confirmShipmentDateUI(id) {
+            if (confirm('Zatwierdzić termin wysyłki i przenieść do kolejki realizacji?')) {
+                showLoading();
+                await window.inventory.confirmShipment(id);
+                hideLoading();
+                showToast('Termin zatwierdzony.', 'success');
+            }
+        }
+
+        async function completeShipmentUI(id) {
+            const s = window.inventory.shipments.find(x => String(x.id) === String(id));
+            if (!s) return;
+            const total = s.products ? Object.values(s.products).reduce((a, b) => parseInt(a) + parseInt(b), 0) : 0;
+            if (confirm(`Wydano towar z magazynu (${total} szt.)? \nStany zostaną zaktualizowane.`)) {
+                showLoading();
+                await window.inventory.completeShipment(id);
+                hideLoading();
+                showToast('Towar wydany.', 'success');
+            }
+        }
+
+        async function completeRemainingShipmentUI(id) {
+            if (confirm('Wydano brakującą część towaru? \nZamówienie zostanie zamknięte jako kompletne.')) {
+                showLoading();
+                await window.inventory.completeRemainingShipment(id);
+                hideLoading();
+                showToast('Zamówienie sfinalizowane.', 'success');
+            }
+        }
+
+        async function deleteShipment(id) { 
+            if (currentRole === 'admin' && confirm('Czy na pewno trwale usunąć to zamówienie z bazy danych?')) { 
+                showLoading();
+                await window.inventory.deleteShipment(id); 
+                hideLoading();
+                showToast('Zamówienie usunięte z bazy.', 'warning');
+            } 
+        }
+
+        async function deleteAdjustment(id) {
+            if (currentRole === 'admin' && confirm('Usunąć ten wpis z regulacji?')) {
+                showLoading();
+                await window.inventory.deleteAdjustment(id);
+                hideLoading();
+                showToast('Termin usunięty.', 'success');
+            }
+        }
+
+        function showAnglesDemand(id) {
+            const shipment = window.inventory.shipments.find(s => String(s.id) === String(id));
+            if(!shipment) return;
+            
+            const p = shipment.products || {};
+            const a22 = parseInt(p[1]) || 0;
+            const a37 = (parseInt(p[2]) || 0) + (parseInt(p[4]) || 0);
+            const a58 = (parseInt(p[3]) || 0) + (parseInt(p[5]) || 0);
+            
+            const content = `
+                <div style="text-align: center;">
+                    <p style="color: var(--text-light); margin-bottom: 1.5rem; font-size:0.95rem;">Zapotrzebowanie dla: <br><strong style="color:var(--text-dark); font-size:1.2rem;">${escapeHTML(shipment.location)}</strong></p>
+                    <div style="display:flex; justify-content: space-around; background: var(--background); padding: 2rem 1rem; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: inset 0 2px 4px rgba(0,0,0,0.03);">
+                        <div><div style="font-size: 0.8rem; color: var(--text-light); text-transform:uppercase; letter-spacing:1px; margin-bottom:5px; font-weight:600;">Kąt 22°</div><div style="font-size: 2.5rem; font-weight: 700; color:var(--primary-dark);">${a22}</div></div>
+                        <div><div style="font-size: 0.8rem; color: var(--text-light); text-transform:uppercase; letter-spacing:1px; margin-bottom:5px; font-weight:600;">Kąt 37°</div><div style="font-size: 2.5rem; font-weight: 700; color:var(--primary-dark);">${a37}</div></div>
+                        <div><div style="font-size: 0.8rem; color: var(--text-light); text-transform:uppercase; letter-spacing:1px; margin-bottom:5px; font-weight:600;">Kąt 58°</div><div style="font-size: 2.5rem; font-weight: 700; color:var(--primary-dark);">${a58}</div></div>
+                    </div>
+                </div>
+            `;
+            showModal('Zapotrzebowanie Kątowe', content);
+        }
+
+        function editShipment(id) {
+            if (currentRole === 'viewer') return;
+            const shipment = window.inventory.shipments.find(s => String(s.id) === String(id));
+            if (!shipment) return;
+
+            const p = shipment.products || {};
+            const p1 = p[1] || 0, p2 = p[2] || 0, p3 = p[3] || 0, p4 = p[4] || 0, p5 = p[5] || 0;
+            const isPartial = shipment.status === 'partial';
+            const disableProducts = isPartial ? 'disabled' : '';
+            
+            const formHTML = `
+                <div style="display: grid; gap: 1.25rem;">
+                    <div class="form-group"><label>Data Wysyłki</label><input type="date" id="edit_shipment_date" value="${escapeHTML(shipment.date)}"></div>
+                    <div class="form-group"><label>Pełny Cel / Adresat</label><input type="text" id="edit_shipment_location" value="${escapeHTML(shipment.location)}"></div>
+                    <div class="form-group"><label>Spedytor / Firma Przewozowa</label><input type="text" id="edit_shipment_company" value="${escapeHTML(shipment.company || '')}"></div>
+                    
+                    <div style="margin-top: 0.5rem; background-color: var(--background); padding: 1.25rem; border-radius: 12px; border: 1px solid var(--border-color);">
+                        <h3 style="margin-bottom: 1rem; font-size: 0.85rem; color: var(--text-light); text-transform:uppercase; letter-spacing:1px;">Ilości Opraw (szt.)</h3>
+                        ${isPartial ? '<p style="color: var(--accent-red); font-size:0.8rem; margin-top:-10px; margin-bottom:10px; font-weight:500;">Edycja ilości zablokowana dla wysyłki częściowej.</p>' : ''}
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
+                            <div class="form-group" style="margin:0;"><label>22° - 15W</label><input type="number" id="edit_p1" value="${p1}" min="0" ${disableProducts}></div>
+                            <div class="form-group" style="margin:0;"><label>37° - 15W</label><input type="number" id="edit_p2" value="${p2}" min="0" ${disableProducts}></div>
+                            <div class="form-group" style="margin:0;"><label>58° - 15W</label><input type="number" id="edit_p3" value="${p3}" min="0" ${disableProducts}></div>
+                            <div class="form-group" style="margin:0;"><label>37° - 20W</label><input type="number" id="edit_p4" value="${p4}" min="0" ${disableProducts}></div>
+                            <div class="form-group" style="margin:0;"><label>58° - 20W</label><input type="number" id="edit_p5" value="${p5}" min="0" ${disableProducts}></div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 1rem;">
+                        <button class="btn-primary" onclick="saveShipment('${id}')" style="width:100%; padding: 1rem;"><span class="material-symbols-outlined">save</span> Zapisz Zmiany w Zamówieniu</button>
+                    </div>
+                </div>
+            `;
+            showModal('Edycja Zamówienia', formHTML);
+        }
+
+        async function saveShipment(id) {
+            const newDate = document.getElementById('edit_shipment_date').value;
+            const newLocation = document.getElementById('edit_shipment_location').value;
+            const newCompany = document.getElementById('edit_shipment_company').value;
+            
+            if (!newDate || !newLocation) { showToast('Data i cel są wymagane.', 'error'); return; }
+
+            const shipment = window.inventory.shipments.find(s => String(s.id) === String(id));
+            const data = { date: newDate, location: newLocation, company: newCompany };
+
+            if (shipment.status !== 'partial') {
+                data.products = {
+                    1: parseInt(document.getElementById('edit_p1').value) || 0,
+                    2: parseInt(document.getElementById('edit_p2').value) || 0,
+                    3: parseInt(document.getElementById('edit_p3').value) || 0,
+                    4: parseInt(document.getElementById('edit_p4').value) || 0,
+                    5: parseInt(document.getElementById('edit_p5').value) || 0,
+                };
+            }
+
+            closeModal();
+            showLoading();
+            await window.inventory.updateShipmentInDB(id, data);
+            hideLoading();
+            showToast('Zmiany zostały zapisane.', 'success');
+        }
+
+        // Bindowanie akcji formularzy 
+        document.getElementById('shipmentForm').addEventListener('submit', async function(e) { 
+            e.preventDefault(); if (currentRole === 'viewer') return; 
+            const btn = this.querySelector('button[type="submit"]'); const txt = btn.innerHTML; 
+            btn.innerHTML = 'Przetwarzanie...'; btn.disabled = true; 
+            const fd = new FormData(this); 
+            const prods = { 1:parseInt(fd.get('p1'))||0, 2:parseInt(fd.get('p2'))||0, 3:parseInt(fd.get('p3'))||0, 4:parseInt(fd.get('p4'))||0, 5:parseInt(fd.get('p5'))||0 }; 
+            let loc = fd.get('ship_city').trim(); 
+            if(fd.get('ship_street').trim()) loc += `, ${fd.get('ship_street').trim()}`; 
+            if(fd.get('ship_target').trim()) loc += ` (${fd.get('ship_target').trim()})`; 
+            
+            const isRep = document.getElementById('form-is-replacement').checked;
+
+            showLoading(); 
+            await window.inventory.addShipment({ date: fd.get('date'), location: loc, company: fd.get('company'), products: prods, is_replacement: isRep }); 
+            hideLoading(); this.reset(); btn.innerHTML = txt; btn.disabled = false; showToast('Dodano zamówienie', 'success');
+        });
+
+        document.getElementById('adjustmentForm').addEventListener('submit', async function(e) { 
+            e.preventDefault(); const btn = this.querySelector('button'); const txt = btn.innerHTML; 
+            btn.innerHTML = 'Zapisywanie...'; btn.disabled = true; 
+            const fd = new FormData(this); 
+            let loc = fd.get('adj_city').trim(); 
+            if(fd.get('adj_street').trim()) loc += `, ${fd.get('adj_street').trim()}`; 
+            if(fd.get('adj_target').trim()) loc += ` (${fd.get('adj_target').trim()})`; 
+            showLoading(); await window.inventory.addAdjustment(fd.get('adj_date'), loc); hideLoading(); 
+            this.reset(); btn.innerHTML = txt; btn.disabled = false; showToast('Zapisano wyjazd', 'success'); 
+        });
+
+        document.getElementById('incomingForm').addEventListener('submit', async function(e) { 
+            e.preventDefault(); const btn = this.querySelector('button'); const txt = btn.innerHTML; 
+            btn.innerHTML = 'Zapisywanie...'; btn.disabled = true; 
+            const fd = new FormData(this); 
+            showLoading(); 
+            await window.inventory.addIncomingShipment(fd.get('supplier'), { 1:parseInt(fd.get('p1'))||0, 2:parseInt(fd.get('p2'))||0, 3:parseInt(fd.get('p3'))||0 }); 
+            hideLoading(); this.reset(); btn.innerHTML = txt; btn.disabled = false; showToast('Przyjęto obudowy na magazyn.', 'success'); 
+        });
+
+        document.getElementById('productionForm').addEventListener('submit', async function(e) { 
+            e.preventDefault(); const btn = this.querySelector('button'); const txt = btn.innerHTML; 
+            btn.innerHTML = 'Przetwarzanie...'; btn.disabled = true; 
+            const fd = new FormData(this); 
+            showLoading(); 
+            await window.inventory.registerProduction({ 1:parseInt(fd.get('p1'))||0, 2:parseInt(fd.get('p2'))||0, 3:parseInt(fd.get('p3'))||0, 4:parseInt(fd.get('p4'))||0, 5:parseInt(fd.get('p5'))||0 }); 
+            hideLoading(); this.reset(); btn.innerHTML = txt; btn.disabled = false; 
+        });
+
+        document.getElementById('componentsIncomingForm').addEventListener('submit', async function(e) { 
+            e.preventDefault(); const btn = this.querySelector('button'); const txt = btn.innerHTML; 
+            btn.innerHTML = 'Zapisywanie...'; btn.disabled = true; 
+            const fd = new FormData(this); 
+            showLoading(); 
+            await window.inventory.addComponentsShipment(fd.get('supplier'), { ps_raw:parseInt(fd.get('ps_raw'))||0, clips_normal:parseInt(fd.get('clips_normal'))||0, clips_pass:parseInt(fd.get('clips_pass'))||0 }); 
+            hideLoading(); this.reset(); btn.innerHTML = txt; btn.disabled = false; showToast('Zapisano komponenty.', 'success'); 
+        });
+    </script>
+</body>
+</html>
