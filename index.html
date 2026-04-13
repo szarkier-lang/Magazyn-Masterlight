@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pl">
 <head>
@@ -132,8 +131,8 @@
 
         .table-responsive { width: 100%; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm); overflow: hidden; }
         table { width: 100%; border-collapse: separate; border-spacing: 0; margin: 0; font-size: 0.9rem; table-layout: auto; }
-        th { background-color: var(--primary-terracotta); color: #fff; padding: 1rem 0.75rem; text-align: left; font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--primary-dark); position: sticky; top: 0; z-index: 10; }
-        td { padding: 0.8rem 0.75rem; border-bottom: 1px solid var(--border-color); color: var(--text-dark); vertical-align: middle; word-break: break-word; }
+        th { background-color: var(--primary-terracotta); color: #fff; padding: 1.1rem 1rem; text-align: left; font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--primary-dark); position: sticky; top: 0; z-index: 10; white-space: nowrap; }
+        td { padding: 0.85rem 1rem; border-bottom: 1px solid var(--border-color); color: var(--text-dark); vertical-align: middle; word-break: break-word; }
         tbody tr { transition: background-color 0.2s, opacity 0.2s; }
         tbody tr:last-child td { border-bottom: none; }
         tbody tr:hover { background-color: #FEF6F3; }
@@ -141,37 +140,50 @@
         .row-completed { opacity: 0.6; background-color: #F9FAFB; }
         .row-completed:hover { opacity: 1; background-color: #F3F4F6 !important; }
 
-        .status-badge { display: inline-flex; align-items: center; padding: 0.4rem 0.8rem; border-radius: 8px; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.3px;}
+        .status-badge { display: inline-flex; align-items: center; justify-content: center; padding: 0.4rem 0.8rem; border-radius: 8px; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.3px; white-space: nowrap;}
         .status-ok { background-color: #ECFDF5; color: #059669; border: 1px solid #A7F3D0; }
         .status-warning { background-color: #FFFBEB; color: #D97706; border: 1px solid #FDE68A; }
         .status-error { background-color: #FEF2F2; color: #DC2626; border: 1px solid #FECACA; }
         .status-neutral { background-color: #EFF6FF; color: #2563EB; border: 1px solid #BFDBFE; }
 
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; backdrop-filter: blur(4px); }
-        .modal-dialog { background: white; padding: 2.5rem; border-radius: 20px; max-width: 550px; margin: 8vh auto; box-shadow: var(--shadow-lg); animation: slideUp 0.3s ease; border: 1px solid var(--border-color); }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-color); }
-        .modal-header h2 { color: var(--primary-dark); font-weight: 700; }
-        .close { font-size: 2rem; cursor: pointer; color: var(--text-light); transition: color 0.2s ease; line-height: 1; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; }
-        .close:hover { color: var(--accent-red); background-color: #FEF2F2; }
+        .form-group { margin-bottom: 0; display: flex; flex-direction: column; gap: 0.5rem; justify-content: flex-end;}
+        .form-group label { font-weight: 600; color: var(--text-dark); font-size: 0.85rem; letter-spacing: 0.3px; }
+        input[type="text"], input[type="number"], input[type="date"], input[type="email"], input[type="password"], select { 
+            padding: 0.75rem 1.1rem; background: #fff; border: 1px solid #D1D5DB; border-radius: 10px; 
+            font-size: 0.95rem; color: var(--text-dark); width: 100%; font-family: 'Inter', sans-serif; 
+            transition: all 0.2s ease; outline: none; box-shadow: inset 0 1px 2px rgba(0,0,0,0.03); 
+            height: 46px; 
+        }
+        input:focus, select:focus { border-color: var(--primary-terracotta); box-shadow: 0 0 0 3px rgba(196, 112, 75, 0.15), inset 0 1px 2px rgba(0,0,0,0.03); }
 
-        button { display: inline-flex; align-items: center; justify-content: center; padding: 0.75rem 1.5rem; border: none; border-radius: 10px; cursor: pointer; font-size: 0.9rem; font-weight: 600; transition: all 0.2s ease; font-family: 'Inter', sans-serif; box-shadow: var(--shadow-sm); letter-spacing: 0.3px; }
+        button { display: inline-flex; align-items: center; justify-content: center; padding: 0.75rem 1.5rem; height: 46px; border: none; border-radius: 10px; cursor: pointer; font-size: 0.9rem; font-weight: 600; transition: all 0.2s ease; font-family: 'Inter', sans-serif; box-shadow: var(--shadow-sm); letter-spacing: 0.3px; white-space: nowrap; }
         .btn-primary { background-color: var(--primary-terracotta); color: white; }
         .btn-primary:hover:not(:disabled) { background-color: var(--primary-dark); transform: translateY(-1px); box-shadow: 0 7px 14px rgba(196, 112, 75, 0.2); }
         .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+        
         .btn-secondary { background-color: white; color: var(--text-dark); border: 1px solid var(--border-color); }
         .btn-secondary:hover:not(:disabled) { background-color: #F9FAFB; border-color: #D1D5DB; transform: translateY(-1px); box-shadow: var(--shadow-sm); }
-        .btn-small { padding: 0.5rem 0.8rem; font-size: 0.75rem; margin-right: 0.3rem; margin-bottom: 0.3rem; border-radius: 6px; }
-
-        .form-group { margin-bottom: 1.25rem; display: flex; flex-direction: column; gap: 0.5rem; }
-        .form-group label { font-weight: 600; color: var(--text-dark); font-size: 0.85rem; letter-spacing: 0.3px; }
-        input[type="text"], input[type="number"], input[type="date"], input[type="email"], input[type="password"], select { padding: 0.75rem 1.1rem; background: #fff; border: 1px solid #D1D5DB; border-radius: 10px; font-size: 0.95rem; color: var(--text-dark); width: 100%; font-family: 'Inter', sans-serif; transition: all 0.2s ease; outline: none; box-shadow: inset 0 1px 2px rgba(0,0,0,0.03); }
-        input:focus, select:focus { border-color: var(--primary-terracotta); box-shadow: 0 0 0 3px rgba(196, 112, 75, 0.15), inset 0 1px 2px rgba(0,0,0,0.03); }
+        
+        .btn-small { padding: 0.4rem 0.8rem; font-size: 0.75rem; height: 32px; border-radius: 6px; }
+        
+        .action-cell-flex { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 
         .editable { cursor: pointer; background-color: #F9FAFB; border-radius: 8px; transition: background 0.2s; border: 1px solid transparent; text-align: center;}
         .editable:hover { background-color: #FEF6F3; border-color: var(--beige-light); }
-        .editable input { max-width: 90px; text-align: center; padding: 0.4rem; margin: 0 auto; display: block; }
-        
-        /* STYLE MAPY I KALENDARZA */
+        .editable input { max-width: 90px; text-align: center; padding: 0.4rem; height: 34px; margin: 0 auto; display: block; }
+
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.55); z-index: 2000; backdrop-filter: blur(4px); }
+        .modal-dialog { background: white; padding: 2.5rem; border-radius: 20px; max-width: 550px; margin: 8vh auto; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); border: 1px solid var(--border-color); }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-color); }
+        .modal-header h2 { color: var(--primary-dark); font-weight: 700; font-size: 1.3rem; }
+        .close { font-size: 2rem; cursor: pointer; color: var(--text-light); transition: color 0.2s ease, background-color 0.2s ease; line-height: 1; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; }
+        .close:hover { color: var(--accent-red); background-color: #FEF2F2; }
+
+        .checkbox-wrapper { display: flex; align-items: center; gap: 12px; background-color: #FEF2F2; border: 1px solid #FECACA; padding: 1rem 1.25rem; border-radius: 10px; cursor: pointer; transition: background-color 0.2s; }
+        .checkbox-wrapper:hover { background-color: #FEE2E2; }
+        .checkbox-wrapper input[type="checkbox"] { width: 22px; height: 22px; cursor: pointer; accent-color: var(--accent-red-dark); margin: 0; box-shadow: none; }
+        .checkbox-wrapper label { color: var(--accent-red-dark); font-weight: 700; cursor: pointer; margin: 0; font-size: 0.9rem; }
+
         .map-container { height: 450px; width: 100%; border-bottom-left-radius: 16px; border-bottom-right-radius: 16px; z-index: 1; background-color: #f3f4f6; }
         .leaflet-popup-content-wrapper { border-radius: 12px !important; box-shadow: var(--shadow-lg) !important; padding: 5px !important;}
         .leaflet-popup-content { margin: 12px 16px !important; font-family: 'Inter', sans-serif !important; color: var(--text-dark) !important; font-size: 0.9rem !important; line-height: 1.5 !important;}
@@ -198,7 +210,6 @@
 
         .footer { text-align: center; padding: 3rem 2rem; color: var(--text-light); font-size: 0.85rem; margin-top: 2rem; border-top: 1px solid var(--border-color); background: #fff; }
 
-        /* --- MOBILE OPTYMALIZACJA --- */
         @media (max-width: 768px) {
             .mobile-menu-btn { display: block; }
             .sidebar { transform: translateX(-100%); } 
@@ -231,7 +242,6 @@
             td::before { content: attr(data-label); position: absolute; left: 1rem; width: 40%; text-align: left; font-weight: 600; color: var(--text-light); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; }
             .editable input { max-width: 140px; text-align: right; padding: 0.5rem; border-radius: 6px; }
             td[data-label="Akcja"] { justify-content: flex-end; flex-wrap: wrap; gap: 5px; padding-top: 1rem !important; }
-            .btn-small { margin-bottom: 0; margin-right: 0; }
             .map-container { height: 400px !important; border-radius: 0 0 12px 12px !important; } 
             .leaflet-popup-content { font-size: 0.8rem !important; }
         }
@@ -277,10 +287,10 @@
         <div class="auth-box">
             <h2><span class="material-symbols-outlined" style="font-size: 2.8rem; color: var(--primary-terracotta);">highlight</span> MASTERLIGHT</h2>
             <p style="margin-bottom: 2.5rem; color: var(--text-light); font-size: 0.95rem;">Zaloguj się do chmury magazynowej WMS</p>
-            <form id="login-form">
-                <div class="form-group"><label>Adres E-mail</label><input type="email" id="login-email" required placeholder="np. jan.kowalski@masterlight.pl"></div>
-                <div class="form-group"><label>Hasło dostępu</label><input type="password" id="login-password" required placeholder="••••••••"></div>
-                <button type="submit" id="login-submit-btn" class="btn-primary" style="width: 100%; margin-top: 1.5rem; padding: 1rem; font-size: 1rem;">
+            <form id="login-form" style="display:flex; flex-direction:column; gap:1.2rem;">
+                <div class="form-group" style="text-align:left;"><label>Adres E-mail</label><input type="email" id="login-email" required placeholder="np. jan.kowalski@masterlight.pl"></div>
+                <div class="form-group" style="text-align:left;"><label>Hasło dostępu</label><input type="password" id="login-password" required placeholder="••••••••"></div>
+                <button type="submit" id="login-submit-btn" class="btn-primary" style="width: 100%; margin-top: 0.5rem; font-size: 1rem;">
                     <span class="material-symbols-outlined">login</span> Zaloguj bezpiecznie
                 </button>
             </form>
@@ -322,7 +332,7 @@
                         <p><span class="material-symbols-outlined" style="font-size: 1.2rem; color: var(--primary-terracotta);">account_circle</span> <strong id="logged-email">...</strong></p>
                         <p style="font-size: 0.75rem; color: var(--text-light); padding-left: 24px;"><span id="logged-role">...</span></p>
                     </div>
-                    <button onclick="logoutUser()" class="btn-secondary btn-small" style="margin: 0; padding: 0.6rem; border-radius: 8px;" title="Wyloguj się">
+                    <button onclick="logoutUser()" class="btn-secondary btn-small" style="margin: 0; margin-left: 10px; width: 36px; height: 36px; border-radius: 8px;" title="Wyloguj się">
                         <span class="material-symbols-outlined" style="margin:0; color: var(--accent-red);">logout</span>
                     </button>
                 </div>
@@ -343,9 +353,9 @@
                         <div class="section-header">
                             <h2><span class="material-symbols-outlined">calendar_month</span> Harmonogram Działań (Kalendarz)</h2>
                             <div class="cal-month-nav">
-                                <button class="btn-secondary btn-small" onclick="changeMonth(-1)"><span class="material-symbols-outlined">chevron_left</span></button>
+                                <button class="btn-secondary btn-small" onclick="changeMonth(-1)" style="margin:0; height:auto; padding:0.4rem;"><span class="material-symbols-outlined" style="margin:0;">chevron_left</span></button>
                                 <strong id="calendar-month-label" style="margin: 0 15px; font-size: 1.1rem; color: var(--primary-dark);">...</strong>
-                                <button class="btn-secondary btn-small" onclick="changeMonth(1)"><span class="material-symbols-outlined">chevron_right</span></button>
+                                <button class="btn-secondary btn-small" onclick="changeMonth(1)" style="margin:0; height:auto; padding:0.4rem;"><span class="material-symbols-outlined" style="margin:0;">chevron_right</span></button>
                             </div>
                         </div>
                         <div class="section-content" style="padding: 1.5rem;">
@@ -397,7 +407,7 @@
                     <div class="section">
                         <div class="section-header">
                             <h2><span class="material-symbols-outlined">inventory_2</span> Pełny Stan Magazynowy Downlightów</h2>
-                            <button class="btn-secondary btn-small" onclick="printInventoryPdf()" style="margin: 0;"><span class="material-symbols-outlined">print</span> Generuj Raport PDF</button>
+                            <button class="btn-secondary btn-small" onclick="printInventoryPdf()" style="margin: 0; height: auto;"><span class="material-symbols-outlined">print</span> Generuj PDF</button>
                         </div>
                         <div class="section-content" style="padding:0;">
                             <div class="table-responsive" style="max-height: 70vh;">
@@ -409,16 +419,30 @@
                         </div>
                     </div>
 
-                    <div class="section" style="max-width: 900px;">
+                    <div class="section" style="max-width: 1200px;">
                         <div class="section-header">
                             <h2><span class="material-symbols-outlined">plumbing</span> Stan Serwisowy Opraw (RMA)</h2>
-                            <button class="btn-secondary btn-small" onclick="openReceiveDamagedUI()" style="margin: 0;"><span class="material-symbols-outlined">assignment_return</span> Przyjmij ze sklepu</button>
+                            <button class="btn-primary btn-small" onclick="openReceiveDamagedUI()" style="margin: 0; background-color:#3B82F6; height:auto; padding:0.5rem 1rem;"><span class="material-symbols-outlined">assignment_return</span> Przyjmij zwrot ze sklepu</button>
                         </div>
                         <div class="section-content" style="padding:0;">
                             <div class="table-responsive">
                                 <table style="min-width: 0;">
-                                    <thead><tr><th>Model Oprawy</th><th>Uszkodzone (Oczekują)</th><th>W Serwisie (Wysyłka)</th><th class="admin-only-col">Akcja</th></tr></thead>
+                                    <thead><tr><th>Model Oprawy</th><th>Uszkodzone (Oczekują)</th><th>W Serwisie (Wysyłka)</th><th class="admin-only-col" style="width:240px;">Akcja</th></tr></thead>
                                     <tbody id="service-table"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="section" style="max-width: 1200px;">
+                        <div class="section-header">
+                            <h2><span class="material-symbols-outlined">history</span> Rejestr Przypadków Serwisowych</h2>
+                        </div>
+                        <div class="section-content" style="padding:0;">
+                            <div class="table-responsive" style="max-height: 400px; overflow-y:auto;">
+                                <table style="min-width: 0;">
+                                    <thead><tr><th>Data</th><th>Typ Akcji</th><th>Model Oprawy</th><th>Ilość</th><th>Opis usterki / Notatka</th></tr></thead>
+                                    <tbody id="service-cases-table"></tbody>
                                 </table>
                             </div>
                         </div>
@@ -430,12 +454,14 @@
                         <div class="section-header"><h2><span class="material-symbols-outlined">move_to_inbox</span> Przyjęcie Dostawy Opraw (Huta)</h2></div>
                         <div class="section-content">
                             <form id="incomingForm">
-                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; align-items: end;">
-                                    <div class="form-group" style="margin:0;"><label>Huta / Dostawca</label><input type="text" name="supplier" required placeholder="np. Alumetal"></div>
-                                    <div class="form-group" style="margin:0;"><label>Surowe 22°</label><input type="number" name="p1" value="0" min="0"></div>
-                                    <div class="form-group" style="margin:0;"><label>Surowe 37°</label><input type="number" name="p2" value="0" min="0"></div>
-                                    <div class="form-group" style="margin:0;"><label>Surowe 58°</label><input type="number" name="p3" value="0" min="0"></div>
-                                    <button type="submit" class="btn-primary" style="height: 47px;"><span class="material-symbols-outlined">add_circle</span> Przyjmij</button>
+                                <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 1rem; align-items: end;">
+                                    <div class="form-group"><label>Huta / Dostawca</label><input type="text" name="supplier" required placeholder="np. Alumetal"></div>
+                                    <div class="form-group"><label>Surowe 22°</label><input type="number" name="p1" value="0" min="0"></div>
+                                    <div class="form-group"><label>Surowe 37°</label><input type="number" name="p2" value="0" min="0"></div>
+                                    <div class="form-group"><label>Surowe 58°</label><input type="number" name="p3" value="0" min="0"></div>
+                                    <div class="form-group">
+                                        <button type="submit" class="btn-primary" style="width:100%;"><span class="material-symbols-outlined">add_circle</span> Przyjmij</button>
+                                    </div>
                                 </div>
                             </form>
                         </div>
@@ -446,35 +472,36 @@
                             <h2><span class="material-symbols-outlined">add_location_alt</span> Dodaj Nowe Zamówienie / Plan Wysyłki</h2>
                             <div style="display:flex; align-items:center; gap:10px;">
                                 <input type="file" id="pdf-input" accept="application/pdf" style="display: none;" onchange="scanOfferFromPDF(this.files[0])">
-                                <button type="button" id="pdf-scan-btn" class="btn-primary btn-small" onclick="document.getElementById('pdf-input').click()" style="background-color: #3B82F6; margin: 0; padding: 0.5rem 1rem;">
+                                <button type="button" id="pdf-scan-btn" class="btn-primary btn-small" onclick="document.getElementById('pdf-input').click()" style="background-color: #3B82F6; margin: 0; padding: 0.5rem 1rem; height:auto;">
                                     <span class="material-symbols-outlined">document_scanner</span> Skanuj z PDF
                                 </button>
                             </div>
                         </div>
                         <div class="section-content">
                             <form id="shipmentForm">
-                                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.25rem;">
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.25rem;">
                                     <div class="form-group"><label>Miejscowość *</label><input type="text" name="ship_city" id="form-city" required placeholder="np. Warszawa"></div>
                                     <div class="form-group"><label>Ulica i nr (opcjonalnie)</label><input type="text" name="ship_street" id="form-street" placeholder="np. Złota 44"></div>
                                     <div class="form-group"><label>Obiekt / Inwestycja (opcjonalnie)</label><input type="text" name="ship_target" id="form-target" placeholder="np. Biurowiec Skylight"></div>
                                 </div>
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-top: 0.5rem;">
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.25rem; margin-top: 1.25rem;">
                                     <div class="form-group"><label>Data Wstępna</label><input type="date" name="date" id="form-date" required></div>
                                     <div class="form-group"><label>Spedytor / Odbiór</label><input type="text" name="company" id="form-company" placeholder="np. DPD, Własny" required></div>
                                 </div>
-                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 1.25rem; margin-top: 0.5rem; background-color: var(--background); padding: 1.25rem; border-radius: 12px; border: 1px solid var(--border-color);">
-                                    <div class="form-group" style="margin:0;"><label>22° - 15W</label><input type="number" name="p1" id="form-p1" value="0" min="0"></div>
-                                    <div class="form-group" style="margin:0;"><label>37° - 15W</label><input type="number" name="p2" id="form-p2" value="0" min="0"></div>
-                                    <div class="form-group" style="margin:0;"><label>58° - 15W</label><input type="number" name="p3" id="form-p3" value="0" min="0"></div>
-                                    <div class="form-group" style="margin:0;"><label>37° - 20W</label><input type="number" name="p4" id="form-p4" value="0" min="0"></div>
-                                    <div class="form-group" style="margin:0;"><label>58° - 20W</label><input type="number" name="p5" id="form-p5" value="0" min="0"></div>
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem; margin-top: 1.25rem; background-color: var(--background); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border-color);">
+                                    <div class="form-group"><label>22° - 15W</label><input type="number" name="p1" id="form-p1" value="0" min="0"></div>
+                                    <div class="form-group"><label>37° - 15W</label><input type="number" name="p2" id="form-p2" value="0" min="0"></div>
+                                    <div class="form-group"><label>58° - 15W</label><input type="number" name="p3" id="form-p3" value="0" min="0"></div>
+                                    <div class="form-group"><label>37° - 20W</label><input type="number" name="p4" id="form-p4" value="0" min="0"></div>
+                                    <div class="form-group"><label>58° - 20W</label><input type="number" name="p5" id="form-p5" value="0" min="0"></div>
                                 </div>
-                                <div class="form-group" style="margin-top: 1rem; flex-direction: row; align-items: center; gap: 10px;">
-                                    <input type="checkbox" id="form-is-replacement" style="width: auto; box-shadow: none;">
-                                    <label for="form-is-replacement" style="margin: 0; color: var(--accent-red-dark);">Wysyłka zastępująca oprawy uszkodzone (Serwis / Wymiana)</label>
-                                </div>
-                                <div style="margin-top: 1.5rem; text-align: right;">
-                                    <button type="submit" class="btn-primary" style="padding: 0.9rem 2rem;"><span class="material-symbols-outlined">save</span> Zapisz i Dodaj do Kolejki</button>
+                                
+                                <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; margin-top: 1.5rem; gap: 1rem;">
+                                    <label class="checkbox-wrapper">
+                                        <input type="checkbox" id="form-is-replacement">
+                                        Wysyłka zastępująca oprawy uszkodzone (Serwis / Wymiana RMA)
+                                    </label>
+                                    <button type="submit" class="btn-primary" style="padding: 0 2.5rem;"><span class="material-symbols-outlined">save</span> Zapisz i Dodaj do Kolejki</button>
                                 </div>
                             </form>
                         </div>
@@ -485,7 +512,7 @@
                         <div class="section-content" style="padding:0;">
                             <div class="table-responsive">
                                 <table>
-                                    <thead><tr><th>Data Wstępna</th><th>Cel</th><th>Typ</th><th>Sztuk</th><th>Kąty</th><th>Wirtualny Magazyn</th><th>Status</th><th class="admin-only-col">Akcja</th></tr></thead>
+                                    <thead><tr><th>Data Wstępna</th><th>Cel</th><th>Typ</th><th>Sztuk</th><th>Kąty</th><th>Wirtualny Magazyn</th><th>Status</th><th class="admin-only-col" style="width:200px;">Akcja</th></tr></thead>
                                     <tbody id="shipments-unconfirmed-table"></tbody>
                                 </table>
                             </div>
@@ -500,7 +527,7 @@
                         <div class="section-content" style="padding:0;">
                             <div class="table-responsive">
                                 <table>
-                                    <thead><tr><th>Data Potw.</th><th>Cel</th><th>Typ</th><th>Sztuk</th><th>Kąty</th><th>Wirtualny Magazyn</th><th>Status</th><th class="admin-only-col">Akcja</th></tr></thead>
+                                    <thead><tr><th>Data Potw.</th><th>Cel</th><th>Typ</th><th>Sztuk</th><th>Kąty</th><th>Wirtualny Magazyn</th><th>Status</th><th class="admin-only-col" style="width:200px;">Akcja</th></tr></thead>
                                     <tbody id="shipments-confirmed-table"></tbody>
                                 </table>
                             </div>
@@ -552,14 +579,14 @@
                         <div class="section-header"><h2><span class="material-symbols-outlined">add_circle</span> Dodaj Nowy Termin Regulacji</h2></div>
                         <div class="section-content">
                             <form id="adjustmentForm">
-                                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.25rem;">
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.25rem;">
                                     <div class="form-group"><label>Miejscowość *</label><input type="text" name="adj_city" required placeholder="np. Gdańsk"></div>
                                     <div class="form-group"><label>Ulica i nr</label><input type="text" name="adj_street" placeholder="np. Długa 5"></div>
                                     <div class="form-group"><label>Obiekt / Klient</label><input type="text" name="adj_target" placeholder="np. Hotel Seaside"></div>
                                 </div>
-                                <div style="display: flex; gap: 1rem; align-items: end; margin-top: 0.5rem;">
-                                    <div class="form-group" style="margin:0; width: 200px;"><label>Data Wyjazdu</label><input type="date" name="adj_date" required></div>
-                                    <button type="submit" class="btn-primary" style="height: 47px;"><span class="material-symbols-outlined">save</span> Zaplanuj Wyjazd</button>
+                                <div style="display: grid; grid-template-columns: 1fr auto; gap: 1rem; align-items: end; margin-top: 1.25rem;">
+                                    <div class="form-group"><label>Data Wyjazdu</label><input type="date" name="adj_date" required></div>
+                                    <div class="form-group"><button type="submit" class="btn-primary" style="width:100%; padding: 0 2rem;"><span class="material-symbols-outlined">save</span> Zaplanuj Wyjazd</button></div>
                                 </div>
                             </form>
                         </div>
@@ -570,7 +597,7 @@
                     <div class="section">
                         <div class="section-header">
                             <h2><span class="material-symbols-outlined">receipt_long</span> Rejestr Zmian i Operacji Magazynowych</h2>
-                            <button class="btn-secondary btn-small" onclick="window.print()" style="margin: 0;"><span class="material-symbols-outlined">print</span> Drukuj Logi</button>
+                            <button class="btn-secondary btn-small" onclick="window.print()" style="margin: 0; height:auto;"><span class="material-symbols-outlined">print</span> Drukuj Logi</button>
                         </div>
                         <div class="section-content" style="padding:0;">
                             <div class="table-responsive" style="max-height: 75vh;">
@@ -588,12 +615,12 @@
                         <div class="section-header"><h2><span class="material-symbols-outlined">inventory</span> Przyjęcie Dostawy Komponentów</h2></div>
                         <div class="section-content">
                             <form id="componentsIncomingForm">
-                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; align-items: end;">
-                                    <div class="form-group" style="margin:0;"><label>Dostawca</label><input type="text" name="supplier" required placeholder="np. Osram, Tridonic"></div>
-                                    <div class="form-group" style="margin:0;"><label>Zasilacze (szt)</label><input type="number" name="ps_raw" value="0" min="0"></div>
-                                    <div class="form-group" style="margin:0;"><label>Klapki Zwykłe</label><input type="number" name="clips_normal" value="0" min="0"></div>
-                                    <div class="form-group" style="margin:0;"><label>Klapki Przelot.</label><input type="number" name="clips_pass" value="0" min="0"></div>
-                                    <button type="submit" class="btn-primary" style="height: 47px;"><span class="material-symbols-outlined">add_circle</span> Dodaj</button>
+                                <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 1rem; align-items: end;">
+                                    <div class="form-group"><label>Dostawca</label><input type="text" name="supplier" required placeholder="np. Osram, Tridonic"></div>
+                                    <div class="form-group"><label>Zasilacze (szt)</label><input type="number" name="ps_raw" value="0" min="0"></div>
+                                    <div class="form-group"><label>Klapki Zwykłe</label><input type="number" name="clips_normal" value="0" min="0"></div>
+                                    <div class="form-group"><label>Klapki Przelot.</label><input type="number" name="clips_pass" value="0" min="0"></div>
+                                    <div class="form-group"><button type="submit" class="btn-primary" style="width:100%;"><span class="material-symbols-outlined">add_circle</span> Dodaj</button></div>
                                 </div>
                             </form>
                         </div>
@@ -623,20 +650,20 @@
                             <form id="productionForm">
                                 <div style="background-color: var(--background); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 1.5rem;">
                                     <h3 style="font-size: 0.9rem; color: var(--text-light); text-transform:uppercase; letter-spacing:1px; margin-bottom: 1rem;">Wprowadź ilość zmontowanych opraw</h3>
-                                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 1.25rem;">
-                                        <div class="form-group" style="margin:0;"><label>22° - 15W</label><input type="number" name="p1" value="0" min="0"></div>
-                                        <div class="form-group" style="margin:0;"><label>37° - 15W</label><input type="number" name="p2" value="0" min="0"></div>
-                                        <div class="form-group" style="margin:0;"><label>58° - 15W</label><input type="number" name="p3" value="0" min="0"></div>
-                                        <div class="form-group" style="margin:0;"><label>37° - 20W</label><input type="number" name="p4" value="0" min="0"></div>
-                                        <div class="form-group" style="margin:0;"><label>58° - 20W</label><input type="number" name="p5" value="0" min="0"></div>
+                                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1.25rem;">
+                                        <div class="form-group"><label>22° - 15W</label><input type="number" name="p1" value="0" min="0"></div>
+                                        <div class="form-group"><label>37° - 15W</label><input type="number" name="p2" value="0" min="0"></div>
+                                        <div class="form-group"><label>58° - 15W</label><input type="number" name="p3" value="0" min="0"></div>
+                                        <div class="form-group"><label>37° - 20W</label><input type="number" name="p4" value="0" min="0"></div>
+                                        <div class="form-group"><label>58° - 20W</label><input type="number" name="p5" value="0" min="0"></div>
                                     </div>
                                 </div>
                                 <div style="text-align: right;">
-                                    <button type="submit" class="btn-primary" style="padding: 1rem 2.5rem;"><span class="material-symbols-outlined">task_alt</span> Zarejestruj Produkcję w Bazie</button>
+                                    <button type="submit" class="btn-primary" style="padding: 0 2.5rem;"><span class="material-symbols-outlined">task_alt</span> Zarejestruj Produkcję w Bazie</button>
                                 </div>
                             </form>
                             <div style="margin-top: 2rem; background: var(--primary-light); padding: 1.25rem; border-radius: 12px; font-size: 0.85rem; color: var(--primary-dark); border: 1px solid var(--beige-light); line-height: 1.6;">
-                                <p style="margin-bottom:6px;"><strong>ℹ️ Automatyzacja:</strong> System zdejmie z puli surowe obudowy z danego kąta. Z puli komponentów zostanie pobrane po 1 szt.: zasilacza, klapki zwykłej i klapki przelotowej za każdą sztukę gotowej oprawy.</p>
+                                <p style="margin-bottom:6px;"><strong><span class="material-symbols-outlined" style="font-size: 1.2em; vertical-align:-0.2em;">info</span> Automatyzacja:</strong> System zdejmie z puli surowe obudowy z danego kąta. Z puli komponentów zostanie pobrane po 1 szt.: zasilacza, klapki zwykłej i klapki przelotowej za każdą sztukę gotowej oprawy.</p>
                                 <p><strong>⚠️ Uwaga:</strong> Upewnij się, że stany komponentów są wystarczające przed rejestracją.</p>
                             </div>
                         </div>
@@ -869,7 +896,7 @@
 
             const btn = document.getElementById('pdf-scan-btn');
             const originalText = btn.innerHTML;
-            btn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">autorenew</span> Skanowanie PDF...';
+            btn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">autorenew</span> Skanowanie...';
             btn.disabled = true;
             
             try {
@@ -1192,13 +1219,13 @@
             if (!window.inventory) return;
             const s = window.inventory.shipments.find(x => String(x.id) === String(id));
             if (!s || !s.partial_missing) return;
-            let c = `<div style="margin-bottom:1rem; padding:1rem; background:#f9fafb; border-radius:8px;">Cel: <b>${escapeHTML(s.location)}</b><br>Data: ${s.date}</div><div class="table-responsive"><table style="width:100%;"><thead><tr><th style="text-align:left;">Model Oprawy</th><th>Ilość Brakująca</th></tr></thead><tbody>`;
+            let c = `<div style="margin-bottom:1rem; padding:1.5rem; background:#F9FAFB; border-radius:12px; border:1px solid #E5E7EB;">Cel wysyłki: <b>${escapeHTML(s.location)}</b><br>Data wyjazdu: ${s.date}</div><div class="table-responsive" style="margin-bottom:1.5rem;"><table style="width:100%;"><thead><tr><th style="text-align:left;">Model Oprawy</th><th>Ilość Brakująca</th></tr></thead><tbody>`;
             let tot = 0;
             Object.entries(s.partial_missing).forEach(([pid, qty]) => {
                 const p = window.inventory.products.find(x => String(x.id) === String(pid));
                 if(p) { c += `<tr><td>${p.name}</td><td style="color:var(--accent-red); font-weight:bold; text-align:center;">${qty} szt.</td></tr>`; tot += qty; }
             });
-            c += `</tbody></table></div><div style="margin-top:1rem; display:flex; justify-content:space-between; align-items:center;"><b>Łącznie do dosłania: <span style="color:var(--accent-red); font-size:1.2em;">${tot} szt.</span></b><button class="btn-primary" onclick="printMissingPdf('${id}')"><span class="material-symbols-outlined">print</span> Drukuj PDF</button></div>`;
+            c += `</tbody></table></div><div style="display:flex; justify-content:space-between; align-items:center;"><b>Łącznie do dosłania: <span style="color:var(--accent-red); font-size:1.2em;">${tot} szt.</span></b><button class="btn-primary" onclick="printMissingPdf('${id}')"><span class="material-symbols-outlined">print</span> Drukuj Raport Braków</button></div>`;
             showModal('Szczegóły Braków', c);
         }
 
@@ -1220,6 +1247,7 @@
         class CloudInventoryManager {
             constructor() { 
                 this.products = []; this.shipments = []; this.history = []; this.adjustments = []; 
+                this.serviceCases = []; 
                 this.components = { ps_raw: 0, clips_normal: 0, clips_pass: 0 };
                 this.realtimeTimeout = null; this.isFirstLoad = true; 
             }
@@ -1238,15 +1266,16 @@
                     let shipsRes = await db.from('shipments').select('*').order('date');
                     let adjsRes  = await db.from('adjustments').select('*').order('date');
                     let histRes  = await db.from('history').select('*').order('created_at', { ascending: false }).limit(40);
+                    let servRes  = await db.from('service_history').select('*').order('created_at', { ascending: false }).limit(50);
 
                     if (prodsRes.error) throw prodsRes.error;
-                    if (shipsRes.error) throw shipsRes.error;
                     
                     this.products = prodsRes.data || [];
                     this.components = compsRes.data || { ps_raw: 0, clips_normal: 0, clips_pass: 0 };
                     this.shipments = shipsRes.data || [];
                     this.adjustments = adjsRes.data || [];
                     this.history = (histRes.data || []).map(x => ({ timestamp: new Date(x.created_at).toLocaleString('pl-PL'), action: x.action || 'Nieznana operacja', details: x.details || '' }));
+                    this.serviceCases = servRes.error ? [] : (servRes.data || []);
                     
                     const t = new Date().toISOString().split('T')[0];
                     const upds = [];
@@ -1264,18 +1293,6 @@
                 } catch(e) { 
                     console.error("CRITICAL Błąd Bazy Danych:", e);
                     hideLoading();
-                    const alertsContainer = document.getElementById('dashboard-alerts');
-                    if(alertsContainer) {
-                        alertsContainer.innerHTML = `
-                            <div class="alert-banner critical" style="background:#FEE2E2; border-left-color:#DC2626; color:#991B1B;">
-                                <span class="material-symbols-outlined" style="font-size: 2.5rem;">cloud_off</span>
-                                <div><strong>Awaria połączenia z bazą danych (Supabase)</strong><br>
-                                System nie mógł załadować Twoich towarów. Projekt Supabase został prawdopodobnie uśpiony po 7 dniach nieaktywności.<br>
-                                <u>Rozwiązanie: Zaloguj się na stronę supabase.com i kliknij "Restore project" na zielonym tle.</u></div>
-                            </div>
-                        `;
-                    }
-                    showToast('Krytyczny błąd serwera danych.', 'error');
                 }
             }
 
@@ -1291,6 +1308,10 @@
                 const d = `${details} (przez: ${u})`; 
                 this.history.unshift({ timestamp: new Date().toLocaleString('pl-PL'), action, details: d }); 
                 await db.from('history').insert([{ action, details: d }]);
+            }
+
+            async addServiceCase(actionType, productName, qty, desc) {
+                await db.from('service_history').insert([{ action_type: actionType, product_name: productName, quantity: qty, description: desc }]);
             }
 
             getStatus(id) { 
@@ -1343,8 +1364,8 @@
                 await this.fetchData();
             }
 
-            // --- NOWA LOGIKA: ZWROTY I SERWIS ---
-            async processDamagedReturn(productId, qty, salvagedPsQty) {
+            // --- LOGIKA: ZWROTY I SERWIS Z HISTORIĄ ---
+            async processDamagedReturn(productId, qty, salvagedPsQty, desc) {
                 const p = this.products.find(x => String(x.id) === String(productId));
                 if (!p) return;
                 p.damaged = (parseInt(p.damaged) || 0) + qty;
@@ -1354,16 +1375,17 @@
                 if(salvagedPsQty > 0) {
                     this.components.ps_raw = (parseInt(this.components.ps_raw)||0) + salvagedPsQty;
                     updates.push(db.from('components').update({ps_raw: this.components.ps_raw}).eq('id', 1));
-                    histMsg += ` Odzyskano sprawnych zasilaczy: ${salvagedPsQty}.`;
+                    histMsg += ` Odzyskano zasilaczy: ${salvagedPsQty}.`;
                 }
                 
                 this.updateDashboard(); 
                 await Promise.all(updates);
-                await this.addHistory(`Zwrot uszkodzonych [${p.name}]`, histMsg);
+                await this.addHistory(`Zwrot z RMA [${p.name}]`, histMsg);
+                await this.addServiceCase('Przyjęcie z RMA', p.name, qty, desc);
                 await this.fetchData();
             }
 
-            async sendToService(productId, qty) {
+            async sendToService(productId, qty, desc) {
                 const p = this.products.find(x => String(x.id) === String(productId));
                 if (!p || (parseInt(p.damaged)||0) < qty) return;
                 p.damaged = parseInt(p.damaged) - qty;
@@ -1371,32 +1393,34 @@
                 
                 this.updateDashboard();
                 await db.from('products').update({ damaged: p.damaged, service: p.service }).eq('id', productId);
-                await this.addHistory(`Wydano na zewnętrzny Serwis`, `Model: ${p.name}, Ilość: ${qty}`);
+                await this.addHistory(`Wydano na Serwis`, `Model: ${p.name}, Ilość: ${qty}`);
+                await this.addServiceCase('Wysłano do Serwisu', p.name, qty, desc);
                 await this.fetchData();
             }
 
-            async receiveFromService(productId, qty, newPsUsed) {
+            async receiveFromService(productId, qty, newPsUsed, desc) {
                 const p = this.products.find(x => String(x.id) === String(productId));
                 if (!p || (parseInt(p.service)||0) < qty) return;
                 p.service = parseInt(p.service) - qty;
                 p.ready = (parseInt(p.ready)||0) + qty;
                 
                 const updates = [ db.from('products').update({ service: p.service, ready: p.ready }).eq('id', productId) ];
-                let histMsg = `Naprawiono opraw: ${qty}.`;
+                let histMsg = `Naprawiono szt: ${qty}.`;
                 
                 if(newPsUsed > 0) {
                     this.components.ps_raw = (parseInt(this.components.ps_raw)||0) - newPsUsed;
                     updates.push(db.from('components').update({ps_raw: this.components.ps_raw}).eq('id', 1));
-                    histMsg += ` Zużyto nowych zasilaczy: ${newPsUsed}.`;
+                    histMsg += ` Zużyto NOWYCH zasilaczy: ${newPsUsed}.`;
                 }
 
                 this.updateDashboard(); 
                 await Promise.all(updates);
                 await this.addHistory(`Zakończono naprawę [${p.name}]`, histMsg);
+                await this.addServiceCase('Odbiór z Serwisu', p.name, qty, desc);
                 await this.fetchData();
             }
 
-            // --- FUNKCJE WYSYŁEK ---
+            // --- LOGIKA WYSYŁEK ---
             async addShipment(s) { 
                 if (currentRole === 'viewer') return;
                 await db.from('shipments').insert([{ 
@@ -1529,7 +1553,6 @@
                 }
             }
 
-            // --- NOWA LOGIKA PRODUKCJI (1 oprawa = 1 zasilacz, 1 klapka zwykła, 1 przelotowa) ---
             async registerProduction(prod) {
                 if (currentRole === 'viewer') return;
                 const tp = Object.values(prod).reduce((a,b)=>a+parseInt(b||0),0); 
@@ -1701,6 +1724,7 @@
                     updateShipmentsTables(rMap); 
                     updateAdjustmentsTable(); 
                     if(currentRole !== 'worker') updateHistoryTable(); 
+                    updateServiceCasesTable();
                     updateComponentsDisplay();
 
                 } catch (err) { 
@@ -1763,7 +1787,6 @@
             return status === 'ok' ? '<span class="material-symbols-outlined">check_circle</span> OK' : status === 'warning' ? '<span class="material-symbols-outlined">warning</span> Mało' : '<span class="material-symbols-outlined">error</span> Brak';
         }
 
-        // --- ZMIANA: Tabela Inwentarza grupująca moce ---
         function updateInventoryTable() {
             const tbodyMain = document.getElementById('products-table');
             const tbodyService = document.getElementById('service-table');
@@ -1779,7 +1802,6 @@
                 { name: 'Kąt 58°', id15: 3, id20: 5, idAssm: 3 }
             ];
 
-            // Renderowanie tabeli głównej (Kąty, 15W, 20W, Surowe)
             angles.forEach(a => {
                 const p15 = getP(a.id15);
                 const p20 = a.id20 ? getP(a.id20) : null;
@@ -1798,7 +1820,7 @@
                 const cAssm = isViewer ? assm : `<td data-label="Surowe (W Montażu)" onclick="editCell(this, 'assembly', '${a.idAssm}')" class="editable">${assm}</td>`;
 
                 const rowHTML = `
-                    <td data-label="Kąt Oprawy">${a.name}</td>
+                    <td data-label="Kąt Oprawy"><strong>${a.name}</strong></td>
                     ${isViewer ? `<td data-label="Gotowe 15W">${c15}</td>` : c15}
                     ${isViewer ? (a.id20 ? `<td data-label="Gotowe 20W">${c20}</td>` : c20) : c20}
                     ${isViewer ? `<td data-label="Surowe (W Montażu)">${cAssm}</td>` : cAssm}
@@ -1809,7 +1831,6 @@
                 const tr = document.createElement('tr'); tr.innerHTML = rowHTML; tbodyMain.appendChild(tr);
             });
 
-            // Renderowanie tabeli serwisowej
             window.inventory.products.forEach(p => {
                 const damaged = parseInt(p.damaged) || 0;
                 const inService = parseInt(p.service) || 0;
@@ -1817,13 +1838,15 @@
                 let actionButtons = '';
                 if (!isViewer) {
                     actionButtons = `
-                        <button class="btn-small btn-secondary" onclick="openSendToServiceUI('${p.id}', '${p.name}', ${damaged})">Na naprawę</button>
-                        <button class="btn-small btn-secondary" onclick="openReceiveFromServiceUI('${p.id}', '${p.name}', ${inService})">Odbierz</button>
+                        <div class="action-cell-flex">
+                            <button class="btn-small btn-secondary" onclick="openSendToServiceUI('${p.id}', '${p.name}', ${damaged})">Na naprawę</button>
+                            <button class="btn-small btn-secondary" onclick="openReceiveFromServiceUI('${p.id}', '${p.name}', ${inService})">Odbierz</button>
+                        </div>
                     `;
                 }
 
                 const serviceRowHTML = `
-                    <td data-label="Model Oprawy">${escapeHTML(p.name)}</td>
+                    <td data-label="Model Oprawy"><strong>${escapeHTML(p.name)}</strong></td>
                     <td data-label="Uszkodzone (Oczekują)" style="color:var(--accent-red); font-weight:700;">${damaged}</td>
                     <td data-label="W Serwisie (Wysyłka)" style="color:var(--info-status); font-weight:700;">${inService}</td>
                     <td data-label="Akcja" class="${isViewer ? 'admin-only-col' : ''}">${actionButtons}</td>
@@ -1832,7 +1855,33 @@
             });
         }
 
-        // --- ZMIANA: Podział tabel dla wysyłek ---
+        function updateServiceCasesTable() {
+            const tbody = document.getElementById('service-cases-table');
+            if(!tbody) return;
+            tbody.innerHTML = '';
+            
+            if (!window.inventory.serviceCases || window.inventory.serviceCases.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 2rem !important; color: gray;">Brak historii serwisowej.</td></tr>';
+                return;
+            }
+
+            window.inventory.serviceCases.forEach(c => {
+                let badgeClass = 'status-neutral';
+                if(c.action_type === 'Przyjęcie z RMA') badgeClass = 'status-warning';
+                if(c.action_type === 'Odbiór z Serwisu') badgeClass = 'status-ok';
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td data-label="Data"><strong>${new Date(c.created_at).toLocaleDateString('pl-PL')}</strong></td>
+                    <td data-label="Typ Akcji"><span class="status-badge ${badgeClass}">${escapeHTML(c.action_type)}</span></td>
+                    <td data-label="Model Oprawy">${escapeHTML(c.product_name)}</td>
+                    <td data-label="Ilość"><strong>${c.quantity} szt.</strong></td>
+                    <td data-label="Notatka">${escapeHTML(c.description || '-')}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
         function renderShipmentRow(s, readinessMap, showActions = true) {
             let total = s.products ? Object.values(s.products).reduce((a, b) => parseInt(a) + parseInt(b), 0) : 0;
             
@@ -1851,14 +1900,14 @@
                 ? `<span class="status-badge" style="background:#FEE2E2; color:#B91C1C; border:1px solid #FECACA;"><span class="material-symbols-outlined">sync_problem</span> Wymiana</span>` 
                 : `<span class="status-badge status-neutral">Standard</span>`;
 
-            let actionButtons = '';
+            let actionButtons = '<div class="action-cell-flex">';
             if (currentRole !== 'viewer' && showActions) {
-                actionButtons += `<button class="btn-small btn-secondary" onclick="editShipment('${s.id}')" title="Edytuj dane"><span class="material-symbols-outlined">edit</span></button>`;
-                if (currentRole === 'admin') actionButtons += `<button class="btn-small btn-secondary" onclick="deleteShipment('${s.id}')" title="Usuń trwale"><span class="material-symbols-outlined" style="color:var(--accent-red);">delete</span></button>`;
+                actionButtons += `<button class="btn-small btn-secondary" onclick="editShipment('${s.id}')" title="Edytuj dane"><span class="material-symbols-outlined" style="margin:0;">edit</span></button>`;
+                if (currentRole === 'admin') actionButtons += `<button class="btn-small btn-secondary" onclick="deleteShipment('${s.id}')" title="Usuń trwale"><span class="material-symbols-outlined" style="color:var(--accent-red); margin:0;">delete</span></button>`;
                 if (s.status === 'planned' && !s.is_confirmed) {
                     actionButtons = `<button class="btn-small btn-primary" onclick="confirmShipmentDateUI('${s.id}')"><span class="material-symbols-outlined">event_available</span> Zatwierdź</button>` + actionButtons;
                 } else if (s.status === 'planned' && s.is_confirmed) {
-                    actionButtons = `<button class="btn-small btn-primary" onclick="completeShipmentUI('${s.id}')">Wydaj</button>` + actionButtons;
+                    actionButtons = `<button class="btn-small btn-primary" onclick="completeShipmentUI('${s.id}')">Wydaj Kurierowi</button>` + actionButtons;
                 } else if (s.status === 'partial') {
                     actionButtons = `<button class="btn-small btn-primary" onclick="completeRemainingShipmentUI('${s.id}')">Wydaj braki</button>` + actionButtons;
                 }
@@ -1866,6 +1915,7 @@
             if (s.status === 'partial' && showActions) {
                 actionButtons += `<button class="btn-small btn-secondary" onclick="showMissingItems('${s.id}')" title="Pokaż listę braków"><span class="material-symbols-outlined">list_alt</span> Braki</button>`;
             }
+            actionButtons += '</div>';
 
             let dateLabel = s.status === 'completed' ? 'Data Wysłania' : (s.is_confirmed ? 'Data Potw.' : 'Data Wstępna');
 
@@ -1875,7 +1925,7 @@
                     <td data-label="Cel">${escapeHTML(s.location)}</td>
                     <td data-label="Typ">${typeBadge}</td>
                     <td data-label="Sztuk"><strong>${total}</strong></td>
-                    <td data-label="Kąty"><button class="btn-small btn-secondary" onclick="showAnglesDemand('${s.id}')" style="margin:0;">Pokaż</button></td>
+                    <td data-label="Kąty"><button class="btn-small btn-secondary" onclick="showAnglesDemand('${s.id}')" style="margin:0;">Zestawienie</button></td>
                     ${s.status !== 'completed' ? `<td data-label="Wirtualny Magazyn">${readinessBadge}</td>` : ''}
                     <td data-label="Status">${statusBadge}</td>
                     ${showActions ? `<td data-label="Akcja" class="${currentRole === 'viewer' ? 'admin-only-col' : ''}">${actionButtons}</td>` : ''}
@@ -1913,7 +1963,7 @@
             tbody.innerHTML = '';
             window.inventory.adjustments.forEach(a => {
                 const tr = document.createElement('tr');
-                let action = currentRole === 'admin' ? `<td data-label="Akcja"><button class="btn-small btn-secondary" onclick="deleteAdjustment('${a.id}')" style="margin:0;"><span class="material-symbols-outlined" style="color:var(--accent-red);">delete</span></button></td>` : `<td class="admin-only-col"></td>`;
+                let action = currentRole === 'admin' ? `<td data-label="Akcja"><button class="btn-small btn-secondary" onclick="deleteAdjustment('${a.id}')" style="margin:0;"><span class="material-symbols-outlined" style="color:var(--accent-red); margin:0;">delete</span></button></td>` : `<td class="admin-only-col"></td>`;
                 tr.innerHTML = `<td data-label="Data Wyjazdu"><strong>${escapeHTML(a.date || '-')}</strong></td><td data-label="Miejscowość / Obiekt">${escapeHTML(a.location)}</td>${action}`;
                 tbody.appendChild(tr);
             });
@@ -2011,13 +2061,14 @@
             input.addEventListener('keypress', (e) => { if (e.key === 'Enter') input.blur(); });
         }
 
-        // --- FUNKCJE UI: SERWIS/RMA ---
+        // --- FUNKCJE UI: SERWIS/RMA Z HISTORIĄ ---
         function openReceiveDamagedUI() {
             let opts = window.inventory.products.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
             let html = `
                 <div class="form-group"><label>Model oprawy (zwrot ze sklepu)</label><select id="rma_prod_id" style="width:100%; padding:0.75rem; border-radius:10px; font-family:'Inter',sans-serif; border:1px solid #D1D5DB;">${opts}</select></div>
                 <div class="form-group"><label>Liczba zwróconych (uszkodzonych) sztuk</label><input type="number" id="rma_qty" min="1" value="1"></div>
                 <div class="form-group" style="background:#ECFDF5; padding:1rem; border-radius:8px; border:1px solid #A7F3D0;"><label style="color:#065F46; font-size:0.8rem;">Ile z nich miało w pełni sprawne zasilacze (odzyskiwane do puli komponentów)?</label><input type="number" id="rma_salvaged" min="0" value="0"></div>
+                <div class="form-group"><label>Opis usterki / Notatka (Opcjonalnie)</label><input type="text" id="rma_desc" placeholder="np. uszkodzony klosz, miga..."></div>
                 <button class="btn-primary" onclick="submitDamagedReturn()" style="width:100%; margin-top:10px;"><span class="material-symbols-outlined">assignment_return</span> Przyjmij zwrot</button>
             `;
             showModal('Przyjęcie zwrotu RMA', html);
@@ -2027,13 +2078,15 @@
             let id = document.getElementById('rma_prod_id').value;
             let qty = parseInt(document.getElementById('rma_qty').value)||0;
             let sal = parseInt(document.getElementById('rma_salvaged').value)||0;
-            if(qty>0) { closeModal(); showLoading(); await window.inventory.processDamagedReturn(id, qty, sal); hideLoading(); }
+            let desc = document.getElementById('rma_desc').value.trim();
+            if(qty>0) { closeModal(); showLoading(); await window.inventory.processDamagedReturn(id, qty, sal, desc); hideLoading(); }
         }
 
         function openSendToServiceUI(id, name, available) {
             let html = `
                 <p style="margin-bottom:1rem; font-size:0.95rem;">Wysyłasz oprawy <strong>${name}</strong> na naprawę. Dostępne na magazynie (uszkodzone): <strong>${available}</strong> szt.</p>
                 <div class="form-group"><label>Ilość do wydania na serwis:</label><input type="number" id="rma_send_qty" min="1" max="${available}" value="1"></div>
+                <div class="form-group"><label>Opis przekazany serwisowi / Notatka</label><input type="text" id="rma_send_desc" placeholder="np. wysłano kurierem DPD..."></div>
                 <button class="btn-primary" onclick="submitSendService('${id}')" style="width:100%;"><span class="material-symbols-outlined">handyman</span> Wydaj do Serwisu</button>
             `;
             showModal('Wydanie na naprawę', html);
@@ -2041,7 +2094,8 @@
 
         async function submitSendService(id) {
             let qty = parseInt(document.getElementById('rma_send_qty').value)||0;
-            if(qty>0) { closeModal(); showLoading(); await window.inventory.sendToService(id, qty); hideLoading(); }
+            let desc = document.getElementById('rma_send_desc').value.trim();
+            if(qty>0) { closeModal(); showLoading(); await window.inventory.sendToService(id, qty, desc); hideLoading(); }
         }
 
         function openReceiveFromServiceUI(id, name, inService) {
@@ -2049,6 +2103,7 @@
                 <p style="margin-bottom:1rem; font-size:0.95rem;">Odbierasz oprawy <strong>${name}</strong> po naprawie. Obecnie w serwisie: <strong>${inService}</strong> szt.</p>
                 <div class="form-group"><label>Ilość odebranych (naprawionych) sztuk:</label><input type="number" id="rma_rec_qty" min="1" max="${inService}" value="1"></div>
                 <div class="form-group" style="background:#FEF2F2; padding:1rem; border-radius:8px; border:1px solid #FECACA;"><label style="color:#991B1B; font-size:0.8rem;">Ile NOWYCH zasilaczy (z puli komponentów) zużyto do naprawy?</label><input type="number" id="rma_used_ps" min="0" value="0"></div>
+                <div class="form-group"><label>Komentarz / Notatka (Opcjonalnie)</label><input type="text" id="rma_rec_desc" placeholder="np. wymieniono 2 zasilacze i diody..."></div>
                 <button class="btn-primary" onclick="submitReceiveService('${id}')" style="width:100%; margin-top:10px;"><span class="material-symbols-outlined">task_alt</span> Zakończ Naprawę</button>
             `;
             showModal('Odbiór z naprawy', html);
@@ -2057,7 +2112,8 @@
         async function submitReceiveService(id) {
             let qty = parseInt(document.getElementById('rma_rec_qty').value)||0;
             let used = parseInt(document.getElementById('rma_used_ps').value)||0;
-            if(qty>0) { closeModal(); showLoading(); await window.inventory.receiveFromService(id, qty, used); hideLoading(); }
+            let desc = document.getElementById('rma_rec_desc').value.trim();
+            if(qty>0) { closeModal(); showLoading(); await window.inventory.receiveFromService(id, qty, used, desc); hideLoading(); }
         }
 
         async function confirmShipmentDateUI(id) {
@@ -2127,7 +2183,7 @@
                     </div>
                 </div>
             `;
-            showModal('Zapotrzebowanie Kątowe', content);
+            showModal('Zestawienie Kątowe', content);
         }
 
         function editShipment(id) {
@@ -2158,7 +2214,7 @@
                         </div>
                     </div>
                     <div style="margin-top: 1rem;">
-                        <button class="btn-primary" onclick="saveShipment('${id}')" style="width:100%; padding: 1rem;"><span class="material-symbols-outlined">save</span> Zapisz Zmiany w Zamówieniu</button>
+                        <button class="btn-primary" onclick="saveShipment('${id}')" style="width:100%; padding: 1rem;"><span class="material-symbols-outlined">save</span> Zapisz Zmiany</button>
                     </div>
                 </div>
             `;
@@ -2211,7 +2267,7 @@
         });
 
         document.getElementById('adjustmentForm').addEventListener('submit', async function(e) { 
-            e.preventDefault(); const btn = this.querySelector('button'); const txt = btn.innerHTML; 
+            e.preventDefault(); const btn = this.querySelector('button[type="submit"]'); const txt = btn.innerHTML; 
             btn.innerHTML = 'Zapisywanie...'; btn.disabled = true; 
             const fd = new FormData(this); 
             let loc = fd.get('adj_city').trim(); 
@@ -2222,7 +2278,7 @@
         });
 
         document.getElementById('incomingForm').addEventListener('submit', async function(e) { 
-            e.preventDefault(); const btn = this.querySelector('button'); const txt = btn.innerHTML; 
+            e.preventDefault(); const btn = this.querySelector('button[type="submit"]'); const txt = btn.innerHTML; 
             btn.innerHTML = 'Zapisywanie...'; btn.disabled = true; 
             const fd = new FormData(this); 
             showLoading(); 
@@ -2231,7 +2287,7 @@
         });
 
         document.getElementById('productionForm').addEventListener('submit', async function(e) { 
-            e.preventDefault(); const btn = this.querySelector('button'); const txt = btn.innerHTML; 
+            e.preventDefault(); const btn = this.querySelector('button[type="submit"]'); const txt = btn.innerHTML; 
             btn.innerHTML = 'Przetwarzanie...'; btn.disabled = true; 
             const fd = new FormData(this); 
             showLoading(); 
@@ -2240,7 +2296,7 @@
         });
 
         document.getElementById('componentsIncomingForm').addEventListener('submit', async function(e) { 
-            e.preventDefault(); const btn = this.querySelector('button'); const txt = btn.innerHTML; 
+            e.preventDefault(); const btn = this.querySelector('button[type="submit"]'); const txt = btn.innerHTML; 
             btn.innerHTML = 'Zapisywanie...'; btn.disabled = true; 
             const fd = new FormData(this); 
             showLoading(); 
