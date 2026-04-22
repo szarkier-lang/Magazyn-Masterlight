@@ -23,6 +23,10 @@ let isUpdatingMap = false;
 let inactivityTimer;
 const INACTIVITY_TIME_MS = 5 * 60 * 1000;
 
+// --- MATRYCE KĄTÓW IMPERIAL (Zapobiega błędom w bazie) ---
+const imperialAngleMaster = { '1': '1', '2': '2', '4': '2', '3': '3', '5': '3' };
+const imperialAngleSync = { '1': ['1'], '2': ['2','4'], '3': ['3','5'] };
+
 // --- FUNKCJE POMOCNICZE UI ---
 function showLoading() { document.getElementById('loading-screen').classList.remove('hidden'); }
 function hideLoading() { document.getElementById('loading-screen').classList.add('hidden'); }
@@ -112,19 +116,14 @@ class CloudInventoryManager {
             const upds = [];
             for (let sh of this.shipments) { 
                 if (sh.status !== 'completed' && (sh.date || '') < t) { 
-                    if (currentRole === 'admin' || currentRole === 'worker') {
-                        upds.push(db.from('shipments').update({ date: t }).eq('id', sh.id));
-                    }
+                    if (currentRole === 'admin' || currentRole === 'worker') { upds.push(db.from('shipments').update({ date: t }).eq('id', sh.id)); }
                     sh.date = t;
                 } 
             }
             if (upds.length > 0) await Promise.all(upds);
             
             this.updateDashboard();
-        } catch(e) { 
-            console.error("CRITICAL Błąd Bazy Danych:", e);
-            hideLoading();
-        }
+        } catch(e) { console.error("Błąd Bazy:", e); hideLoading(); }
     }
 
     setupRealtime() { 
@@ -135,8 +134,7 @@ class CloudInventoryManager {
     }
 
     async addHistory(action, details) { 
-        const u = currentUserEmail.split('@')[0];
-        const d = `${details} (przez: ${u})`; 
+        const u = currentUserEmail.split('@')[0]; const d = `${details} (przez: ${u})`; 
         this.history.unshift({ timestamp: new Date().toLocaleString('pl-PL'), action, details: d }); 
         await db.from('history').insert([{ action, details: d }]);
     }
@@ -160,7 +158,6 @@ class CloudInventoryManager {
             this.updateDashboard(); 
             await db.from('products').update(updates).eq('id', id); 
             
-            // TWARDE POŁĄCZENIE KĄTÓW IMPERIAL (Uniezależnienie od bazy Supabase)
             if (updates.assembly !== undefined && parseInt(id) <= 5) {
                 const angleMapSync = { '1': ['1'], '2': ['2','4'], '3': ['3','5'], '4': ['2','4'], '5': ['3','5'] };
                 const targets = angleMapSync[id] || [];
@@ -212,20 +209,14 @@ class CloudInventoryManager {
 
     async registerProduction(prod) {
         if (currentRole === 'viewer') return;
-        const tp = Object.values(prod).reduce((a,b)=>a+parseInt(b||0),0); 
-        if (tp === 0) return;
-        
+        const tp = Object.values(prod).reduce((a,b) => a + parseInt(b||0), 0); if (tp === 0) return;
         const minC = Math.min(parseInt(this.components.ps_raw)||0, parseInt(this.components.clips_normal)||0, parseInt(this.components.clips_pass)||0);
         if (tp > minC) { showToast('Brak zasilaczy lub klapek na magazynie!', 'error'); return; }
         
-        const angleMapMaster = { '1': '1', '2': '2', '4': '2', '3': '3', '5': '3' };
         const req = {};
         for(const [id, q] of Object.entries(prod)) { 
-            let qq = parseInt(q);
-            if(qq > 0) { 
-                let mId = angleMapMaster[id] || id;
-                req[mId] = (req[mId] || 0) + qq; 
-            } 
+            let qq = parseInt(q); 
+            if(qq > 0) { let mId = imperialAngleMaster[id] || id; req[mId] = (req[mId] || 0) + qq; } 
         }
         
         for(const [mId, q] of Object.entries(req)) { 
@@ -234,61 +225,37 @@ class CloudInventoryManager {
             if(q > av) { showToast('Brak surowych obudów IMPERIAL na ten kąt!', 'error'); return; } 
         }
         
-        const upds = [];
-        let tpReal = 0;
-        const assemblyUpdates = {};
-        const readyUpdates = {};
+        const upds = []; let tpReal = 0;
+        const assemblyUpdates = {}; const readyUpdates = {};
 
         for (const [id, q] of Object.entries(prod)) {
             let qq = parseInt(q);
             if(qq > 0) { 
                 const p = this.products.find(x => String(x.id) === String(id));
                 if(p) { 
-                    p.ready = (parseInt(p.ready) || 0) + qq;
-                    readyUpdates[p.id] = p.ready;
-                    
-                    let mId = angleMapMaster[id] || id;
-                    if (assemblyUpdates[mId] === undefined) {
-                        const masterP = this.products.find(x => String(x.id) === String(mId));
-                        assemblyUpdates[mId] = masterP ? (parseInt(masterP.assembly) || 0) : 0;
-                    }
-                    assemblyUpdates[mId] -= qq;
-                    tpReal += qq;
+                    p.ready = (parseInt(p.ready) || 0) + qq; readyUpdates[p.id] = p.ready;
+                    let mId = imperialAngleMaster[id] || id;
+                    if (assemblyUpdates[mId] === undefined) { const masterP = this.products.find(x => String(x.id) === String(mId)); assemblyUpdates[mId] = masterP ? (parseInt(masterP.assembly) || 0) : 0; }
+                    assemblyUpdates[mId] -= qq; tpReal += qq;
                 } 
             }
         }
 
-        for (const [pid, newReady] of Object.entries(readyUpdates)) {
-            upds.push(db.from('products').update({ ready: newReady }).eq('id', pid));
-        }
-
-        const angleMapSync = { '1': ['1'], '2': ['2','4'], '3': ['3','5'] };
+        for (const [pid, newReady] of Object.entries(readyUpdates)) { upds.push(db.from('products').update({ ready: newReady }).eq('id', pid)); }
+        
         for (const [mId, newAssembly] of Object.entries(assemblyUpdates)) {
-            const targets = angleMapSync[mId] || [mId];
+            const targets = imperialAngleSync[mId] || [mId];
             for (let targetId of targets) {
                 upds.push(db.from('products').update({ assembly: newAssembly }).eq('id', targetId));
-                const p = this.products.find(x => String(x.id) === targetId);
-                if (p) p.assembly = newAssembly;
+                const p = this.products.find(x => String(x.id) === targetId); if (p) p.assembly = newAssembly;
             }
         }
         
         if(tpReal > 0) { 
-            this.components.ps_raw -= tpReal;
-            this.components.clips_normal -= tpReal; 
-            this.components.clips_pass -= tpReal; 
-            
-            this.updateDashboard(); 
-            
-            upds.push(db.from('components').update({
-                ps_raw: this.components.ps_raw, 
-                clips_normal: this.components.clips_normal, 
-                clips_pass: this.components.clips_pass
-            }).eq('id', 1)); 
-            
-            await Promise.all(upds);
-            await this.addHistory('Raport z produkcji (IMPERIAL)', `Zmontowano i wrzucono na gotowe: ${tpReal} szt.`); 
-            showToast('Sukces! Oprawy zmontowane.', 'success'); 
-            await this.fetchData();
+            this.components.ps_raw -= tpReal; this.components.clips_normal -= tpReal; this.components.clips_pass -= tpReal; 
+            upds.push(db.from('components').update({ ps_raw: this.components.ps_raw, clips_normal: this.components.clips_normal, clips_pass: this.components.clips_pass }).eq('id', 1)); 
+            await Promise.all(upds); await this.addHistory('Raport z produkcji (IMPERIAL)', `Zmontowano sztuk: ${tpReal}`); 
+            showToast('Zmontowano IMPERIAL', 'success'); await this.fetchData();
         }
     }
 
@@ -318,131 +285,61 @@ class CloudInventoryManager {
 
     async swapPxfAngle(fromAngle, toAngle, power, qty) {
         if (currentRole === 'viewer') return;
-        
         const getPxfId = (a, p) => {
-            if (a === '22' && p === '15') return 6;
-            if (a === '37' && p === '15') return 7;
-            if (a === '58' && p === '15') return 8;
-            if (a === '37' && p === '20') return 9;
-            if (a === '58' && p === '20') return 10;
-            return null;
+            if (a === '22' && p === '15') return 6; if (a === '37' && p === '15') return 7; if (a === '58' && p === '15') return 8;
+            if (a === '37' && p === '20') return 9; if (a === '58' && p === '20') return 10; return null;
         };
-
-        const sourceId = getPxfId(fromAngle, power);
-        const targetId = getPxfId(toAngle, power);
+        const sourceId = getPxfId(fromAngle, power); const targetId = getPxfId(toAngle, power);
         
         if (!sourceId || !targetId) { showToast('Nieprawidłowa kombinacja.', 'error'); return; }
+        const sourceP = this.products.find(p => p.id === sourceId); const targetP = this.products.find(p => p.id === targetId);
+        if ((parseInt(sourceP.ready) || 0) < qty) { showToast(`Brak wystarczającej ilości lamp Gotowych PXF dla kąta ${fromAngle}°`, 'error'); return; }
         
-        const sourceProduct = this.products.find(p => p.id === sourceId);
-        const targetProduct = this.products.find(p => p.id === targetId);
-        
-        if ((parseInt(sourceProduct.ready) || 0) < qty) { showToast(`Brak wystarczającej ilości lamp Gotowych PXF dla kąta ${fromAngle}°`, 'error'); return; }
-        
-        const targetReflectorField = `reflector_${toAngle}`;
-        const sourceReflectorField = `reflector_${fromAngle}`;
-        
+        const targetReflectorField = `reflector_${toAngle}`; const sourceReflectorField = `reflector_${fromAngle}`;
         if ((parseInt(this.components[targetReflectorField]) || 0) < qty) { showToast(`Brakuje Ci odbłyśników ${toAngle}° w magazynie komponentów!`, 'error'); return; }
 
-        sourceProduct.ready = (parseInt(sourceProduct.ready) || 0) - qty;
-        targetProduct.ready = (parseInt(targetProduct.ready) || 0) + qty;
-        
+        sourceP.ready = (parseInt(sourceP.ready) || 0) - qty; targetP.ready = (parseInt(targetP.ready) || 0) + qty;
         this.components[targetReflectorField] = (parseInt(this.components[targetReflectorField]) || 0) - qty;
         this.components[sourceReflectorField] = (parseInt(this.components[sourceReflectorField]) || 0) + qty;
 
         this.updateDashboard();
 
         const upds = [
-            db.from('products').update({ ready: sourceProduct.ready }).eq('id', sourceId),
-            db.from('products').update({ ready: targetProduct.ready }).eq('id', targetId),
-            db.from('components').update({ 
-                [targetReflectorField]: this.components[targetReflectorField],
-                [sourceReflectorField]: this.components[sourceReflectorField]
-            }).eq('id', 1)
+            db.from('products').update({ ready: sourceP.ready }).eq('id', sourceId), db.from('products').update({ ready: targetP.ready }).eq('id', targetId),
+            db.from('components').update({ [targetReflectorField]: this.components[targetReflectorField], [sourceReflectorField]: this.components[sourceReflectorField] }).eq('id', 1)
         ];
-
-        await Promise.all(upds);
-        await this.addHistory('Przezbrojenie (PXF)', `Konwersja z ${fromAngle}° na ${toAngle}° (${power}W). Ilość: ${qty} szt.`);
-        showToast('Kąty zostały zamienione!', 'success');
-        await this.fetchData();
+        await Promise.all(upds); await this.addHistory('Przezbrojenie (PXF)', `Konwersja z ${fromAngle}° na ${toAngle}° (${power}W). Ilość: ${qty} szt.`);
+        showToast('Kąty zostały zamienione!', 'success'); await this.fetchData();
     }
 
     // --- 3. WYSYŁKI ---
     async addShipment(s) { 
         if (currentRole === 'viewer') return;
-        await db.from('shipments').insert([{ 
-            date: s.date, 
-            location: s.location, 
-            company: s.company, 
-            products: s.products, 
-            status: 'planned', 
-            is_confirmed: false,
-            is_replacement: s.is_replacement,
-            brand: s.brand
-        }]); 
-        await this.addHistory(s.is_replacement ? 'Utworzono Wysyłkę SERWISOWĄ (Wymiana)' : 'Nowe zamówienie dopisane', `${s.location} [${s.brand.toUpperCase()}]`);
+        await db.from('shipments').insert([{ date: s.date, location: s.location, company: s.company, products: s.products, status: 'planned', is_confirmed: false, is_replacement: s.is_replacement, brand: s.brand }]); 
+        await this.addHistory(s.is_replacement ? 'Utworzono Wysyłkę SERWISOWĄ' : 'Dodano zamówienie', `${s.location} [${s.brand.toUpperCase()}]`);
         await this.fetchData(); 
-    }
-
-    async confirmShipment(id) { 
-        if (currentRole === 'viewer') return;
-        const s = this.shipments.find(x => String(x.id) === String(id)); 
-        if (s) { 
-            s.is_confirmed = true;
-            this.updateDashboard(); 
-            await db.from('shipments').update({ is_confirmed: true }).eq('id', id); 
-            await this.addHistory('Potwierdzenie daty wyjazdu', s.location); 
-            await this.fetchData();
-        } 
-    }
-
-    async deleteShipment(id) { 
-        if (currentRole !== 'admin') return;
-        this.shipments = this.shipments.filter(s => String(s.id) !== String(id)); 
-        this.updateDashboard(); 
-        await db.from('shipments').delete().eq('id', id); 
-        await this.addHistory('Anulowanie zamówienia w systemie', `Skasowano`); 
-        await this.fetchData();
-    }
-
-    async updateShipmentInDB(id, data) { 
-        if (currentRole === 'viewer') return;
-        const s = this.shipments.find(x => String(x.id) === String(id)); 
-        if (s) { 
-            Object.assign(s, data);
-            this.updateDashboard(); 
-            await db.from('shipments').update(data).eq('id', id); 
-            await this.addHistory('Edycja szczegółów zamówienia', s.location); 
-            await this.fetchData();
-        } 
     }
     
     async completeShipment(id) {
         if (currentRole === 'viewer') return;
-        const s = this.shipments.find(x => String(x.id) === String(id)); 
-        if (!s) return;
-        
+        const s = this.shipments.find(x => String(x.id) === String(id)); if (!s) return;
         const mis = {}, upds = [];
         for (const [pId, qty] of Object.entries(s.products || {})) {
             let q = parseInt(qty);
             if(q > 0) { 
                 const p = this.products.find(x => String(x.id) === String(pId));
                 if(p) { 
-                    let ded = Math.min(q, parseInt(p.ready)||0);
-                    p.ready = (parseInt(p.ready)||0) - ded; 
+                    let ded = Math.min(q, parseInt(p.ready)||0); p.ready = (parseInt(p.ready)||0) - ded; 
                     if(q - ded > 0) mis[pId] = q - ded;
                     if(ded > 0) upds.push(db.from('products').update({ ready: p.ready }).eq('id', p.id)); 
                 } 
             }
         }
-
-        s.status = Object.keys(mis).length > 0 ? 'partial' : 'completed'; 
-        s.partial_missing = Object.keys(mis).length > 0 ? mis : null; 
-        s.is_confirmed = true; 
+        s.status = Object.keys(mis).length > 0 ? 'partial' : 'completed'; s.partial_missing = Object.keys(mis).length > 0 ? mis : null; s.is_confirmed = true; 
         this.updateDashboard();
         if(upds.length > 0) await Promise.all(upds); 
         await db.from('shipments').update({ status: s.status, partial_missing: s.partial_missing, is_confirmed: true }).eq('id', id);
-        await this.addHistory(Object.keys(mis).length > 0 ? `Wydano oprawy (niepełna przesyłka)` : `Wydano pełny komplet`, s.location); 
-        await this.fetchData();
+        await this.addHistory(Object.keys(mis).length > 0 ? `Wydano (niepełna przesyłka)` : `Wydano pełny komplet`, s.location); await this.fetchData();
     }
 
     async completeRemainingShipment(id) {
@@ -460,11 +357,8 @@ class CloudInventoryManager {
                 if(ded > 0) upds.push(db.from('products').update({ ready: p.ready }).eq('id', p.id)); 
             }
         }
-
-        s.status = Object.keys(smis).length > 0 ? 'partial' : 'completed'; 
-        s.partial_missing = Object.keys(smis).length > 0 ? smis : null; 
+        s.status = Object.keys(smis).length > 0 ? 'partial' : 'completed'; s.partial_missing = Object.keys(smis).length > 0 ? smis : null; 
         this.updateDashboard();
-
         if(upds.length > 0) await Promise.all(upds);
         await db.from('shipments').update({ status: s.status, partial_missing: s.partial_missing }).eq('id', id); 
         await this.addHistory(Object.keys(smis).length > 0 ? `Wydano część braków` : `Wydano zaległe braki (komplet)`, s.location);
@@ -597,38 +491,7 @@ class CloudInventoryManager {
 
             const rMap = getShipmentsReadinessMap();
             renderCalendar(rMap);
-            if(document.getElementById('tab-dashboard').classList.contains('active')) {
-                updateMapMarkers(this.shipments, this.adjustments);
-            }
-
-            const itb = document.getElementById('dashboard-recent-incoming');
-            if (itb && this.history) {
-                itb.innerHTML = '';
-                const rI = this.history.filter(h => h && h.action && (h.action.includes('Dostawa opraw') || h.action.includes('Dostawa obudów') || h.action.includes('Dostawa z Huty') || h.action.includes('Dostawa Gotowych'))).slice(0, 2);
-                if(rI.length === 0) {
-                    itb.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 2rem !important; border:none; color: gray;">Brak historii dostaw.</td></tr>';
-                } else {
-                    rI.forEach(e => { 
-                        if(!e||!e.details) return; 
-                        
-                        if(e.action.includes('PXF')) {
-                            itb.innerHTML += `<tr><td><strong>${(e.timestamp||'').split(',')[0]}</strong></td><td style="color:#1E3A8A; font-weight:bold;">PXF</td><td colspan="3">${escapeHTML(e.details.split('|')[0])}</td><td><strong style="color:var(--success-status);">${e.details.match(/Wgrano.*?:\s*(\d+)/)?.[1] || 0}</strong> szt</td></tr>`;
-                            return;
-                        }
-
-                        let s="-", p1="?", p2="?", p3="?", tv=0, cd=(e.details||"").replace(/\(przez:.*?\)/,'').trim();
-                        if(cd.includes('|')) { 
-                            let ps=cd.split('|').map(x=>x.trim()); s=ps[0]; 
-                            const pq=(str)=>{ let m=(str||"").match(/:(\d+)/); return m ? parseInt(m[1]) : 0; }; 
-                            p1=pq(ps[1]); p2=pq(ps[2]); p3=pq(ps[3]); tv = p1+p2+p3; 
-                        } else { 
-                            let m=cd.match(/(.*?)\s*\(\+(\d+)\s*szt\.\)/); 
-                            if(m) { s=m[1].trim(); tv=parseInt(m[2]); } else { s=cd; } 
-                        }
-                        itb.innerHTML += `<tr><td><strong>${(e.timestamp||'').split(',')[0]}</strong></td><td><strong style="color:var(--primary-dark);">IMPERIAL</strong><br>${escapeHTML(s)}</td><td>${p1!=='?'?`<b>${p1}</b>`:p1}</td><td>${p2!=='?'?`<b>${p2}</b>`:p2}</td><td>${p3!=='?'?`<b>${p3}</b>`:p3}</td><td><strong style="color:var(--success-status);">${tv}</strong> szt</td></tr>`;
-                    });
-                }
-            }
+            if(document.getElementById('tab-dashboard').classList.contains('active')) { updateMapMarkers(this.shipments, this.adjustments); }
 
             updateInventoryTable();
             updateShipmentsTables(rMap); 
@@ -778,16 +641,16 @@ function updateShipmentsTables(readinessMap) {
 
 function renderShipmentRow(s, readinessMap, showActions = true) {
     let total = s.products ? Object.values(s.products).reduce((a, b) => parseInt(a) + parseInt(b), 0) : 0;
-    let statusBadge = s.status === 'completed' ? '<span class="status-badge status-ok"><span class="material-symbols-outlined">check_circle</span> Zrealizowana</span>' : (s.status === 'partial' ? '<span class="status-badge status-warning"><span class="material-symbols-outlined">warning</span> Niepełna</span>' : (s.is_confirmed ? '<span class="status-badge status-neutral"><span class="material-symbols-outlined">event_available</span> Potwierdzona</span>' : '<span class="status-badge status-warning"><span class="material-symbols-outlined">pending_actions</span> Oczekująca</span>'));
-    let readinessBadge = s.status === 'completed' ? '<span style="color: var(--text-light); font-size: 0.85em;">-</span>' : (readinessMap && readinessMap[s.id] ? '<span class="status-badge status-ok" style="background:#ECFDF5; color:#059669; border: 1px solid #10B981;"><span class="material-symbols-outlined">inventory_2</span> Komplet</span>' : '<span class="status-badge status-error" style="background:#FEF2F2; color:#DC2626; border: 1px solid #EF4444;"><span class="material-symbols-outlined">production_quantity_limits</span> Braki</span>');
-    let typeBadge = s.is_replacement ? `<span class="status-badge" style="background:#FEE2E2; color:#B91C1C; border:1px solid #FECACA;"><span class="material-symbols-outlined">sync_problem</span> Wymiana</span>` : `<span class="status-badge status-neutral">Standard</span>`;
+    let statusBadge = s.status === 'completed' ? '<span class="status-badge status-ok">Zrealizowana</span>' : (s.status === 'partial' ? '<span class="status-badge status-warning">Niepełna</span>' : (s.is_confirmed ? '<span class="status-badge status-neutral">Potwierdzona</span>' : '<span class="status-badge status-warning">Oczekująca</span>'));
+    let readinessBadge = s.status === 'completed' ? '<span style="color: var(--text-light); font-size: 0.85em;">-</span>' : (readinessMap && readinessMap[s.id] ? '<span class="status-badge status-ok">Komplet</span>' : '<span class="status-badge status-error">Braki</span>');
+    let typeBadge = s.is_replacement ? `<span class="status-badge" style="background:#FEE2E2; color:#B91C1C; border:1px solid #FECACA;">Wymiana</span>` : `<span class="status-badge status-neutral">Standard</span>`;
     let brandBadge = s.brand === 'pxf' ? `<strong style="color:#1E3A8A;">PXF</strong>` : `<strong style="color:var(--primary-dark);">IMPERIAL</strong>`;
 
     let actionButtons = '<div class="action-cell-flex">';
     if (currentRole !== 'viewer' && showActions) {
         actionButtons += `<button class="btn-small btn-secondary" onclick="editShipment('${s.id}')" title="Edytuj dane"><span class="material-symbols-outlined" style="margin:0;">edit</span></button>`;
         if (currentRole === 'admin') actionButtons += `<button class="btn-small btn-secondary" onclick="deleteShipment('${s.id}')" title="Usuń trwale"><span class="material-symbols-outlined" style="color:var(--accent-red); margin:0;">delete</span></button>`;
-        if (s.status === 'planned' && !s.is_confirmed) actionButtons = `<button class="btn-small btn-primary" onclick="confirmShipmentDateUI('${s.id}')"><span class="material-symbols-outlined">event_available</span> Zatwierdź</button>` + actionButtons;
+        if (s.status === 'planned' && !s.is_confirmed) actionButtons = `<button class="btn-small btn-primary" onclick="confirmShipmentDateUI('${s.id}')">Zatwierdź</button>` + actionButtons;
         else if (s.status === 'planned' && s.is_confirmed) actionButtons = `<button class="btn-small btn-primary" onclick="completeShipmentUI('${s.id}')">Wydaj Kurierowi</button>` + actionButtons;
         else if (s.status === 'partial') actionButtons = `<button class="btn-small btn-primary" onclick="completeRemainingShipmentUI('${s.id}')">Wydaj braki</button>` + actionButtons;
     }
@@ -833,7 +696,7 @@ function updateInventoryTable() {
 
     window.inventory.products.forEach(p => {
         const damaged = parseInt(p.damaged) || 0; const inService = parseInt(p.service) || 0;
-        if(damaged === 0 && inService === 0) return;
+        if(damaged === 0 && inService === 0) return; 
         let actionButtons = !isViewer ? `<div class="action-cell-flex"><button class="btn-small btn-secondary" onclick="openSendToServiceUI('${p.id}', '${p.name}', ${damaged})">Na naprawę</button><button class="btn-small btn-secondary" onclick="openReceiveFromServiceUI('${p.id}', '${p.name}', ${inService})">Odbierz</button></div>` : '';
         tbSrv.innerHTML += `<tr><td data-label="Model Oprawy"><strong>${escapeHTML(p.name)}</strong></td><td data-label="Uszkodzone" style="color:var(--accent-red); font-weight:700;">${damaged}</td><td data-label="W Serwisie" style="color:var(--info-status); font-weight:700;">${inService}</td><td data-label="Akcja" class="${isViewer ? 'admin-only-col' : ''}">${actionButtons}</td></tr>`;
     });
@@ -893,14 +756,14 @@ function editComponentCell(cell, field) {
     input.addEventListener('blur', save); input.addEventListener('keypress', (e) => { if (e.key === 'Enter') input.blur(); });
 }
 
-// Wrapper Functions for HTML buttons
+// --- FUNKCJE WYWOŁANIA (Bindowane z UI) ---
 async function confirmShipmentDateUI(id) { if (confirm('Zatwierdzić termin wysyłki?')) await window.inventory.confirmShipment(id); }
 async function completeShipmentUI(id) { if (confirm(`Wydano towar z magazynu?`)) await window.inventory.completeShipment(id); }
 async function completeRemainingShipmentUI(id) { if (confirm('Wydano brakującą część towaru?')) await window.inventory.completeRemainingShipment(id); }
 async function deleteShipment(id) { if (currentRole === 'admin' && confirm('Usunąć zamówienie?')) await window.inventory.deleteShipment(id); }
 async function deleteAdjustment(id) { if (currentRole === 'admin' && confirm('Usunąć wpis z regulacji?')) await window.inventory.deleteAdjustment(id); }
 
-// --- FUNKCJE MODALI ---
+// --- MODALE: SERWIS I ZESTAWIENIA ---
 function openReceiveDamagedUI() {
     let opts = window.inventory.products.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
     let html = `<div class="form-group"><label>Model oprawy (zwrot)</label><select id="rma_prod_id" style="width:100%; padding:0.75rem; border-radius:10px; font-family:'Inter',sans-serif; border:1px solid #D1D5DB;">${opts}</select></div><div class="form-group"><label>Zwróconych (uszkodzonych) sztuk</label><input type="number" id="rma_qty" min="1" value="1"></div><div class="form-group" style="background:#ECFDF5; padding:1rem; border-radius:8px; border:1px solid #A7F3D0;"><label style="color:#065F46; font-size:0.8rem;">Odzyskanych zasilaczy?</label><input type="number" id="rma_salvaged" min="0" value="0"></div><div class="form-group"><label>Opis usterki</label><input type="text" id="rma_desc" placeholder="np. uszkodzony klosz..."></div><button class="btn-primary" onclick="submitDamagedReturn()" style="width:100%; margin-top:10px;"><span class="material-symbols-outlined">assignment_return</span> Przyjmij zwrot</button>`;
@@ -922,12 +785,10 @@ async function submitReceiveService(id) { let qty = parseInt(document.getElement
 
 function showAnglesDemand(id) {
     const shipment = window.inventory.shipments.find(s => String(s.id) === String(id)); if(!shipment) return;
-    const p = shipment.products || {};
-    const brand = shipment.brand;
+    const p = shipment.products || {}; const brand = shipment.brand;
     const a22 = brand === 'pxf' ? (parseInt(p[6])||0) : (parseInt(p[1])||0);
     const a37 = brand === 'pxf' ? (parseInt(p[7])||0) + (parseInt(p[9])||0) : (parseInt(p[2])||0) + (parseInt(p[4])||0);
     const a58 = brand === 'pxf' ? (parseInt(p[8])||0) + (parseInt(p[10])||0) : (parseInt(p[3])||0) + (parseInt(p[5])||0);
-    
     const content = `<div style="text-align: center;"><p style="color: var(--text-light); margin-bottom: 1.5rem; font-size:0.95rem;">Zapotrzebowanie dla: <br><strong style="color:var(--text-dark); font-size:1.2rem;">${escapeHTML(shipment.location)}</strong></p><div style="display:flex; justify-content: space-around; background: var(--background); padding: 2rem 1rem; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: inset 0 2px 4px rgba(0,0,0,0.03);"><div><div style="font-size: 0.8rem; color: var(--text-light); text-transform:uppercase; letter-spacing:1px; margin-bottom:5px; font-weight:600;">Kąt 22°</div><div style="font-size: 2.5rem; font-weight: 700; color:var(--primary-dark);">${a22}</div></div><div><div style="font-size: 0.8rem; color: var(--text-light); text-transform:uppercase; letter-spacing:1px; margin-bottom:5px; font-weight:600;">Kąt 37°</div><div style="font-size: 2.5rem; font-weight: 700; color:var(--primary-dark);">${a37}</div></div><div><div style="font-size: 0.8rem; color: var(--text-light); text-transform:uppercase; letter-spacing:1px; margin-bottom:5px; font-weight:600;">Kąt 58°</div><div style="font-size: 2.5rem; font-weight: 700; color:var(--primary-dark);">${a58}</div></div></div></div>`;
     showModal('Zestawienie Kątowe', content);
 }
@@ -938,7 +799,6 @@ function editShipment(id) {
     const p = shipment.products || {}; const isPartial = shipment.status === 'partial'; const disableProducts = isPartial ? 'disabled' : '';
     const b = shipment.brand;
     const p1 = b==='pxf'?(p[6]||0):(p[1]||0); const p2 = b==='pxf'?(p[7]||0):(p[2]||0); const p3 = b==='pxf'?(p[8]||0):(p[3]||0); const p4 = b==='pxf'?(p[9]||0):(p[4]||0); const p5 = b==='pxf'?(p[10]||0):(p[5]||0);
-    
     const formHTML = `<div style="display: grid; gap: 1.25rem;"><div class="form-group"><label>Data Wysyłki</label><input type="date" id="edit_shipment_date" value="${escapeHTML(shipment.date)}"></div><div class="form-group"><label>Pełny Cel / Adresat</label><input type="text" id="edit_shipment_location" value="${escapeHTML(shipment.location)}"></div><div class="form-group"><label>Spedytor / Firma Przewozowa</label><input type="text" id="edit_shipment_company" value="${escapeHTML(shipment.company || '')}"></div><div style="margin-top: 0.5rem; background-color: var(--background); padding: 1.25rem; border-radius: 12px; border: 1px solid var(--border-color);"><h3 style="margin-bottom: 1rem; font-size: 0.85rem; color: var(--text-light); text-transform:uppercase; letter-spacing:1px;">Ilości Opraw (szt.) - Pula ${b.toUpperCase()}</h3>${isPartial ? '<p style="color: var(--accent-red); font-size:0.8rem; margin-top:-10px; margin-bottom:10px; font-weight:500;">Edycja ilości zablokowana dla wysyłki częściowej.</p>' : ''}<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;"><div class="form-group" style="margin:0;"><label>22° - 15W</label><input type="number" id="edit_p1" value="${p1}" min="0" ${disableProducts}></div><div class="form-group" style="margin:0;"><label>37° - 15W</label><input type="number" id="edit_p2" value="${p2}" min="0" ${disableProducts}></div><div class="form-group" style="margin:0;"><label>58° - 15W</label><input type="number" id="edit_p3" value="${p3}" min="0" ${disableProducts}></div><div class="form-group" style="margin:0;"><label>37° - 20W</label><input type="number" id="edit_p4" value="${p4}" min="0" ${disableProducts}></div><div class="form-group" style="margin:0;"><label>58° - 20W</label><input type="number" id="edit_p5" value="${p5}" min="0" ${disableProducts}></div></div></div><div style="margin-top: 1rem;"><button class="btn-primary" onclick="saveShipment('${id}')" style="width:100%; padding: 1rem;"><span class="material-symbols-outlined">save</span> Zapisz Zmiany</button></div></div>`;
     showModal('Edycja Zamówienia', formHTML);
 }
@@ -948,11 +808,8 @@ async function saveShipment(id) {
     if (!newDate || !newLocation) { showToast('Data i cel są wymagane.', 'error'); return; }
     const shipment = window.inventory.shipments.find(s => String(s.id) === String(id)); const data = { date: newDate, location: newLocation, company: newCompany };
     if (shipment.status !== 'partial') {
-        if(shipment.brand === 'imperial') {
-            data.products = { 1: parseInt(document.getElementById('edit_p1').value) || 0, 2: parseInt(document.getElementById('edit_p2').value) || 0, 3: parseInt(document.getElementById('edit_p3').value) || 0, 4: parseInt(document.getElementById('edit_p4').value) || 0, 5: parseInt(document.getElementById('edit_p5').value) || 0 };
-        } else {
-            data.products = { 6: parseInt(document.getElementById('edit_p1').value) || 0, 7: parseInt(document.getElementById('edit_p2').value) || 0, 8: parseInt(document.getElementById('edit_p3').value) || 0, 9: parseInt(document.getElementById('edit_p4').value) || 0, 10: parseInt(document.getElementById('edit_p5').value) || 0 };
-        }
+        if(shipment.brand === 'imperial') { data.products = { 1: parseInt(document.getElementById('edit_p1').value) || 0, 2: parseInt(document.getElementById('edit_p2').value) || 0, 3: parseInt(document.getElementById('edit_p3').value) || 0, 4: parseInt(document.getElementById('edit_p4').value) || 0, 5: parseInt(document.getElementById('edit_p5').value) || 0 }; } 
+        else { data.products = { 6: parseInt(document.getElementById('edit_p1').value) || 0, 7: parseInt(document.getElementById('edit_p2').value) || 0, 8: parseInt(document.getElementById('edit_p3').value) || 0, 9: parseInt(document.getElementById('edit_p4').value) || 0, 10: parseInt(document.getElementById('edit_p5').value) || 0 }; }
     }
     closeModal(); showLoading(); await window.inventory.updateShipmentInDB(id, data); hideLoading(); showToast('Zmiany zostały zapisane.', 'success');
 }
@@ -971,4 +828,31 @@ function printMissingPdf(id) {
     let t = 0; Object.entries(s.partial_missing).forEach(([pid, qty]) => { const p = window.inventory.products.find(x => String(x.id) === String(pid)); if(p) { h += `<tr><td style="border-bottom:1px solid #ddd; padding:8px;">${p.name}</td><td style="border-bottom:1px solid #ddd; padding:8px; font-weight:bold; color:red; text-align:center;">${qty} szt.</td></tr>`; t+=qty; } });
     h += `</table><p style="text-align:right; font-size:1.2em; margin-top:20px;"><b>Suma sztuk do dosłania: <span style="color:red;">${t}</span></b></p><br><br>Podpis magazyniera: .........................</body></html>`;
     const w = window.open('', '', 'width=800,height=600'); w.document.write(h); w.document.close(); setTimeout(() => { w.print(); w.close(); }, 300);
+}
+
+// --- SKANER PDF ---
+window.scanOfferFromPDF = async function(file) {
+    if (!file) return;
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) { showToast('Proszę wgrać plik w formacie PDF.', 'error'); document.getElementById('pdf-input').value = ''; return; }
+    const btn = document.getElementById('pdf-scan-btn'); const originalText = btn.innerHTML;
+    btn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">autorenew</span> Skanowanie...'; btn.disabled = true;
+    try {
+        const arrayBuffer = await file.arrayBuffer(); const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise; let fullText = "";
+        for (let i = 1; i <= pdf.numPages; i++) { const page = await pdf.getPage(i); const content = await page.getTextContent(); fullText += content.items.map(item => item.str).join(' ') + '\n'; }
+        let p1 = 0, p2 = 0, p3 = 0, p4 = 0, p5 = 0; let target = ""; let city = "";
+        const matchSklep = fullText.match(/Sklep nr\s*(\d+)/i); if (matchSklep) target = "ROSSMANN Sklep nr " + matchSklep[1];
+        const lines = fullText.split('\n');
+        lines.forEach(line => {
+            if (line.toUpperCase().includes('VIGO')) {
+                const words = line.trim().split(/\s+/); let qty = parseInt(words[words.length - 1]); if (isNaN(qty) && words.length > 1) qty = parseInt(words[words.length - 2]); if (isNaN(qty)) qty = 0;
+                let upperLine = line.toUpperCase(); let is15W = upperLine.includes("15W") || upperLine.includes("15 W"); let is20WPlus = upperLine.includes("20W") || upperLine.includes("26W") || upperLine.includes("33W");
+                let is22 = upperLine.includes("22") || upperLine.includes("G3"); let is58 = upperLine.includes("58") || upperLine.includes("235") || upperLine.includes("G1") || upperLine.includes("G5"); let is37 = upperLine.includes("37") || upperLine.includes("140") || upperLine.includes("185") || upperLine.includes("G2") || upperLine.includes("G4") || (!is22 && !is58);
+                if (is15W) { if (is22) p1 += qty; else if (is58) p3 += qty; else p2 += qty; } else if (is20WPlus) { if (is58) p5 += qty; else p4 += qty; }
+            }
+        });
+        document.getElementById('form-city').value = city; document.getElementById('form-target').value = target; document.getElementById('form-date').value = new Date().toISOString().split('T')[0]; document.getElementById('form-company').value = "Do ustalenia";
+        document.getElementById('form-p1').value = p1; document.getElementById('form-p2').value = p2; document.getElementById('form-p3').value = p3; document.getElementById('form-p4').value = p4; document.getElementById('form-p5').value = p5;
+        showToast('PDF przeskanowany! Wybierz pulę (Imperial/PXF).', 'success');
+    } catch (error) { console.error(error); showModal('Błąd odczytu PDF', `<p style="color:var(--accent-red); font-weight:500;">Nie udało się przetworzyć pliku.</p>`); } 
+    finally { btn.innerHTML = originalText; btn.disabled = false; document.getElementById('pdf-input').value = ''; }
 }
