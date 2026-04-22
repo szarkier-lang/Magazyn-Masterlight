@@ -9,6 +9,7 @@
     <title>Masterlight - System Magazynowy</title>
     
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -21,7 +22,270 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script>window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';</script>
     
-    <link rel="stylesheet" href="style.css">
+    <style>
+        /* BAZOWE ZMIENNE I RESET */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --primary-terracotta: #C4704B;
+            --primary-dark: #A85A3A;
+            --primary-light: #FDF2EE;
+            --accent-red: #D84C4C;
+            --accent-red-dark: #C23E3E;
+            --warm-beige: #F5E6D3;
+            --beige-light: #E8D7C3;
+            --text-dark: #1F2937;
+            --text-light: #6B7280;
+            --border-color: #E5E7EB;
+            --success-status: #10B981;
+            --warning-status: #F59E0B;
+            --error-status: #EF4444;
+            --info-status: #3B82F6;
+            --background: #F3F4F6;
+            --sidebar-bg: #8B6F47;
+            
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+
+        body { font-family: 'Inter', sans-serif; background-color: var(--background); color: var(--text-dark); line-height: 1.6; overflow-x: hidden; }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #9CA3AF; }
+
+        .material-symbols-outlined { vertical-align: middle; font-size: 1.25em; }
+        button .material-symbols-outlined { font-size: 1.15em; margin-right: 6px; vertical-align: -0.15em; }
+        .status-badge .material-symbols-outlined { font-size: 1.1em; margin-right: 4px; vertical-align: -0.15em; }
+        .sidebar-nav a .material-symbols-outlined { font-size: 1.4em; margin-right: 12px; opacity: 0.9; }
+
+        /* EKRANY ŁADOWANIA I TOASTY */
+        #loading-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(243, 244, 246, 0.95); z-index: 99999; display: flex; flex-direction: column; justify-content: center; align-items: center; transition: opacity 0.4s ease; backdrop-filter: blur(4px); }
+        .spinner { width: 50px; height: 50px; border: 4px solid #E5E7EB; border-top: 4px solid var(--primary-terracotta); border-radius: 50%; animation: spin 1s cubic-bezier(0.55, 0.15, 0.45, 0.85) infinite; margin-bottom: 1.5rem; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        #toast-container { position: fixed; top: 20px; right: 20px; z-index: 100000; display: flex; flex-direction: column; gap: 10px; pointer-events: none;}
+        .toast { background: white; padding: 1rem 1.5rem; border-radius: 12px; box-shadow: var(--shadow-lg); display: flex; align-items: center; gap: 12px; animation: slideInRight 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; max-width: 400px; font-weight: 500; border-left: 6px solid #ccc; }
+        .toast.success { border-left-color: var(--success-status); color: var(--text-dark); }
+        .toast.success .material-symbols-outlined { color: var(--success-status); }
+        .toast.error { border-left-color: var(--accent-red); color: var(--text-dark); }
+        .toast.error .material-symbols-outlined { color: var(--accent-red); }
+        .toast.warning { border-left-color: var(--warning-status); color: var(--text-dark); }
+        .toast-fadeOut { animation: fadeOutRight 0.4s ease forwards; }
+        @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes fadeOutRight { from { transform: translateX(0); opacity: 1; } to { transform: translateX(120%); opacity: 0; } }
+
+        .alert-banner { background: #FEF3C7; border: 1px solid #FDE68A; border-left: 6px solid var(--warning-status); padding: 1rem 1.5rem; border-radius: 12px; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 15px; color: #B45309; font-weight: 500; box-shadow: var(--shadow-sm); }
+        .alert-banner.critical { background: #FEE2E2; border-color: #FECACA; border-left-color: var(--accent-red); color: #B91C1C; }
+        .alert-banner .material-symbols-outlined { font-size: 1.8rem; }
+
+        /* LOGOWANIE */
+        #auth-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-terracotta) 100%); display: flex; justify-content: center; align-items: center; z-index: 9999; }
+        .auth-box { background: white; padding: 3rem; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); width: 100%; max-width: 400px; text-align: center; }
+        .auth-box h2 { color: var(--primary-dark); margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 700; }
+        .hidden { display: none !important; }
+
+        /* LAYOUT GŁÓWNY */
+        .mobile-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9998; backdrop-filter: blur(2px); }
+        .mobile-overlay.active { display: block; }
+
+        .sidebar { width: 260px; background: linear-gradient(180deg, var(--sidebar-bg) 0%, #6F5A3A 100%); color: #fff; padding: 2rem 0; position: fixed; left: 0; top: 0; height: 100vh; overflow-y: auto; box-shadow: 4px 0 24px rgba(0,0,0,0.1); z-index: 9999; transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+        .sidebar-logo { padding: 0 1.5rem; margin-bottom: 2rem; border-bottom: 1px solid rgba(255,255,255,0.15); padding-bottom: 1.5rem; }
+        .sidebar-logo h2 { font-size: 1.2rem; letter-spacing: 1px; color: #fff; display: flex; align-items: center; gap: 10px; font-weight: 700; text-shadow: 1px 1px 2px rgba(0,0,0,0.2); }
+        .sidebar-logo h2 .material-symbols-outlined { color: #fff; opacity: 0.9; }
+        .sidebar-nav { list-style: none; padding: 0 1rem; }
+        .sidebar-nav li { margin: 0.3rem 0; }
+        .sidebar-nav a { display: flex; align-items: center; padding: 0.9rem 1.2rem; border-radius: 8px; color: rgba(255,255,255,0.8); text-decoration: none; transition: all 0.2s ease; font-weight: 500; font-size: 0.95rem; }
+        .sidebar-nav a:hover { background-color: rgba(255,255,255,0.1); color: #fff; }
+        .sidebar-nav a.active { background-color: rgba(255,255,255,0.2); color: #fff; box-shadow: var(--shadow-sm); font-weight: 600; border: 1px solid rgba(255,255,255,0.1); }
+        .sidebar-nav a.active .material-symbols-outlined { opacity: 1; color: var(--warm-beige); }
+
+        .mobile-only-logout { display: none; }
+        .mobile-menu-btn { display: none; background: none; border: none; color: var(--text-dark); cursor: pointer; margin-right: 15px; }
+
+        .main-content { margin-left: 260px; flex: 1; overflow-y: auto; display: flex; flex-direction: column; width: calc(100% - 260px); transition: margin 0.3s ease; }
+        
+        .header { background: #fff; color: var(--text-dark); padding: 1.2rem 2.5rem; box-shadow: var(--shadow-sm); border-bottom: 3px solid var(--primary-terracotta); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 50; }
+        .header-left { display: flex; align-items: center; }
+        .header-title h1 { font-size: 1.5rem; margin-bottom: 0; font-weight: 700; display: flex; align-items: center; gap: 10px; color: var(--primary-terracotta);}
+        .user-badge { background: var(--background); padding: 0.6rem 1rem; border-radius: 12px; font-size: 0.85rem; border: 1px solid var(--border-color); text-align: left; display: flex; align-items: center; gap: 15px; }
+        .user-badge-info p { margin: 0; line-height: 1.4; display: flex; align-items: center; gap: 6px; color: var(--text-dark); font-weight: 500;}
+
+        .content { flex: 1; padding: 2rem 2.5rem; max-width: 1600px; margin: 0 auto; width: 100%; }
+
+        .tab-content { display: none; animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; }
+        .tab-content.active { display: block; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* WIDGETY STATYSTYK */
+        .stats-bar { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem; margin-bottom: 2.5rem; }
+        .stat-card { background: #fff; padding: 1.5rem; border-radius: 16px; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm); transition: transform 0.3s ease, box-shadow 0.3s ease; position: relative; overflow: hidden; }
+        .stat-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: var(--primary-terracotta); border-radius: 5px 0 0 5px; }
+        .stat-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); border-color: var(--beige-light); }
+        .stat-card h3 { color: var(--text-light); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem; font-weight: 600; }
+        .stat-card .value { font-size: 2.4rem; font-weight: 700; color: var(--text-dark); line-height: 1; }
+
+        /* SEKCJE I PANELE */
+        .section { background: #fff; margin-bottom: 2.5rem; border-radius: 16px; box-shadow: var(--shadow-md); overflow: hidden; border: 1px solid var(--border-color); }
+        .section-header { background-color: var(--primary-light); padding: 1.2rem 2rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .section-header h2 { color: var(--primary-dark); font-size: 1.25rem; margin: 0; display:flex; align-items:center; gap:10px; font-weight: 600; }
+        .section-header h2 .material-symbols-outlined { color: var(--primary-terracotta); font-size: 1.4em; }
+        .section-header .badge { background: #fff; color: var(--text-dark); padding: 0.4rem 0.9rem; border-radius: 20px; font-size: 0.8rem; font-weight: 600; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm); }
+        .section-content { padding: 1.5rem 2rem; }
+
+        /* TABELE */
+        .table-responsive { width: 100%; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm); overflow: hidden; }
+        table { width: 100%; border-collapse: separate; border-spacing: 0; margin: 0; font-size: 0.9rem; table-layout: auto; }
+        th { background-color: var(--primary-terracotta); color: #fff; padding: 1.1rem 1rem; text-align: left; font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--primary-dark); position: sticky; top: 0; z-index: 10; white-space: nowrap; }
+        td { padding: 0.85rem 1rem; border-bottom: 1px solid var(--border-color); color: var(--text-dark); vertical-align: middle; word-break: break-word; }
+        tbody tr { transition: background-color 0.2s, opacity 0.2s; }
+        tbody tr:last-child td { border-bottom: none; }
+        tbody tr:hover { background-color: #FEF6F3; }
+        
+        .row-completed { opacity: 0.6; background-color: #F9FAFB; }
+        .row-completed:hover { opacity: 1; background-color: #F3F4F6 !important; }
+
+        .status-badge { display: inline-flex; align-items: center; justify-content: center; padding: 0.4rem 0.8rem; border-radius: 8px; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.3px; white-space: nowrap;}
+        .status-ok { background-color: #ECFDF5; color: #059669; border: 1px solid #A7F3D0; }
+        .status-warning { background-color: #FFFBEB; color: #D97706; border: 1px solid #FDE68A; }
+        .status-error { background-color: #FEF2F2; color: #DC2626; border: 1px solid #FECACA; }
+        .status-neutral { background-color: #EFF6FF; color: #2563EB; border: 1px solid #BFDBFE; }
+
+        /* FORMULARZE I PRZYCISKI */
+        .form-group { margin-bottom: 0; display: flex; flex-direction: column; gap: 0.5rem; justify-content: flex-end;}
+        .form-group label { font-weight: 600; color: var(--text-dark); font-size: 0.85rem; letter-spacing: 0.3px; }
+        input[type="text"], input[type="number"], input[type="date"], input[type="email"], input[type="password"], select { 
+            padding: 0.75rem 1.1rem; background: #fff; border: 1px solid #D1D5DB; border-radius: 10px; 
+            font-size: 0.95rem; color: var(--text-dark); width: 100%; font-family: 'Inter', sans-serif; 
+            transition: all 0.2s ease; outline: none; box-shadow: inset 0 1px 2px rgba(0,0,0,0.03); 
+            height: 46px; 
+        }
+        input:focus, select:focus { border-color: var(--primary-terracotta); box-shadow: 0 0 0 3px rgba(196, 112, 75, 0.15), inset 0 1px 2px rgba(0,0,0,0.03); }
+
+        button { display: inline-flex; align-items: center; justify-content: center; padding: 0.75rem 1.5rem; height: 46px; border: none; border-radius: 10px; cursor: pointer; font-size: 0.9rem; font-weight: 600; transition: all 0.2s ease; font-family: 'Inter', sans-serif; box-shadow: var(--shadow-sm); letter-spacing: 0.3px; white-space: nowrap; }
+        .btn-primary { background-color: var(--primary-terracotta); color: white; }
+        .btn-primary:hover:not(:disabled) { background-color: var(--primary-dark); transform: translateY(-1px); box-shadow: 0 7px 14px rgba(196, 112, 75, 0.2); }
+        .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+        
+        .btn-secondary { background-color: white; color: var(--text-dark); border: 1px solid var(--border-color); }
+        .btn-secondary:hover:not(:disabled) { background-color: #F9FAFB; border-color: #D1D5DB; transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+        
+        .btn-small { padding: 0.4rem 0.8rem; font-size: 0.75rem; height: 32px; border-radius: 6px; }
+        
+        .action-cell-flex { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+        .editable { cursor: pointer; background-color: #F9FAFB; border-radius: 8px; transition: background 0.2s; border: 1px solid transparent; text-align: center;}
+        .editable:hover { background-color: #FEF6F3; border-color: var(--beige-light); }
+        .editable input { max-width: 90px; text-align: center; padding: 0.4rem; height: 34px; margin: 0 auto; display: block; }
+
+        /* MODALE */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.55); z-index: 2000; backdrop-filter: blur(4px); }
+        .modal-dialog { background: white; padding: 2.5rem; border-radius: 20px; max-width: 550px; margin: 8vh auto; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); border: 1px solid var(--border-color); }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-color); }
+        .modal-header h2 { color: var(--primary-dark); font-weight: 700; font-size: 1.3rem; }
+        .close { font-size: 2rem; cursor: pointer; color: var(--text-light); transition: color 0.2s ease, background-color 0.2s ease; line-height: 1; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; }
+        .close:hover { color: var(--accent-red); background-color: #FEF2F2; }
+
+        /* CHECKBOX WYSYŁKA SERWISOWA */
+        .checkbox-wrapper { display: flex; align-items: center; gap: 12px; background-color: #FEF2F2; border: 1px solid #FECACA; padding: 1rem 1.25rem; border-radius: 10px; cursor: pointer; transition: background-color 0.2s; }
+        .checkbox-wrapper:hover { background-color: #FEE2E2; }
+        .checkbox-wrapper input[type="checkbox"] { width: 22px; height: 22px; cursor: pointer; accent-color: var(--accent-red-dark); margin: 0; box-shadow: none; }
+        .checkbox-wrapper label { color: var(--accent-red-dark); font-weight: 700; cursor: pointer; margin: 0; font-size: 0.9rem; }
+
+        /* MAPA I KALENDARZ */
+        .map-container { height: 450px; width: 100%; border-bottom-left-radius: 16px; border-bottom-right-radius: 16px; z-index: 1; background-color: #f3f4f6; }
+        .leaflet-popup-content-wrapper { border-radius: 12px !important; box-shadow: var(--shadow-lg) !important; padding: 5px !important;}
+        .leaflet-popup-content { margin: 12px 16px !important; font-family: 'Inter', sans-serif !important; color: var(--text-dark) !important; font-size: 0.9rem !important; line-height: 1.5 !important;}
+        .leaflet-container { font-family: 'Inter', sans-serif !important; }
+
+        .custom-map-marker { display: flex; align-items: center; justify-content: center; border-radius: 50%; color: #fff; font-weight: 700; box-shadow: 0 3px 8px rgba(0,0,0,0.4); border: 2px solid #fff; }
+        .marker-home { background-color: #1F2937; }
+        .marker-confirmed { background-color: #10B981; } 
+        .marker-planned { background-color: #C4704B; }   
+        .marker-adjustment { background-color: #3B82F6; } 
+
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr) 80px; gap: 8px; }
+        .calendar-header { display: grid; grid-template-columns: repeat(7, 1fr) 80px; gap: 8px; font-weight: 700; text-align: center; margin-bottom: 8px; font-size: 0.85rem; color: var(--text-light); text-transform: uppercase;}
+        .calendar-cell { background: #fff; border: 1px solid var(--border-color); border-radius: 8px; min-height: 110px; padding: 6px; display: flex; flex-direction: column; gap: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.02);}
+        .calendar-cell.empty { background: transparent; border: none; box-shadow: none; }
+        .calendar-cell.today { border: 2px solid var(--primary-terracotta); background: #FEF6F3; }
+        .calendar-date { font-size: 0.85rem; font-weight: 700; color: var(--text-light); text-align: right; margin-bottom: 5px; }
+        .cal-item { font-size: 0.75rem; padding: 5px; border-radius: 6px; line-height: 1.3; cursor: pointer; border-left: 3px solid transparent; background: #F9FAFB; border: 1px solid #E5E7EB; overflow: hidden; text-overflow: ellipsis;}
+        .cal-item:hover { filter: brightness(0.95); }
+        .cal-item.shipment { border-left-color: var(--primary-terracotta); }
+        .cal-item.adjustment { border-left-color: var(--info-status); }
+        .cal-summary { background: var(--primary-light); display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 8px; font-weight: 700; font-size: 0.95rem; color: var(--primary-dark); text-align:center; border: 1px solid #FDE68A; padding: 5px;}
+        .cal-month-nav { display: flex; justify-content: space-between; align-items: center; }
+
+        .footer { text-align: center; padding: 3rem 2rem; color: var(--text-light); font-size: 0.85rem; margin-top: 2rem; border-top: 1px solid var(--border-color); background: #fff; }
+
+        @media (max-width: 768px) {
+            .mobile-menu-btn { display: block; }
+            .sidebar { transform: translateX(-100%); } 
+            .sidebar.open { transform: translateX(0); } 
+            .main-content { margin-left: 0; width: 100%; }
+            .header { padding: 1rem 1.5rem; }
+            .header-title h1 { font-size: 1.3rem; }
+            .content { padding: 1.5rem 1rem; }
+            .stats-bar { grid-template-columns: 1fr; gap: 1rem; }
+            .section-header { padding: 1rem 1.2rem; }
+            .section-content { padding: 1rem 1.2rem; }
+            .user-badge { display: none; }
+            #toast-container { right: 10px; top: 10px; left: 10px; align-items: stretch; }
+            .toast { max-width: none; }
+
+            .mobile-only-logout { display: block !important; }
+
+            .calendar-grid, .calendar-header { grid-template-columns: 1fr; }
+            .calendar-header { display: none; }
+            .calendar-cell.empty { display: none; }
+            .cal-summary { flex-direction: row; justify-content: space-between; min-height: 40px; font-size: 0.85rem; }
+
+            .table-responsive { border: none; box-shadow: none; border-radius: 0; background: transparent; max-height: none !important; overflow: visible !important; }
+            table, thead, tbody, th, td, tr { display: block; width: 100%; }
+            thead tr { position: absolute; top: -9999px; left: -9999px; }
+            tr { border: 1px solid var(--border-color); margin-bottom: 1rem; border-radius: 12px; overflow: hidden; box-shadow: var(--shadow-sm); background: #fff; padding: 0.5rem 0; }
+            tr:hover { background-color: #fff !important; }
+            td { border: none; border-bottom: 1px solid #F3F4F6; position: relative; padding: 0.7rem 1rem 0.7rem 45% !important; text-align: right; min-height: 40px; display: flex; align-items: center; justify-content: flex-end; font-size: 0.85rem; white-space: normal; }
+            td:last-child { border-bottom: none; }
+            td::before { content: attr(data-label); position: absolute; left: 1rem; width: 40%; text-align: left; font-weight: 600; color: var(--text-light); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; }
+            .editable input { max-width: 140px; text-align: right; padding: 0.5rem; border-radius: 6px; }
+            td[data-label="Akcja"] { justify-content: flex-end; flex-wrap: wrap; gap: 5px; padding-top: 1rem !important; }
+            .map-container { height: 400px !important; border-radius: 0 0 12px 12px !important; } 
+            .leaflet-popup-content { font-size: 0.8rem !important; }
+        }
+
+        @media print {
+            @page { size: A4 landscape; margin: 10mm; }
+            body { background: white !important; color: black !important; font-size: 11pt !important; }
+            .sidebar, .header, .footer, button, form, .modal, #dashboard-alerts, .badge, #toast-container, #loading-screen, .mobile-overlay { display: none !important; }
+            .main-content { margin: 0 !important; width: 100% !important; padding: 0 !important; display: block !important; }
+            .content { padding: 0 !important; max-width: none !important; }
+            .tab-content { display: none !important; }
+            .tab-content.active { display: block !important; opacity: 1 !important; animation: none !important; transform: none !important; }
+            .section { box-shadow: none !important; border: 1px solid #ddd !important; margin-bottom: 20px !important; border-radius: 0 !important; page-break-inside: avoid; }
+            .section-header { background: #f5f5f5 !important; border-bottom: 2px solid #333 !important; padding: 10px 15px !important; }
+            .section-header h2 { color: #000 !important; font-size: 14pt !important; margin: 0 !important; }
+            .section-header .material-symbols-outlined { display: none !important; } 
+            .section-content { padding: 10px !important; }
+            .table-responsive { max-height: none !important; overflow: visible !important; border: none !important; box-shadow: none !important; }
+            table { display: table !important; width: 100% !important; border-collapse: collapse !important; table-layout: auto !important; }
+            thead { display: table-header-group !important; }
+            tbody { display: table-row-group !important; }
+            tr { display: table-row !important; page-break-inside: avoid !important; border-bottom: 1px solid #ddd !important; }
+            th { display: table-cell !important; background-color: #eee !important; color: #000 !important; font-weight: bold !important; border-bottom: 2px solid #333 !important; padding: 8px !important; font-size: 10pt !important; position: static !important; text-transform: uppercase; }
+            td { display: table-cell !important; padding: 8px !important; font-size: 10pt !important; border: none !important; text-align: left !important; color: #000 !important; }
+            td::before { display: none !important; }
+            .status-badge { border: 1px solid #666 !important; background: transparent !important; color: #000 !important; padding: 2px 6px !important; font-weight: normal !important; }
+            td[data-label="Akcja"], th.admin-only-col { display: none !important; }
+            .map-container { display: none !important; }
+            #map-section-container, #adj-map-section-container { display: none !important; }
+        }
+    </style>
 </head>
 <body>
 
@@ -61,7 +325,7 @@
                     <li><a href="#" onclick="switchTab('tab-adjustments')" class="nav-item"><span class="material-symbols-outlined">handyman</span> Regulacje</a></li>
                     <li id="nav-history"><a href="#" onclick="switchTab('tab-history')" class="nav-item"><span class="material-symbols-outlined">receipt_long</span> Historia Zmian</a></li>
                     <li><a href="#" onclick="switchTab('tab-components')" class="nav-item"><span class="material-symbols-outlined">electrical_services</span> Komponenty</a></li>
-                    <li id="nav-reports"><a href="#" onclick="switchTab('tab-reports')" class="nav-item"><span class="material-symbols-outlined">precision_manufacturing</span> Produkcja i Przezbrajanie</a></li>
+                    <li id="nav-reports"><a href="#" onclick="switchTab('tab-reports')" class="nav-item"><span class="material-symbols-outlined">precision_manufacturing</span> Panel Produkcji</a></li>
                     <li class="mobile-only-logout" style="margin-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1rem;">
                         <a href="#" onclick="logoutUser()" class="nav-item" style="color: #FECACA;"><span class="material-symbols-outlined">logout</span> Wyloguj się</a>
                     </li>
@@ -126,33 +390,43 @@
                             <div id="shipments-map" class="map-container"></div>
                         </div>
                     </div>
-                </div>
 
-                <div id="tab-inventory" class="tab-content">
                     <div class="section">
-                        <div class="section-header">
-                            <h2><span class="material-symbols-outlined">inventory_2</span> Stan Magazynowy: IMPERIAL (Składane)</h2>
-                            <button class="btn-secondary btn-small" onclick="printInventoryPdf()" style="margin: 0; height: auto;"><span class="material-symbols-outlined">print</span> Generuj PDF</button>
-                        </div>
+                        <div class="section-header"><h2><span class="material-symbols-outlined">conveyor_belt</span> Ostatnie Przyjęcia Opraw</h2></div>
                         <div class="section-content" style="padding:0;">
-                            <div class="table-responsive" style="max-height: 70vh;">
+                            <div class="table-responsive">
                                 <table>
-                                    <thead><tr><th>Kąt Oprawy</th><th>Gotowe 15W</th><th>Gotowe 20W</th><th>Surowe (W Montażu)</th><th>Serwis (Suma)</th><th>Łącznie Suma</th><th>Dostępność</th></tr></thead>
-                                    <tbody id="products-imperial-table"></tbody>
+                                    <thead><tr><th>Data Przyjęcia</th><th>Dostawca / Huta</th><th>22°</th><th>37°</th><th>58°</th><th>Suma</th></tr></thead>
+                                    <tbody id="dashboard-recent-incoming"></tbody>
                                 </table>
                             </div>
                         </div>
                     </div>
 
                     <div class="section">
-                        <div class="section-header" style="background-color: #E0F2FE; border-bottom: 2px solid #3B82F6;">
-                            <h2 style="color: #1E3A8A;"><span class="material-symbols-outlined" style="color: #3B82F6;">lightbulb</span> Stan Magazynowy: PXF (Zintegrowane)</h2>
-                        </div>
+                        <div class="section-header"><h2><span class="material-symbols-outlined">fact_check</span> Bieżący Stan Opraw Gotowych</h2></div>
                         <div class="section-content" style="padding:0;">
                             <div class="table-responsive">
                                 <table>
-                                    <thead><tr><th>Kąt Oprawy</th><th>Gotowe 15W</th><th>Gotowe 20W</th><th>Serwis (Suma)</th><th>Łącznie Suma</th><th>Dostępność</th></tr></thead>
-                                    <tbody id="products-pxf-table"></tbody>
+                                    <thead><tr><th>Model Oprawy</th><th>Ilość Gotowych</th><th>Dostępność</th></tr></thead>
+                                    <tbody id="products-dashboard"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="tab-inventory" class="tab-content">
+                    <div class="section">
+                        <div class="section-header">
+                            <h2><span class="material-symbols-outlined">inventory_2</span> Pełny Stan Magazynowy Downlightów</h2>
+                            <button class="btn-secondary btn-small" onclick="printInventoryPdf()" style="margin: 0; height: auto;"><span class="material-symbols-outlined">print</span> Generuj PDF</button>
+                        </div>
+                        <div class="section-content" style="padding:0;">
+                            <div class="table-responsive" style="max-height: 70vh;">
+                                <table>
+                                    <thead><tr><th>Kąt Oprawy</th><th>Gotowe 15W</th><th>Gotowe 20W</th><th>Surowe (W Montażu)</th><th>Serwis (Suma)</th><th>Łącznie Suma</th><th>Dostępność</th></tr></thead>
+                                    <tbody id="products-table"></tbody>
                                 </table>
                             </div>
                         </div>
@@ -189,45 +463,26 @@
                 </div>
 
                 <div id="tab-shipments" class="tab-content">
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 1.5rem; margin-bottom: 2.5rem;">
-                        <div id="form-incoming-imperial-container" class="section" style="margin-bottom:0;">
-                            <div class="section-header"><h2><span class="material-symbols-outlined">move_to_inbox</span> Przyjęcie z Huty (IMPERIAL)</h2></div>
-                            <div class="section-content">
-                                <form id="incomingImperialForm">
-                                    <div class="form-group" style="margin-bottom: 1rem;"><label>Dostawca</label><input type="text" name="supplier" required placeholder="np. Alumetal"></div>
-                                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
-                                        <div class="form-group"><label>Surowe 22°</label><input type="number" name="p1" value="0" min="0"></div>
-                                        <div class="form-group"><label>Surowe 37°</label><input type="number" name="p2" value="0" min="0"></div>
-                                        <div class="form-group"><label>Surowe 58°</label><input type="number" name="p3" value="0" min="0"></div>
+                    <div id="form-incoming-container" class="section">
+                        <div class="section-header"><h2><span class="material-symbols-outlined">move_to_inbox</span> Przyjęcie Dostawy Opraw (Huta)</h2></div>
+                        <div class="section-content">
+                            <form id="incomingForm">
+                                <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 1rem; align-items: end;">
+                                    <div class="form-group"><label>Huta / Dostawca</label><input type="text" name="supplier" required placeholder="np. Alumetal"></div>
+                                    <div class="form-group"><label>Surowe 22°</label><input type="number" name="p1" value="0" min="0"></div>
+                                    <div class="form-group"><label>Surowe 37°</label><input type="number" name="p2" value="0" min="0"></div>
+                                    <div class="form-group"><label>Surowe 58°</label><input type="number" name="p3" value="0" min="0"></div>
+                                    <div class="form-group">
+                                        <button type="submit" class="btn-primary" style="width:100%;"><span class="material-symbols-outlined">add_circle</span> Przyjmij</button>
                                     </div>
-                                    <button type="submit" class="btn-primary" style="width:100%;"><span class="material-symbols-outlined">add_circle</span> Przyjmij obudowy</button>
-                                </form>
-                            </div>
-                        </div>
-
-                        <div id="form-incoming-pxf-container" class="section" style="margin-bottom:0;">
-                            <div class="section-header" style="background-color: #E0F2FE;">
-                                <h2 style="color: #1E3A8A;"><span class="material-symbols-outlined" style="color: #3B82F6;">local_shipping</span> Przyjęcie Gotowych (PXF)</h2>
-                            </div>
-                            <div class="section-content">
-                                <form id="incomingPxfForm">
-                                    <div class="form-group" style="margin-bottom: 1rem;"><label>Dostawca</label><input type="text" name="supplier" required placeholder="np. PXF Lighting"></div>
-                                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1rem;">
-                                        <div class="form-group"><label>22° - 15W</label><input type="number" name="p6" value="0" min="0"></div>
-                                        <div class="form-group"><label>37° - 15W</label><input type="number" name="p7" value="0" min="0"></div>
-                                        <div class="form-group"><label>58° - 15W</label><input type="number" name="p8" value="0" min="0"></div>
-                                        <div class="form-group"><label>37° - 20W</label><input type="number" name="p9" value="0" min="0"></div>
-                                        <div class="form-group"><label>58° - 20W</label><input type="number" name="p10" value="0" min="0"></div>
-                                    </div>
-                                    <button type="submit" class="btn-primary" style="width:100%; background-color: #3B82F6;"><span class="material-symbols-outlined">add_circle</span> Przyjmij gotowe lampy</button>
-                                </form>
-                            </div>
+                                </div>
+                            </form>
                         </div>
                     </div>
 
                     <div id="form-shipment-container" class="section">
                         <div class="section-header">
-                            <h2><span class="material-symbols-outlined">add_location_alt</span> Dodaj Zamówienie / Plan Wysyłki</h2>
+                            <h2><span class="material-symbols-outlined">add_location_alt</span> Dodaj Nowe Zamówienie / Plan Wysyłki</h2>
                             <div style="display:flex; align-items:center; gap:10px;">
                                 <input type="file" id="pdf-input" accept="application/pdf" style="display: none;" onchange="scanOfferFromPDF(this.files[0])">
                                 <button type="button" id="pdf-scan-btn" class="btn-primary btn-small" onclick="document.getElementById('pdf-input').click()" style="background-color: #3B82F6; margin: 0; padding: 0.5rem 1rem; height:auto;">
@@ -237,14 +492,6 @@
                         </div>
                         <div class="section-content">
                             <form id="shipmentForm">
-                                <div style="background-color: var(--primary-light); padding: 1rem; border-radius: 8px; border: 1px solid var(--primary-terracotta); margin-bottom: 1.5rem;">
-                                    <label style="font-weight: 700; color: var(--primary-dark); display: block; margin-bottom: 0.5rem;">Z jakiej puli wysyłamy towar?</label>
-                                    <select id="form-brand" name="brand" style="border-color: var(--primary-terracotta); background-color: #fff; font-weight: 600;">
-                                        <option value="imperial">Pula: IMPERIAL (Składane)</option>
-                                        <option value="pxf">Pula: PXF (Zintegrowane)</option>
-                                    </select>
-                                </div>
-
                                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.25rem;">
                                     <div class="form-group"><label>Miejscowość *</label><input type="text" name="ship_city" id="form-city" required placeholder="np. Warszawa"></div>
                                     <div class="form-group"><label>Ulica i nr (opcjonalnie)</label><input type="text" name="ship_street" id="form-street" placeholder="np. Złota 44"></div>
@@ -255,17 +502,17 @@
                                     <div class="form-group"><label>Spedytor / Odbiór</label><input type="text" name="company" id="form-company" placeholder="np. DPD, Własny" required></div>
                                 </div>
                                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem; margin-top: 1.25rem; background-color: var(--background); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border-color);">
-                                    <div class="form-group"><label>22° - 15W</label><input type="number" name="p_22_15" id="form-p1" value="0" min="0"></div>
-                                    <div class="form-group"><label>37° - 15W</label><input type="number" name="p_37_15" id="form-p2" value="0" min="0"></div>
-                                    <div class="form-group"><label>58° - 15W</label><input type="number" name="p_58_15" id="form-p3" value="0" min="0"></div>
-                                    <div class="form-group"><label>37° - 20W</label><input type="number" name="p_37_20" id="form-p4" value="0" min="0"></div>
-                                    <div class="form-group"><label>58° - 20W</label><input type="number" name="p_58_20" id="form-p5" value="0" min="0"></div>
+                                    <div class="form-group"><label>22° - 15W</label><input type="number" name="p1" id="form-p1" value="0" min="0"></div>
+                                    <div class="form-group"><label>37° - 15W</label><input type="number" name="p2" id="form-p2" value="0" min="0"></div>
+                                    <div class="form-group"><label>58° - 15W</label><input type="number" name="p3" id="form-p3" value="0" min="0"></div>
+                                    <div class="form-group"><label>37° - 20W</label><input type="number" name="p4" id="form-p4" value="0" min="0"></div>
+                                    <div class="form-group"><label>58° - 20W</label><input type="number" name="p5" id="form-p5" value="0" min="0"></div>
                                 </div>
                                 
                                 <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; margin-top: 1.5rem; gap: 1rem;">
                                     <label class="checkbox-wrapper">
                                         <input type="checkbox" id="form-is-replacement">
-                                        Wysyłka serwisowa (Wymiana RMA)
+                                        Wysyłka zastępująca oprawy uszkodzone (Serwis / Wymiana RMA)
                                     </label>
                                     <button type="submit" class="btn-primary" style="padding: 0 2.5rem;"><span class="material-symbols-outlined">save</span> Zapisz i Dodaj do Kolejki</button>
                                 </div>
@@ -278,7 +525,7 @@
                         <div class="section-content" style="padding:0;">
                             <div class="table-responsive">
                                 <table>
-                                    <thead><tr><th>Data Wstępna</th><th>Pula</th><th>Cel</th><th>Typ</th><th>Sztuk</th><th>Kąty</th><th>Status Magazynu</th><th>Stan</th><th class="admin-only-col" style="width:200px;">Akcja</th></tr></thead>
+                                    <thead><tr><th>Data Wstępna</th><th>Cel</th><th>Typ</th><th>Sztuk</th><th>Kąty</th><th>Wirtualny Magazyn</th><th>Status</th><th class="admin-only-col" style="width:200px;">Akcja</th></tr></thead>
                                     <tbody id="shipments-unconfirmed-table"></tbody>
                                 </table>
                             </div>
@@ -293,7 +540,7 @@
                         <div class="section-content" style="padding:0;">
                             <div class="table-responsive">
                                 <table>
-                                    <thead><tr><th>Data Potw.</th><th>Pula</th><th>Cel</th><th>Typ</th><th>Sztuk</th><th>Kąty</th><th>Status Magazynu</th><th>Stan</th><th class="admin-only-col" style="width:200px;">Akcja</th></tr></thead>
+                                    <thead><tr><th>Data Potw.</th><th>Cel</th><th>Typ</th><th>Sztuk</th><th>Kąty</th><th>Wirtualny Magazyn</th><th>Status</th><th class="admin-only-col" style="width:200px;">Akcja</th></tr></thead>
                                     <tbody id="shipments-confirmed-table"></tbody>
                                 </table>
                             </div>
@@ -307,12 +554,13 @@
                         <div class="section-content" style="padding:0;">
                             <div class="table-responsive">
                                 <table>
-                                    <thead><tr><th>Data Wysłania</th><th>Pula</th><th>Cel</th><th>Typ</th><th>Sztuk</th><th>Kąty</th><th>Stan</th><th class="admin-only-col">Akcja</th></tr></thead>
+                                    <thead><tr><th>Data Wysłania</th><th>Cel</th><th>Typ</th><th>Sztuk</th><th>Kąty</th><th>Status</th><th class="admin-only-col">Akcja</th></tr></thead>
                                     <tbody id="shipments-completed-table"></tbody>
                                 </table>
                             </div>
                         </div>
                     </div>
+
                 </div>
 
                 <div id="tab-adjustments" class="tab-content">
@@ -376,28 +624,16 @@
                 </div>
 
                 <div id="tab-components" class="tab-content">
-                    <div class="stats-bar">
-                        <div class="stat-card" style="border-left: 5px solid #3B82F6;"><h3>Odbłyśniki PXF 22°</h3><div class="value" id="stat-refl-22">0</div></div>
-                        <div class="stat-card" style="border-left: 5px solid #3B82F6;"><h3>Odbłyśniki PXF 37°</h3><div class="value" id="stat-refl-37">0</div></div>
-                        <div class="stat-card" style="border-left: 5px solid #3B82F6;"><h3>Odbłyśniki PXF 58°</h3><div class="value" id="stat-refl-58">0</div></div>
-                    </div>
-
                     <div id="form-components-container" class="section">
-                        <div class="section-header"><h2><span class="material-symbols-outlined">inventory</span> Przyjęcie Komponentów</h2></div>
+                        <div class="section-header"><h2><span class="material-symbols-outlined">inventory</span> Przyjęcie Dostawy Komponentów</h2></div>
                         <div class="section-content">
                             <form id="componentsIncomingForm">
-                                <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 1rem; align-items: end; margin-bottom: 1rem;">
-                                    <div class="form-group"><label>Dostawca</label><input type="text" name="supplier" required placeholder="Dostawca"></div>
+                                <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 1rem; align-items: end;">
+                                    <div class="form-group"><label>Dostawca</label><input type="text" name="supplier" required placeholder="np. Osram, Tridonic"></div>
                                     <div class="form-group"><label>Zasilacze (szt)</label><input type="number" name="ps_raw" value="0" min="0"></div>
                                     <div class="form-group"><label>Klapki Zwykłe</label><input type="number" name="clips_normal" value="0" min="0"></div>
                                     <div class="form-group"><label>Klapki Przelot.</label><input type="number" name="clips_pass" value="0" min="0"></div>
                                     <div class="form-group"><button type="submit" class="btn-primary" style="width:100%;"><span class="material-symbols-outlined">add_circle</span> Dodaj</button></div>
-                                </div>
-                                <h3 style="font-size: 0.85rem; color: #3B82F6; margin-bottom: 0.5rem; text-transform:uppercase;">Dostawa luźnych odbłyśników PXF</h3>
-                                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 1rem; align-items: end;">
-                                    <div class="form-group"><label>Odbłyśniki 22°</label><input type="number" name="r22" value="0" min="0"></div>
-                                    <div class="form-group"><label>Odbłyśniki 37°</label><input type="number" name="r37" value="0" min="0"></div>
-                                    <div class="form-group"><label>Odbłyśniki 58°</label><input type="number" name="r58" value="0" min="0"></div>
                                 </div>
                             </form>
                         </div>
@@ -413,9 +649,6 @@
                                         <tr><td data-label="Typ"><strong>Zasilacze LED</strong></td><td data-label="Ilość" onclick="editComponentCell(this, 'ps_raw')" class="editable" id="ps-raw-cell">0</td></tr>
                                         <tr><td data-label="Typ"><strong>Klapki Montażowe Zwykłe</strong></td><td data-label="Ilość" onclick="editComponentCell(this, 'clips_normal')" class="editable" id="clips-normal-cell">0</td></tr>
                                         <tr><td data-label="Typ"><strong>Klapki Montażowe Przelotowe</strong></td><td data-label="Ilość" onclick="editComponentCell(this, 'clips_pass')" class="editable" id="clips-pass-cell">0</td></tr>
-                                        <tr style="background:#F0F9FF;"><td data-label="Typ"><strong style="color:#1E3A8A;">Odbłyśnik PXF 22°</strong></td><td data-label="Ilość" onclick="editComponentCell(this, 'reflector_22')" class="editable" id="reflector-22-cell">0</td></tr>
-                                        <tr style="background:#F0F9FF;"><td data-label="Typ"><strong style="color:#1E3A8A;">Odbłyśnik PXF 37°</strong></td><td data-label="Ilość" onclick="editComponentCell(this, 'reflector_37')" class="editable" id="reflector-37-cell">0</td></tr>
-                                        <tr style="background:#F0F9FF;"><td data-label="Typ"><strong style="color:#1E3A8A;">Odbłyśnik PXF 58°</strong></td><td data-label="Ilość" onclick="editComponentCell(this, 'reflector_58')" class="editable" id="reflector-58-cell">0</td></tr>
                                     </tbody>
                                 </table>
                             </div>
@@ -424,70 +657,27 @@
                 </div>
 
                 <div id="tab-reports" class="tab-content">
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 1.5rem;">
-                        <div id="form-production-container" class="section">
-                            <div class="section-header"><h2><span class="material-symbols-outlined">precision_manufacturing</span> Rejestracja Produkcji (IMPERIAL)</h2></div>
-                            <div class="section-content">
-                                <form id="productionForm">
-                                    <div style="background-color: var(--background); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 1.5rem;">
-                                        <h3 style="font-size: 0.9rem; color: var(--text-light); text-transform:uppercase; letter-spacing:1px; margin-bottom: 1rem;">Zmontowane oprawy IMPERIAL</h3>
-                                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1.25rem;">
-                                            <div class="form-group"><label>22° - 15W</label><input type="number" name="p1" value="0" min="0"></div>
-                                            <div class="form-group"><label>37° - 15W</label><input type="number" name="p2" value="0" min="0"></div>
-                                            <div class="form-group"><label>58° - 15W</label><input type="number" name="p3" value="0" min="0"></div>
-                                            <div class="form-group"><label>37° - 20W</label><input type="number" name="p4" value="0" min="0"></div>
-                                            <div class="form-group"><label>58° - 20W</label><input type="number" name="p5" value="0" min="0"></div>
-                                        </div>
+                    <div id="form-production-container" class="section">
+                        <div class="section-header"><h2><span class="material-symbols-outlined">precision_manufacturing</span> Raportowanie Dziennej Produkcji</h2></div>
+                        <div class="section-content">
+                            <form id="productionForm">
+                                <div style="background-color: var(--background); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 1.5rem;">
+                                    <h3 style="font-size: 0.9rem; color: var(--text-light); text-transform:uppercase; letter-spacing:1px; margin-bottom: 1rem;">Wprowadź ilość zmontowanych opraw</h3>
+                                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1.25rem;">
+                                        <div class="form-group"><label>22° - 15W</label><input type="number" name="p1" value="0" min="0"></div>
+                                        <div class="form-group"><label>37° - 15W</label><input type="number" name="p2" value="0" min="0"></div>
+                                        <div class="form-group"><label>58° - 15W</label><input type="number" name="p3" value="0" min="0"></div>
+                                        <div class="form-group"><label>37° - 20W</label><input type="number" name="p4" value="0" min="0"></div>
+                                        <div class="form-group"><label>58° - 20W</label><input type="number" name="p5" value="0" min="0"></div>
                                     </div>
-                                    <div style="text-align: right;">
-                                        <button type="submit" class="btn-primary" style="padding: 0 2.5rem;"><span class="material-symbols-outlined">task_alt</span> Zarejestruj Produkcję</button>
-                                    </div>
-                                </form>
-                                <div style="margin-top: 1rem; background: var(--primary-light); padding: 1rem; border-radius: 12px; font-size: 0.8rem; color: var(--primary-dark);">
-                                    <p>System zdejmuje "Surowe" z danego kąta i zużywa po 1 szt. zasilacza i klapek.</p>
                                 </div>
-                            </div>
-                        </div>
-
-                        <div class="section">
-                            <div class="section-header" style="background-color: #E0F2FE;">
-                                <h2 style="color: #1E3A8A;"><span class="material-symbols-outlined" style="color: #3B82F6;">swap_horiz</span> Przezbrojenie kątów (PXF)</h2>
-                            </div>
-                            <div class="section-content">
-                                <form id="pxfSwapForm">
-                                    <div style="background-color: #F0F9FF; border: 1px solid #BAE6FD; padding: 1.5rem; border-radius: 12px; margin-bottom: 1.5rem;">
-                                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem;">
-                                            <div class="form-group">
-                                                <label style="color:#1E3A8A;">Z kąta (Zabieram z półki):</label>
-                                                <select name="angleFrom" style="border-color:#93C5FD;">
-                                                    <option value="22">22°</option><option value="37">37°</option><option value="58">58°</option>
-                                                </select>
-                                            </div>
-                                            <div class="form-group">
-                                                <label style="color:#1E3A8A;">Na kąt (Wrzucam na półkę):</label>
-                                                <select name="angleTo" style="border-color:#93C5FD;">
-                                                    <option value="37">37°</option><option value="22">22°</option><option value="58">58°</option>
-                                                </select>
-                                            </div>
-                                            <div class="form-group">
-                                                <label style="color:#1E3A8A;">Dla jakiej mocy?</label>
-                                                <select name="swapPower" style="border-color:#93C5FD;">
-                                                    <option value="15">15W</option><option value="20">20W</option>
-                                                </select>
-                                            </div>
-                                            <div class="form-group">
-                                                <label style="color:#1E3A8A;">Liczba przerabianych lamp:</label>
-                                                <input type="number" name="swapQty" value="1" min="1" style="border-color:#93C5FD;">
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div style="text-align: right;">
-                                        <button type="submit" class="btn-primary" style="padding: 0 2.5rem; background-color: #3B82F6;"><span class="material-symbols-outlined">sync</span> Wykonaj Konwersję</button>
-                                    </div>
-                                </form>
-                                <div style="margin-top: 1rem; background: #FFFBEB; padding: 1rem; border-radius: 12px; font-size: 0.8rem; color: #B45309;">
-                                    <p>System automatycznie zamieni odbłyśniki w lampach oraz zaksięguje zdemontowane odbłyśniki na magazynie komponentów.</p>
+                                <div style="text-align: right;">
+                                    <button type="submit" class="btn-primary" style="padding: 0 2.5rem;"><span class="material-symbols-outlined">task_alt</span> Zarejestruj Produkcję w Bazie</button>
                                 </div>
+                            </form>
+                            <div style="margin-top: 2rem; background: var(--primary-light); padding: 1.25rem; border-radius: 12px; font-size: 0.85rem; color: var(--primary-dark); border: 1px solid var(--beige-light); line-height: 1.6;">
+                                <p style="margin-bottom:6px;"><strong><span class="material-symbols-outlined" style="font-size: 1.2em; vertical-align:-0.2em;">info</span> Automatyzacja:</strong> System zdejmie z puli surowe obudowy z danego kąta. Z puli komponentów zostanie pobrane po 1 szt.: zasilacza, klapki zwykłej i klapki przelotowej za każdą sztukę gotowej oprawy.</p>
+                                <p><strong>⚠️ Uwaga:</strong> Upewnij się, że stany komponentów są wystarczające przed rejestracją.</p>
                             </div>
                         </div>
                     </div>
@@ -495,7 +685,7 @@
 
                 <footer class="footer">
                     <p>© 2026 Masterlight Sp. z o.o. - Wszelkie prawa zastrzeżone</p>
-                    <p style="font-size: 0.75rem; color: var(--text-light); margin-top: 5px;">Cloud WMS Engine v4.0 | Zalogowano jako: <span id="footer-user">...</span></p>
+                    <p style="font-size: 0.75rem; color: var(--text-light); margin-top: 5px;">Cloud WMS Engine v3.0 | Zalogowano jako: <span id="footer-user">...</span></p>
                 </footer>
             </div>
         </div>
@@ -511,6 +701,1692 @@
         </div>
     </div>
 
-    <script src="app.js"></script>
+    <script>
+        // --- KONFIGURACJA SUPABASE ---
+        const supabaseUrl = 'https://ghdswvjhqpxupzcrixlu.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdoZHN3dmpocXB4dXB6Y3JpeGx1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4NTEwMDAsImV4cCI6MjA4NzQyNzAwMH0._sk7mCv27tC153DTvqp_7O3CUyYsk3iuYuf0f93GCfo';
+        
+        const ROLES = {
+            'b.hajduk@masterlight.pl': 'admin',      
+            'm.olejnik@masterlight.pl': 'viewer',         
+            'f.robert@interia.pl': 'viewer',         
+            'd.lewandowska@masterlight.pl': 'worker',
+            'm.czyzewska@masterlight.pl': 'worker'
+        };
+
+        // --- ZMIENNE GLOBALNE ---
+        let currentUserEmail = '';
+        let currentRole = 'viewer';
+        let currentCalendarDate = new Date();
+        let map = null;
+        let mapMarkers = [];
+        let mapAdj = null;
+        let mapAdjMarkers = [];
+        let geocodeCache = {}; 
+        let isUpdatingMap = false;
+        let inactivityTimer;
+        const INACTIVITY_TIME_MS = 5 * 60 * 1000;
+
+        const db = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        // --- FUNKCJE POMOCNICZE (UI) ---
+        function showLoading() { document.getElementById('loading-screen').classList.remove('hidden'); }
+        function hideLoading() { document.getElementById('loading-screen').classList.add('hidden'); }
+        
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            let icon = type === 'error' ? 'error' : (type === 'warning' ? 'warning' : 'check_circle');
+            toast.innerHTML = `<span class="material-symbols-outlined">${icon}</span> <span>${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => { 
+                toast.classList.add('toast-fadeOut'); 
+                toast.addEventListener('animationend', () => toast.remove()); 
+            }, 3500);
+        }
+
+        function showModal(title, content) {
+            document.getElementById('modal-title').textContent = title;
+            document.getElementById('modal-content').innerHTML = content;
+            document.getElementById('modal').style.display = 'block';
+        }
+
+        function closeModal() { document.getElementById('modal').style.display = 'none'; }
+
+        function escapeHTML(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // --- ZARZĄDZANIE SESJĄ ---
+        function resetInactivityTimer() {
+            clearTimeout(inactivityTimer);
+            if (currentUserEmail) { 
+                inactivityTimer = setTimeout(async () => {
+                    showToast('Sesja wygasła z powodu braku aktywności (5 min).', 'warning');
+                    await db.auth.signOut();
+                    window.location.reload();
+                }, INACTIVITY_TIME_MS);
+            }
+        }
+
+        ['click', 'mousemove', 'keypress', 'scroll', 'touchstart'].forEach(event => {
+            document.addEventListener(event, resetInactivityTimer, true);
+        });
+
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            const errorElement = document.getElementById('login-error');
+            const submitBtn = document.getElementById('login-submit-btn');
+            
+            errorElement.style.display = 'none';
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">autorenew</span> Autoryzacja...';
+            
+            const { data, error } = await db.auth.signInWithPassword({ email, password });
+            if (error) {
+                console.error("Błąd logowania:", error.message);
+                errorElement.textContent = 'Błąd autoryzacji. Sprawdź e-mail i hasło.';
+                errorElement.style.display = 'block';
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<span class="material-symbols-outlined">login</span> Zaloguj bezpiecznie';
+            } else {
+                initApp(data.user);
+            }
+        });
+
+        async function checkSession() {
+            const { data: { session } } = await db.auth.getSession();
+            if (session) initApp(session.user);
+        }
+
+        function initApp(user) {
+            currentUserEmail = user.email;
+            currentRole = ROLES[currentUserEmail] || 'viewer'; 
+
+            document.getElementById('logged-email').textContent = currentUserEmail;
+            document.getElementById('footer-user').textContent = currentUserEmail;
+            
+            let roleText = 'Obserwator (Viewer)';
+            if (currentRole === 'admin') roleText = 'Kierownik (Admin)';
+            if (currentRole === 'worker') roleText = 'Pracownik (Worker)';
+            document.getElementById('logged-role').textContent = roleText;
+
+            document.getElementById('auth-screen').classList.add('hidden');
+            document.getElementById('app-container').classList.remove('hidden');
+            document.getElementById('app-container').style.display = 'flex'; 
+            
+            // TODO: Aktywacja darmowych E-maili:
+            // 1. Zarejestruj się na stronie emailjs.com
+            // 2. Odkomentuj poniższą linijkę i wklej swój PUBLIC_KEY (zakładka Account)
+            // emailjs.init("TWÓJ_KLUCZ_PUBLICZNY_Z_EMAILJS");
+
+            resetInactivityTimer(); 
+            applyPermissions();
+
+            window.inventory = new CloudInventoryManager();
+            window.inventory.init();
+        }
+
+        function applyPermissions() {
+            if (currentRole === 'viewer') {
+                const elsToHide = [
+                    'form-shipment-container', 'form-incoming-container', 
+                    'form-components-container', 'form-production-container', 
+                    'form-adjustments-container', 'nav-history', 'nav-reports'
+                ];
+                elsToHide.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.style.display = 'none';
+                });
+                document.querySelectorAll('.editable').forEach(el => el.classList.remove('editable'));
+                document.querySelectorAll('.admin-only-col').forEach(el => el.style.display = 'none');
+            }
+            if (currentRole === 'worker') {
+                const elsToHide = ['nav-history'];
+                elsToHide.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.style.display = 'none';
+                });
+            }
+        }
+
+        async function logoutUser() {
+            clearTimeout(inactivityTimer);
+            showLoading();
+            await db.auth.signOut();
+            window.location.reload(); 
+        }
+
+        checkSession();
+
+        function toggleSidebar() {
+            document.querySelector('.sidebar').classList.toggle('open');
+            document.getElementById('mobile-overlay').classList.toggle('active');
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            
+            document.getElementById(tabId).classList.add('active');
+            
+            const clickedNav = Array.from(document.querySelectorAll('.nav-item')).find(item => item.getAttribute('onclick').includes(tabId));
+            if (clickedNav) clickedNav.classList.add('active');
+            
+            if (window.innerWidth <= 768) {
+                document.querySelector('.sidebar').classList.remove('open');
+                document.getElementById('mobile-overlay').classList.remove('active');
+            }
+
+            if (tabId === 'tab-dashboard') {
+                setTimeout(() => { 
+                    if (!map) initMap();
+                    if (map) map.invalidateSize(); 
+                    if(window.inventory && !isUpdatingMap) updateMapMarkers(window.inventory.shipments, window.inventory.adjustments);
+                }, 150);
+            }
+            if (tabId === 'tab-adjustments') {
+                setTimeout(() => { 
+                    if (!mapAdj) initAdjMap();
+                    if (mapAdj) mapAdj.invalidateSize(); 
+                    if(window.inventory) updateAdjMapMarkers(window.inventory.adjustments);
+                }, 150);
+            }
+        }
+
+        // --- SKANER PDF ---
+        async function scanOfferFromPDF(file) {
+            if (!file) return;
+            if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+                showToast('Proszę wgrać plik w formacie PDF.', 'error');
+                document.getElementById('pdf-input').value = '';
+                return;
+            }
+
+            const btn = document.getElementById('pdf-scan-btn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">autorenew</span> Skanowanie...';
+            btn.disabled = true;
+            
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
+                let fullText = "";
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const content = await page.getTextContent();
+                    fullText += content.items.map(item => item.str).join(' ') + '\n';
+                }
+
+                let p1 = 0, p2 = 0, p3 = 0, p4 = 0, p5 = 0;
+                let target = "";
+                let city = "";
+
+                const matchSklep = fullText.match(/Sklep nr\s*(\d+)/i);
+                if (matchSklep) target = "ROSSMANN Sklep nr " + matchSklep[1];
+
+                const lines = fullText.split('\n');
+                lines.forEach(line => {
+                    if (line.toUpperCase().includes('VIGO')) {
+                        const words = line.trim().split(/\s+/);
+                        let qty = parseInt(words[words.length - 1]);
+                        if (isNaN(qty) && words.length > 1) qty = parseInt(words[words.length - 2]);
+                        if (isNaN(qty)) qty = 0;
+
+                        let upperLine = line.toUpperCase();
+                        let is15W = upperLine.includes("15W") || upperLine.includes("15 W");
+                        let is20WPlus = upperLine.includes("20W") || upperLine.includes("26W") || upperLine.includes("33W");
+
+                        let is22 = upperLine.includes("22") || upperLine.includes("G3");
+                        let is58 = upperLine.includes("58") || upperLine.includes("235") || upperLine.includes("G1") || upperLine.includes("G5");
+                        let is37 = upperLine.includes("37") || upperLine.includes("140") || upperLine.includes("185") || upperLine.includes("G2") || upperLine.includes("G4") || (!is22 && !is58);
+
+                        if (is15W) {
+                            if (is22) p1 += qty;
+                            else if (is58) p3 += qty;
+                            else p2 += qty;
+                        } else if (is20WPlus) {
+                            if (is58) p5 += qty;
+                            else p4 += qty; 
+                        }
+                    }
+                });
+                
+                document.getElementById('form-city').value = city;
+                document.getElementById('form-target').value = target;
+                document.getElementById('form-date').value = new Date().toISOString().split('T')[0];
+                document.getElementById('form-company').value = "Do ustalenia";
+                
+                document.getElementById('form-p1').value = p1;
+                document.getElementById('form-p2').value = p2;
+                document.getElementById('form-p3').value = p3;
+                document.getElementById('form-p4').value = p4;
+                document.getElementById('form-p5').value = p5;
+
+                showToast('PDF przeskanowany!', 'success');
+            } catch (error) {
+                console.error("Szczegóły błędu:", error);
+                showModal('Błąd odczytu PDF', `<p style="color:var(--accent-red); font-weight:500;">Nie udało się przetworzyć pliku.</p>`);
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                document.getElementById('pdf-input').value = ''; 
+            }
+        }
+
+        // --- LEAFLET MAPS ---
+        const boundsPoland = L.latLngBounds(L.latLng(48.9, 14.1), L.latLng(54.9, 24.2));
+        
+        function initMap() { 
+            if (map) return;
+            map = L.map('shipments-map', { zoomControl: false, scrollWheelZoom: false, dragging: false, touchZoom: false, doubleClickZoom: false, boxZoom: false, keyboard: false, maxBounds: boundsPoland, minZoom: 5, maxZoom: 9 }).setView([51.7592, 19.4560], 6);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map); 
+        }
+
+        function initAdjMap() { 
+            if (mapAdj) return;
+            mapAdj = L.map('adjustments-map', { zoomControl: false, scrollWheelZoom: false, dragging: false, touchZoom: false, doubleClickZoom: false, boxZoom: false, keyboard: false, maxBounds: boundsPoland, minZoom: 5, maxZoom: 9 }).setView([51.7592, 19.4560], 6);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(mapAdj); 
+        }
+
+        async function geocodeLocation(locationStr) {
+            let searchStr = locationStr.split('(')[0].trim();
+            if (geocodeCache[searchStr]) return geocodeCache[searchStr];
+            try {
+                let res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchStr)}&countrycodes=pl&limit=1`);
+                let data = await res.json();
+                if (data && data.length > 0) { 
+                    geocodeCache[searchStr] = [data[0].lat, data[0].lon]; 
+                    return geocodeCache[searchStr]; 
+                }
+            } catch (e) { }
+            geocodeCache[searchStr] = null; 
+            return null;
+        }
+
+        async function updateMapMarkers(shipments, adjustments) {
+            if (isUpdatingMap || !window.inventory) return; 
+            isUpdatingMap = true;
+            try {
+                if (!map) initMap();
+                
+                const statusEl = document.getElementById('map-status');
+                if(statusEl) statusEl.innerHTML = '<span class="material-symbols-outlined" style="font-size:1em; animation: spin 1s linear infinite;">autorenew</span> Rysowanie tras...';
+
+                mapMarkers.forEach(m => map.removeLayer(m)); 
+                mapMarkers = [];
+                const homeMarker = L.marker([51.7592, 19.4560], {icon: L.divIcon({html: `<div class="custom-map-marker marker-home" style="width:28px; height:28px;"><span class="material-symbols-outlined" style="font-size:16px;">home</span></div>`, className: '', iconSize: [28,28], iconAnchor: [14,14]})}).addTo(map).bindPopup('<b>Baza Masterlight</b>');
+                const allPoints = [homeMarker];
+                
+                let tasks = [];
+                (shipments || []).filter(s => s.status !== 'completed').forEach(s => { tasks.push({ ...s, type: 'Wysyłka' }); });
+                (adjustments || []).forEach(a => { tasks.push({ ...a, type: 'Regulacja' }); });
+                
+                tasks.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+                let shipCounter = 1;
+                let adjCounter = 1;
+
+                for (let i = 0; i < tasks.length; i++) {
+                    const t = tasks[i];
+                    if(!t.location) continue;
+                    const coords = await geocodeLocation(t.location);
+                    if (coords) {
+                        let mClass = '', title = '', details = '', displayNum = 0;
+                        if (t.type === 'Wysyłka') {
+                            displayNum = shipCounter++;
+                            const total = t.products ? Object.values(t.products).reduce((a, b) => parseInt(a) + parseInt(b), 0) : 0;
+                            mClass = t.is_confirmed ? 'marker-confirmed' : 'marker-planned';
+                            title = 'Wysyłka'; 
+                            details = `Sztuk: <strong>${total}</strong><br>Spedytor: ${escapeHTML(t.company)}`;
+                        } else {
+                            displayNum = adjCounter++;
+                            mClass = 'marker-adjustment'; 
+                            title = 'Regulacja'; 
+                            details = 'Wyjazd Serwisowy';
+                        }
+                        
+                        const popupText = `<b>${escapeHTML(t.location)}</b><br><span style="font-size:0.85rem;color:gray;">[#${displayNum}] ${title}</span><br>Termin: ${escapeHTML(t.date)}<br>${details}`;
+                        const marker = L.marker(coords, { icon: L.divIcon({html: `<div class="custom-map-marker ${mClass}" style="width:24px; height:24px; font-size:11px;">${displayNum}</div>`, className: '', iconSize: [24,24], iconAnchor: [12,12]})}).addTo(map).bindPopup(popupText);
+                        
+                        mapMarkers.push(marker);
+                        allPoints.push(marker);
+                    }
+                    await new Promise(r => setTimeout(r, 150));
+                }
+                
+                if (allPoints.length > 1) {
+                    map.fitBounds(new L.featureGroup(allPoints).getBounds(), { padding: [50, 50], maxZoom: 9 });
+                } else {
+                    map.setView([51.7592, 19.4560], 6);
+                }
+                if(statusEl) statusEl.innerHTML = '<span class="material-symbols-outlined" style="color: var(--success-status);">check_circle</span> Gotowa';
+            } catch(e) {
+                console.error(e);
+            } finally { 
+                isUpdatingMap = false;
+            }
+        }
+
+        async function updateAdjMapMarkers(adjustments) {
+            try {
+                if (!mapAdj) initMapAdj();
+                mapAdjMarkers.forEach(m => mapAdj.removeLayer(m)); mapAdjMarkers = [];
+                const homeMarker = L.marker([51.7592, 19.4560], {icon: L.divIcon({html: `<div class="custom-map-marker marker-home" style="width:28px; height:28px;"><span class="material-symbols-outlined" style="font-size:16px;">home</span></div>`, className: '', iconSize: [28,28], iconAnchor: [14,14]})}).addTo(mapAdj).bindPopup('<b>Baza Masterlight</b>');
+                const allPoints = [homeMarker];
+                
+                let sortedAdjs = [...(adjustments||[])].sort((a,b) => (a.date||'').localeCompare(b.date||''));
+                for (let i = 0; i < sortedAdjs.length; i++) {
+                    const coords = await geocodeLocation(sortedAdjs[i].location);
+                    if (coords) {
+                        const marker = L.marker(coords, { icon: L.divIcon({html: `<div class="custom-map-marker marker-adjustment" style="width:24px; height:24px; font-size:11px;">${i+1}</div>`, className: '', iconSize: [24,24], iconAnchor: [12,12]})}).addTo(mapAdj).bindPopup(`<b>${escapeHTML(sortedAdjs[i].location)}</b><br>Serwis: ${escapeHTML(sortedAdjs[i].date)}`);
+                        mapAdjMarkers.push(marker); allPoints.push(marker);
+                    }
+                    await new Promise(r => setTimeout(r, 100));
+                }
+                if (allPoints.length > 1) mapAdj.fitBounds(new L.featureGroup(allPoints).getBounds(), { padding: [50, 50], maxZoom: 9 });
+            } catch(e) {}
+        }
+
+        // --- KALENDARZ ---
+        function changeMonth(dir) { 
+            currentCalendarDate.setMonth(currentCalendarDate.getMonth() + dir);
+            if(window.inventory) window.inventory.updateDashboard(); 
+        }
+
+        function handleDragStart(event, type, id) {
+            event.dataTransfer.setData('application/json', JSON.stringify({ type, id }));
+            event.dataTransfer.effectAllowed = 'move';
+        }
+        
+        async function handleCalendarDrop(event, targetDate) {
+            event.preventDefault();
+            if (currentRole === 'viewer') {
+                showToast('Brak uprawnień do zmiany daty.', 'warning');
+                return;
+            }
+            try {
+                const dataStr = event.dataTransfer.getData('application/json');
+                if (!dataStr) return;
+                const data = JSON.parse(dataStr);
+                if (!data.type || !data.id) return;
+                
+                showLoading();
+                if (data.type === 'shipment') {
+                    await window.inventory.updateShipmentInDB(data.id, { date: targetDate });
+                    showToast('Termin wysyłki został przesunięty.', 'success');
+                } else if (data.type === 'adjustment') {
+                    await window.inventory.updateAdjustmentDate(data.id, targetDate);
+                    showToast('Termin wyjazdu serwisowego zaktualizowany.', 'success');
+                }
+            } catch (e) {
+                console.error('Błąd drag&drop:', e);
+                showToast('Wystąpił błąd przy przenoszeniu.', 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function renderCalendar(readinessMap) {
+            const container = document.getElementById('dashboard-calendar-container');
+            const monthLabel = document.getElementById('calendar-month-label');
+            if(!container) return;
+        
+            const year = currentCalendarDate.getFullYear();
+            const month = currentCalendarDate.getMonth();
+            const monthNames = ["Styczeń","Luty","Marzec","Kwiecień","Maj","Czerwiec","Lipiec","Sierpień","Wrzesień","Październik","Listopad","Grudzień"];
+            monthLabel.textContent = `${monthNames[month]} ${year}`;
+            container.innerHTML = '';
+        
+            let firstDay = new Date(year, month, 1).getDay(); 
+            firstDay = firstDay === 0 ? 6 : firstDay - 1; 
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            let dayCounter = 1, isMonthFinished = false;
+        
+            while (!isMonthFinished) {
+                const row = document.createElement('div');
+                row.className = 'calendar-grid'; 
+                let weekTotal = 0;
+        
+                for (let j = 0; j < 7; j++) {
+                    const cell = document.createElement('div');
+                    if (dayCounter === 1 && j < firstDay) { 
+                        cell.className = 'calendar-cell empty';
+                    } else if (dayCounter > daysInMonth) { 
+                        cell.className = 'calendar-cell empty';
+                        isMonthFinished = true; 
+                    } else {
+                        cell.className = 'calendar-cell';
+                        const ds = `${year}-${String(month + 1).padStart(2,'0')}-${String(dayCounter).padStart(2,'0')}`;
+                        
+                        cell.ondragover = (e) => e.preventDefault();
+                        cell.ondrop = (e) => handleCalendarDrop(e, ds);
+        
+                        if (ds === new Date().toISOString().split('T')[0]) cell.classList.add('today');
+                        
+                        let html = `<div class="calendar-date">${dayCounter}</div>`;
+                        if(window.inventory && window.inventory.shipments) {
+                            window.inventory.shipments.filter(s => s.status !== 'completed' && s.date === ds).forEach(s => {
+                                const tot = s.products ? Object.values(s.products).reduce((a,b)=>parseInt(a||0)+parseInt(b||0),0) : 0;
+                                weekTotal += tot;
+                                let st = s.status === 'partial' ? '<span style="color:var(--warning-status);">Braki (Część.)</span>' : (readinessMap[s.id] ? '<span style="color:var(--success-status);">Komplet</span>' : '<span style="color:var(--accent-red);">Braki</span>');
+                                html += `<div class="cal-item shipment" draggable="true" ondragstart="handleDragStart(event, 'shipment', '${s.id}')" onclick="editShipment('${s.id}')"><strong>W: ${escapeHTML(s.location).split('(')[0]}</strong><br>${tot} szt<br>${st}</div>`;
+                            });
+                        }
+                        if(window.inventory && window.inventory.adjustments) {
+                            window.inventory.adjustments.filter(a => a.date === ds).forEach(a => {
+                                html += `<div class="cal-item adjustment" draggable="true" ondragstart="handleDragStart(event, 'adjustment', '${a.id}')"><strong>R: ${escapeHTML(a.location).split('(')[0]}</strong><br>Serwis</div>`;
+                            });
+                        }
+                        
+                        cell.innerHTML = html; 
+                        dayCounter++;
+                    }
+                    row.appendChild(cell);
+                }
+        
+                if (!isMonthFinished || row.childNodes[0].className !== 'calendar-cell empty') {
+                    const sum = document.createElement('div'); 
+                    sum.className = 'cal-summary';
+                    sum.innerHTML = `<span style="font-size:0.7rem;color:var(--text-light);">POTRZEBA</span><span style="font-size:1.4rem;">${weekTotal}</span><span style="font-size:0.7rem;">szt</span>`;
+                    row.appendChild(sum); 
+                    container.appendChild(row);
+                }
+            }
+        }
+
+        // --- PDF GENERATOR ---
+        function printInventoryPdf() {
+            if(!window.inventory || window.inventory.products.length === 0) return;
+            const d = new Date().toLocaleDateString('pl-PL');
+            const t = window.inventory.getTotals();
+            let h = `<html><head><title>Raport Inwentaryzacji</title><style>body{font-family:sans-serif;margin:40px;}table{width:100%;border-collapse:collapse;margin:20px 0;}th,td{padding:8px;border-bottom:1px solid #ddd;text-align:left;}</style></head><body><h2>Stan Magazynu Masterlight (${d})</h2><table><tr><th>Kąt Oprawy</th><th>Gotowe 15W</th><th>Gotowe 20W</th><th>Surowe</th><th>Serwis</th><th>Suma Całkowita</th></tr>`;
+            
+            const angles = [
+                { name: 'Kąt 22°', id15: 1, id20: null, idAssm: 1 },
+                { name: 'Kąt 37°', id15: 2, id20: 4, idAssm: 2 },
+                { name: 'Kąt 58°', id15: 3, id20: 5, idAssm: 3 }
+            ];
+            
+            const getP = (id) => window.inventory.products.find(x => String(x.id) === String(id)) || {};
+
+            angles.forEach(a => { 
+                const p15 = getP(a.id15); const p20 = a.id20 ? getP(a.id20) : null; const pAssm = getP(a.idAssm);
+                const r15 = parseInt(p15.ready)||0; const r20 = p20 ? (parseInt(p20.ready)||0) : 0; const assm = parseInt(pAssm.assembly)||0;
+                const s15 = parseInt(p15.service)||0 + parseInt(p15.damaged)||0;
+                const s20 = p20 ? (parseInt(p20.service)||0 + parseInt(p20.damaged)||0) : 0;
+                const totSer = s15 + s20;
+                const total = r15 + r20 + assm + totSer;
+                h += `<tr><td>${a.name}</td><td>${r15}</td><td>${a.id20 ? r20 : '-'}</td><td>${assm}</td><td>${totSer}</td><td><b>${total}</b></td></tr>`; 
+            });
+            h += `<tr><td colspan="5" align="right"><b>ŁĄCZNIE MODUŁÓW (SUROWE+GOTOWE+SERWIS):</b></td><td><b>${t.totalAll}</b></td></tr></table><br><br>Podpis magazyniera: .........................</body></html>`;
+
+            const w = window.open('', '', 'width=800,height=600'); w.document.write(h); w.document.close();
+            setTimeout(() => { w.print(); w.close(); }, 300);
+        }
+
+        function showMissingItems(id) {
+            if (!window.inventory) return;
+            const s = window.inventory.shipments.find(x => String(x.id) === String(id));
+            if (!s || !s.partial_missing) return;
+            let c = `<div style="margin-bottom:1rem; padding:1.5rem; background:#F9FAFB; border-radius:12px; border:1px solid #E5E7EB;">Cel wysyłki: <b>${escapeHTML(s.location)}</b><br>Data wyjazdu: ${s.date}</div><div class="table-responsive" style="margin-bottom:1.5rem;"><table style="width:100%;"><thead><tr><th style="text-align:left;">Model Oprawy</th><th>Ilość Brakująca</th></tr></thead><tbody>`;
+            let tot = 0;
+            Object.entries(s.partial_missing).forEach(([pid, qty]) => {
+                const p = window.inventory.products.find(x => String(x.id) === String(pid));
+                if(p) { c += `<tr><td>${p.name}</td><td style="color:var(--accent-red); font-weight:bold; text-align:center;">${qty} szt.</td></tr>`; tot += qty; }
+            });
+            c += `</tbody></table></div><div style="display:flex; justify-content:space-between; align-items:center;"><b>Łącznie do dosłania: <span style="color:var(--accent-red); font-size:1.2em;">${tot} szt.</span></b><button class="btn-primary" onclick="printMissingPdf('${id}')"><span class="material-symbols-outlined">print</span> Drukuj Raport Braków</button></div>`;
+            showModal('Szczegóły Braków', c);
+        }
+
+        function printMissingPdf(id) {
+            const s = window.inventory.shipments.find(x => String(x.id) === String(id));
+            if (!s || !s.partial_missing) return;
+            let h = `<html><body style="font-family:sans-serif; padding:40px;"><h2>Lista Braków do Dosłania</h2><p><b>Miejsce docelowe:</b> ${escapeHTML(s.location)}<br><b>Data pierwotna:</b> ${s.date}</p><table style="width:100%; border-collapse:collapse; margin-top:20px;"><tr><th style="text-align:left; border-bottom:2px solid #000; padding:8px;">Oprawa</th><th style="border-bottom:2px solid #000; padding:8px; text-align:center;">Brakująca ilość</th></tr>`;
+            let t = 0;
+            Object.entries(s.partial_missing).forEach(([pid, qty]) => {
+                const p = window.inventory.products.find(x => String(x.id) === String(pid));
+                if(p) { h += `<tr><td style="border-bottom:1px solid #ddd; padding:8px;">${p.name}</td><td style="border-bottom:1px solid #ddd; padding:8px; font-weight:bold; color:red; text-align:center;">${qty} szt.</td></tr>`; t+=qty; }
+            });
+            h += `</table><p style="text-align:right; font-size:1.2em; margin-top:20px;"><b>Suma sztuk do dosłania: <span style="color:red;">${t}</span></b></p><br><br>Podpis magazyniera: .........................</body></html>`;
+            const w = window.open('', '', 'width=800,height=600'); w.document.write(h);
+            w.document.close(); setTimeout(() => { w.print(); w.close(); }, 300);
+        }
+
+        // --- GŁÓWNY MENEDŻER CHMURY ---
+        class CloudInventoryManager {
+            constructor() { 
+                this.products = []; this.shipments = []; this.history = []; this.adjustments = []; 
+                this.serviceCases = []; 
+                this.components = { ps_raw: 0, clips_normal: 0, clips_pass: 0 };
+                this.realtimeTimeout = null; this.isFirstLoad = true; 
+            }
+            
+            async init() { 
+                showLoading(); await this.fetchData(); this.setupRealtime(); hideLoading(); 
+                if (this.isFirstLoad && this.products.length > 0) { 
+                    showToast(`Zalogowano pomyślnie.`, 'success'); this.isFirstLoad = false; 
+                } 
+            }
+            
+            async fetchData() {
+                try {
+                    let prodsRes = await db.from('products').select('*').order('id');
+                    let compsRes = await db.from('components').select('*').eq('id', 1).single();
+                    let shipsRes = await db.from('shipments').select('*').order('date');
+                    let adjsRes  = await db.from('adjustments').select('*').order('date');
+                    let histRes  = await db.from('history').select('*').order('created_at', { ascending: false }).limit(40);
+                    let servRes  = await db.from('service_history').select('*').order('created_at', { ascending: false }).limit(50);
+
+                    if (prodsRes.error) throw prodsRes.error;
+                    
+                    this.products = prodsRes.data || [];
+                    this.components = compsRes.data || { ps_raw: 0, clips_normal: 0, clips_pass: 0 };
+                    this.shipments = shipsRes.data || [];
+                    this.adjustments = adjsRes.data || [];
+                    this.history = (histRes.data || []).map(x => ({ timestamp: new Date(x.created_at).toLocaleString('pl-PL'), action: x.action || 'Nieznana operacja', details: x.details || '' }));
+                    this.serviceCases = servRes.error ? [] : (servRes.data || []);
+                    
+                    const t = new Date().toISOString().split('T')[0];
+                    const upds = [];
+                    for (let sh of this.shipments) { 
+                        if (sh.status !== 'completed' && (sh.date || '') < t) { 
+                            if (currentRole === 'admin' || currentRole === 'worker') {
+                                upds.push(db.from('shipments').update({ date: t }).eq('id', sh.id));
+                            }
+                            sh.date = t;
+                        } 
+                    }
+                    if (upds.length > 0) await Promise.all(upds);
+                    this.updateDashboard();
+                    
+                } catch(e) { 
+                    console.error("CRITICAL Błąd Bazy Danych:", e);
+                    hideLoading();
+                }
+            }
+
+            setupRealtime() { 
+                db.channel('public:all').on('postgres_changes', { event: '*', schema: 'public' }, () => { 
+                    clearTimeout(this.realtimeTimeout); 
+                    this.realtimeTimeout = setTimeout(() => this.fetchData(), 500); 
+                }).subscribe();
+            }
+
+            async addHistory(action, details) { 
+                const u = currentUserEmail.split('@')[0];
+                const d = `${details} (przez: ${u})`; 
+                this.history.unshift({ timestamp: new Date().toLocaleString('pl-PL'), action, details: d }); 
+                await db.from('history').insert([{ action, details: d }]);
+            }
+
+            async addServiceCase(actionType, productName, qty, desc) {
+                await db.from('service_history').insert([{ action_type: actionType, product_name: productName, quantity: qty, description: desc }]);
+            }
+
+            getStatus(id) { 
+                const p = this.products.find(x => String(x.id) === String(id));
+                if (!p) return 'unknown'; 
+                const t = (parseInt(p.ready)||0) + (parseInt(p.assembly)||0) + (parseInt(p.service)||0); 
+                return t === 0 ? 'error' : (t >= 50 ? 'ok' : 'warning'); 
+            }
+            
+            async updateProduct(id, updates) {
+                if (currentRole === 'viewer') return;
+                const p = this.products.find(x => String(x.id) === String(id));
+                if (p) { 
+                    Object.assign(p, updates);
+                    this.updateDashboard(); 
+                    await db.from('products').update(updates).eq('id', id); 
+                    
+                    // TWARDE POŁĄCZENIE KĄTÓW (Uniezależnienie od bazy Supabase)
+                    if (updates.assembly !== undefined) {
+                        const angleMapSync = { '1': ['1'], '2': ['2','4'], '3': ['3','5'], '4': ['2','4'], '5': ['3','5'] };
+                        const targets = angleMapSync[id] || [];
+                        for(let t of targets) {
+                            if(t !== String(id)) {
+                                await db.from('products').update({ assembly: updates.assembly }).eq('id', t);
+                                const tp = this.products.find(x => String(x.id) === t);
+                                if(tp) tp.assembly = updates.assembly;
+                            }
+                        }
+                    }
+                    
+                    await this.addHistory('Edycja stanu ręczna', p.name);
+                    await this.fetchData(); 
+                }
+            }
+            
+            async addAdjustment(date, location) { 
+                if (currentRole === 'viewer') return;
+                await db.from('adjustments').insert([{ date, location }]); 
+                await this.addHistory('Planowanie regulacji', `${location} - ${date}`); 
+                await this.fetchData();
+            }
+
+            async updateAdjustmentDate(id, newDate) { 
+                if (currentRole === 'viewer') return;
+                const a = this.adjustments.find(x => String(x.id) === String(id)); 
+                if (a) { 
+                    a.date = newDate;
+                    this.updateDashboard(); 
+                    await db.from('adjustments').update({ date: newDate }).eq('id', id);
+                    await this.addHistory('Zmiana terminu serwisu (Przeciągnięcie)', `${a.location} na ${newDate}`); 
+                    await this.fetchData();
+                } 
+            }
+            
+            async deleteAdjustment(id) { 
+                if (currentRole !== 'admin') return;
+                this.adjustments = this.adjustments.filter(a => String(a.id) !== String(id)); 
+                this.updateDashboard(); 
+                await db.from('adjustments').delete().eq('id', id); 
+                await this.addHistory('Usunięcie regulacji z kalendarza', `Rekord skasowany`); 
+                await this.fetchData();
+            }
+
+            // --- LOGIKA: ZWROTY I SERWIS Z HISTORIĄ ---
+            async processDamagedReturn(productId, qty, salvagedPsQty, desc) {
+                const p = this.products.find(x => String(x.id) === String(productId));
+                if (!p) return;
+                p.damaged = (parseInt(p.damaged) || 0) + qty;
+                const updates = [ db.from('products').update({ damaged: p.damaged }).eq('id', productId) ];
+                
+                let histMsg = `Przyjęto uszkodzone szt: ${qty}.`;
+                if(salvagedPsQty > 0) {
+                    this.components.ps_raw = (parseInt(this.components.ps_raw)||0) + salvagedPsQty;
+                    updates.push(db.from('components').update({ps_raw: this.components.ps_raw}).eq('id', 1));
+                    histMsg += ` Odzyskano zasilaczy: ${salvagedPsQty}.`;
+                }
+                
+                this.updateDashboard(); 
+                await Promise.all(updates);
+                await this.addHistory(`Zwrot z RMA [${p.name}]`, histMsg);
+                await this.addServiceCase('Przyjęcie z RMA', p.name, qty, desc);
+                await this.fetchData();
+            }
+
+            async sendToService(productId, qty, desc) {
+                const p = this.products.find(x => String(x.id) === String(productId));
+                if (!p || (parseInt(p.damaged)||0) < qty) return;
+                p.damaged = parseInt(p.damaged) - qty;
+                p.service = (parseInt(p.service)||0) + qty;
+                
+                this.updateDashboard();
+                await db.from('products').update({ damaged: p.damaged, service: p.service }).eq('id', productId);
+                await this.addHistory(`Wydano na Serwis`, `Model: ${p.name}, Ilość: ${qty}`);
+                await this.addServiceCase('Wysłano do Serwisu', p.name, qty, desc);
+                await this.fetchData();
+            }
+
+            async receiveFromService(productId, qty, newPsUsed, desc) {
+                const p = this.products.find(x => String(x.id) === String(productId));
+                if (!p || (parseInt(p.service)||0) < qty) return;
+                p.service = parseInt(p.service) - qty;
+                p.ready = (parseInt(p.ready)||0) + qty;
+                
+                const updates = [ db.from('products').update({ service: p.service, ready: p.ready }).eq('id', productId) ];
+                let histMsg = `Naprawiono szt: ${qty}.`;
+                
+                if(newPsUsed > 0) {
+                    this.components.ps_raw = (parseInt(this.components.ps_raw)||0) - newPsUsed;
+                    updates.push(db.from('components').update({ps_raw: this.components.ps_raw}).eq('id', 1));
+                    histMsg += ` Zużyto NOWYCH zasilaczy: ${newPsUsed}.`;
+                }
+
+                this.updateDashboard(); 
+                await Promise.all(updates);
+                await this.addHistory(`Zakończono naprawę [${p.name}]`, histMsg);
+                await this.addServiceCase('Odbiór z Serwisu', p.name, qty, desc);
+                await this.fetchData();
+            }
+
+            // --- LOGIKA WYSYŁEK ---
+            async addShipment(s) { 
+                if (currentRole === 'viewer') return;
+                await db.from('shipments').insert([{ 
+                    date: s.date, 
+                    location: s.location, 
+                    company: s.company, 
+                    products: s.products, 
+                    status: 'planned', 
+                    is_confirmed: false,
+                    is_replacement: s.is_replacement 
+                }]); 
+                await this.addHistory(s.is_replacement ? 'Utworzono Wysyłkę SERWISOWĄ (Wymiana)' : 'Nowe zamówienie dopisane', s.location);
+                await this.fetchData(); 
+            }
+
+            async confirmShipment(id) { 
+                if (currentRole === 'viewer') return;
+                const s = this.shipments.find(x => String(x.id) === String(id)); 
+                if (s) { 
+                    s.is_confirmed = true;
+                    this.updateDashboard(); 
+                    await db.from('shipments').update({ is_confirmed: true }).eq('id', id); 
+                    await this.addHistory('Potwierdzenie daty wyjazdu', s.location); 
+                    await this.fetchData();
+                } 
+            }
+
+            async deleteShipment(id) { 
+                if (currentRole !== 'admin') return;
+                this.shipments = this.shipments.filter(s => String(s.id) !== String(id)); 
+                this.updateDashboard(); 
+                await db.from('shipments').delete().eq('id', id); 
+                await this.addHistory('Anulowanie zamówienia w systemie', `Skasowano`); 
+                await this.fetchData();
+            }
+
+            async updateShipmentInDB(id, data) { 
+                if (currentRole === 'viewer') return;
+                const s = this.shipments.find(x => String(x.id) === String(id)); 
+                if (s) { 
+                    Object.assign(s, data);
+                    this.updateDashboard(); 
+                    await db.from('shipments').update(data).eq('id', id); 
+                    await this.addHistory('Edycja szczegółów zamówienia', s.location); 
+                    await this.fetchData();
+                } 
+            }
+            
+            async completeShipment(id) {
+                if (currentRole === 'viewer') return;
+                const s = this.shipments.find(x => String(x.id) === String(id)); 
+                if (!s) return;
+                
+                const mis = {}, upds = [];
+                for (const [pId, qty] of Object.entries(s.products || {})) {
+                    let q = parseInt(qty);
+                    if(q > 0) { 
+                        const p = this.products.find(x => String(x.id) === String(pId));
+                        if(p) { 
+                            let ded = Math.min(q, parseInt(p.ready)||0);
+                            p.ready = (parseInt(p.ready)||0) - ded; 
+                            if(q - ded > 0) mis[pId] = q - ded;
+                            if(ded > 0) upds.push(db.from('products').update({ ready: p.ready }).eq('id', p.id)); 
+                        } 
+                    }
+                }
+
+                s.status = Object.keys(mis).length > 0 ? 'partial' : 'completed'; 
+                s.partial_missing = Object.keys(mis).length > 0 ? mis : null; 
+                s.is_confirmed = true; 
+                this.updateDashboard();
+                if(upds.length > 0) await Promise.all(upds); 
+                await db.from('shipments').update({ status: s.status, partial_missing: s.partial_missing, is_confirmed: true }).eq('id', id);
+                await this.addHistory(Object.keys(mis).length > 0 ? `Wydano oprawy (niepełna przesyłka)` : `Wydano pełny komplet`, s.location); 
+                await this.fetchData();
+            }
+
+            async completeRemainingShipment(id) {
+                if (currentRole === 'viewer') return;
+                const s = this.shipments.find(x => String(x.id) === String(id)); 
+                if (!s || s.status !== 'partial' || !s.partial_missing) return;
+                const mis = s.partial_missing, smis = {}, upds = [];
+                for (const [pId, needStr] of Object.entries(mis)) {
+                    let need = parseInt(needStr);
+                    const p = this.products.find(x => String(x.id) === String(pId)); 
+                    if(p) { 
+                        let ded = Math.min(need, parseInt(p.ready)||0);
+                        p.ready = (parseInt(p.ready)||0) - ded; 
+                        if(need - ded > 0) smis[pId] = need - ded;
+                        if(ded > 0) upds.push(db.from('products').update({ ready: p.ready }).eq('id', p.id)); 
+                    }
+                }
+
+                s.status = Object.keys(smis).length > 0 ? 'partial' : 'completed'; 
+                s.partial_missing = Object.keys(smis).length > 0 ? smis : null; 
+                this.updateDashboard();
+
+                if(upds.length > 0) await Promise.all(upds);
+                await db.from('shipments').update({ status: s.status, partial_missing: s.partial_missing }).eq('id', id); 
+                await this.addHistory(Object.keys(smis).length > 0 ? `Wydano część braków` : `Wydano zaległe braki (komplet)`, s.location);
+                await this.fetchData();
+            }
+
+            // --- TWARDE MAPOWANIE KĄTÓW (Uniezależnienie od bazy) ---
+            async addIncomingShipment(supplier, newProducts) {
+                if (currentRole === 'viewer') return;
+                let totalAdded = 0; const dbUpdates = [];
+                
+                const angleMapSync = { '1': ['1'], '2': ['2','4'], '3': ['3','5'] };
+
+                for (const [masterId, qtyStr] of Object.entries(newProducts)) {
+                    let qty = parseInt(qtyStr);
+                    if (qty > 0) {
+                        const masterProduct = this.products.find(p => String(p.id) === String(masterId));
+                        if (masterProduct) {
+                            const newAssembly = (parseInt(masterProduct.assembly) || 0) + qty;
+                            const idsToUpdate = angleMapSync[masterId] || [masterId];
+                            
+                            idsToUpdate.forEach(targetId => {
+                                dbUpdates.push(db.from('products').update({ assembly: newAssembly }).eq('id', targetId));
+                                const targetProduct = this.products.find(p => String(p.id) === String(targetId));
+                                if(targetProduct) targetProduct.assembly = newAssembly;
+                            });
+                            totalAdded += qty;
+                        }
+                    }
+                }
+                this.updateDashboard();
+                if (dbUpdates.length > 0) await Promise.all(dbUpdates);
+                if (totalAdded > 0) {
+                    const p1 = newProducts[1] || 0, p2 = newProducts[2] || 0, p3 = newProducts[3] || 0;
+                    await this.addHistory('Dostawa opraw (Huta)', `${supplier} | 22°:${p1} | 37°:${p2} | 58°:${p3}`); 
+                    await this.fetchData();
+                }
+            }
+
+            async registerProduction(prod) {
+                if (currentRole === 'viewer') return;
+                const tp = Object.values(prod).reduce((a,b)=>a+parseInt(b||0),0); 
+                if (tp === 0) return;
+                
+                const minC = Math.min(parseInt(this.components.ps_raw)||0, parseInt(this.components.clips_normal)||0, parseInt(this.components.clips_pass)||0);
+                if (tp > minC) { showToast('Brak zasilaczy lub klapek na magazynie!', 'error'); return; }
+                
+                // Grupowanie na podstawie twardej matrycy (zabezpieczenie przed niewypełnioną bazą)
+                const angleMapMaster = { '1': '1', '2': '2', '4': '2', '3': '3', '5': '3' };
+                const req = {};
+                for(const [id, q] of Object.entries(prod)) { 
+                    let qq = parseInt(q);
+                    if(qq > 0) { 
+                        let mId = angleMapMaster[id] || id;
+                        req[mId] = (req[mId] || 0) + qq; 
+                    } 
+                }
+                
+                // Walidacja dostępności
+                for(const [mId, q] of Object.entries(req)) { 
+                    const masterP = this.products.find(x => String(x.id) === String(mId));
+                    let av = masterP ? (parseInt(masterP.assembly)||0) : 0;
+                    if(q > av) { showToast('Brak surowych opraw "W Montażu" dla tego wariantu!', 'error'); return; } 
+                }
+                
+                const upds = [];
+                let tpReal = 0;
+                
+                // Zbieranie wyników (Race Condition Fix)
+                const assemblyUpdates = {};
+                const readyUpdates = {};
+
+                for (const [id, q] of Object.entries(prod)) {
+                    let qq = parseInt(q);
+                    if(qq > 0) { 
+                        const p = this.products.find(x => String(x.id) === String(id));
+                        if(p) { 
+                            p.ready = (parseInt(p.ready) || 0) + qq;
+                            readyUpdates[p.id] = p.ready;
+                            
+                            let mId = angleMapMaster[id] || id;
+                            if (assemblyUpdates[mId] === undefined) {
+                                const masterP = this.products.find(x => String(x.id) === String(mId));
+                                assemblyUpdates[mId] = masterP ? (parseInt(masterP.assembly) || 0) : 0;
+                            }
+                            assemblyUpdates[mId] -= qq;
+                            tpReal += qq;
+                        } 
+                    }
+                }
+
+                // Dopisanie Gotowych
+                for (const [pid, newReady] of Object.entries(readyUpdates)) {
+                    upds.push(db.from('products').update({ ready: newReady }).eq('id', pid));
+                }
+
+                // Odjęcie Surowych 
+                const angleMapSync = { '1': ['1'], '2': ['2','4'], '3': ['3','5'] };
+                for (const [mId, newAssembly] of Object.entries(assemblyUpdates)) {
+                    const targets = angleMapSync[mId] || [mId];
+                    for (let targetId of targets) {
+                        upds.push(db.from('products').update({ assembly: newAssembly }).eq('id', targetId));
+                        const p = this.products.find(x => String(x.id) === targetId);
+                        if (p) p.assembly = newAssembly;
+                    }
+                }
+                
+                if(tpReal > 0) { 
+                    this.components.ps_raw -= tpReal;
+                    this.components.clips_normal -= tpReal; 
+                    this.components.clips_pass -= tpReal; 
+                    
+                    this.updateDashboard(); 
+                    
+                    upds.push(db.from('components').update({
+                        ps_raw: this.components.ps_raw, 
+                        clips_normal: this.components.clips_normal, 
+                        clips_pass: this.components.clips_pass
+                    }).eq('id', 1)); 
+                    
+                    await Promise.all(upds);
+                    await this.addHistory('Raport z produkcji', `Zmontowano i wrzucono na gotowe: ${tpReal} szt.`); 
+                    showToast('Sukces! Oprawy zmontowane.', 'success'); 
+                    await this.fetchData();
+                }
+            }
+
+            getTotals() {
+                const s = new Set();
+                let tA = 0; 
+                const angleMapMaster = { '1': '1', '2': '2', '4': '2', '3': '3', '5': '3' };
+                
+                this.products.forEach(p => { 
+                    let mId = angleMapMaster[p.id] || p.id;
+                    if (!s.has(mId)) {
+                        tA += parseInt(p.assembly)||0;
+                        s.add(mId);
+                    }
+                });
+                
+                return { 
+                    totalReady: this.products.reduce((sum, p) => sum + (parseInt(p.ready)||0), 0), 
+                    totalAssembly: tA, 
+                    totalService: this.products.reduce((sum, p) => sum + (parseInt(p.service)||0) + (parseInt(p.damaged)||0), 0), 
+                    totalAll: this.products.reduce((sum, p) => sum + (parseInt(p.ready)||0), 0) + tA + this.products.reduce((sum, p) => sum + (parseInt(p.service)||0) + (parseInt(p.damaged)||0), 0) 
+                };
+            }
+
+            async addComponentsShipment(sup, nc) { 
+                if (currentRole === 'viewer') return;
+                const u = { 
+                    ps_raw: (parseInt(this.components.ps_raw)||0) + (parseInt(nc.ps_raw)||0), 
+                    clips_normal: (parseInt(this.components.clips_normal)||0) + (parseInt(nc.clips_normal)||0), 
+                    clips_pass: (parseInt(this.components.clips_pass)||0) + (parseInt(nc.clips_pass)||0) 
+                };
+                this.components = u; 
+                this.updateDashboard(); 
+                await db.from('components').update(u).eq('id', 1); 
+                await this.addHistory('Dostawa drobnych komponentów', sup); 
+                await this.fetchData();
+            }
+
+            async updateComponent(f, v) { 
+                if (currentRole === 'viewer') return;
+                this.components[f] = v; 
+                this.updateDashboard(); 
+                await db.from('components').update({ [f]: v }).eq('id', 1); 
+                await this.addHistory('Korekta ręczna komponentów', `Zaktualizowano stan bazy.`); 
+                await this.fetchData();
+            }
+
+            // GŁÓWNY RENDERER INTERFEJSU
+            updateDashboard() {
+                try {
+                    if(!this.products || this.products.length === 0) return;
+                    const t = this.getTotals();
+                    document.querySelector('[data-stat="total"]').textContent = t.totalAll; 
+                    document.querySelector('[data-stat="ready"]').textContent = t.totalReady;
+                    document.querySelector('[data-stat="shipments"]').textContent = this.shipments.filter(s => s.status!=='completed'&&s.is_confirmed).length;
+                    document.querySelector('[data-stat="service"]').textContent = t.totalService;
+                    
+                    const alertsContainer = document.getElementById('dashboard-alerts');
+                    alertsContainer.innerHTML = '';
+                    const c = this.components; let lc = [];
+                    if(c) { 
+                        if((parseInt(c.ps_raw)||0)<50) lc.push('Zasilacze');
+                        if((parseInt(c.clips_normal)||0)<50) lc.push('Klapki Zwykłe'); 
+                        if((parseInt(c.clips_pass)||0)<50) lc.push('Klapki Przelotowe'); 
+                    }
+                    if(lc.length>0) {
+                        alertsContainer.innerHTML = `<div class="alert-banner critical"><span class="material-symbols-outlined">warning_amber</span><div><strong>Krytyczny stan!</strong> Pilnie domów: ${lc.join(', ')}.</div></div>`;
+                        
+                        // --- AKTYWACJA DARMOWEGO ALERTU EMAIL ---
+                        // Jeśli odkomentujesz to poniżej, i założysz konto na EmailJS, 
+                        // system sam wyśle maila z powiadomieniem, gdy wejdziesz w panel, a zasilaczy będzie za mało.
+                        
+                        // if (!window.alertSentToManager) {
+                        //     emailjs.send("TWÓJ_SERVICE_ID", "TWÓJ_TEMPLATE_ID", {
+                        //         to_email: "b.hajduk@masterlight.pl", // Gdzie wysłać
+                        //         subject: "SYSTEM WMS: Niski stan komponentów",
+                        //         message: "Zaloguj się do systemu WMS. Na magazynie kończą się: " + lc.join(', ')
+                        //     }).then(function() {
+                        //         window.alertSentToManager = true; 
+                        //         showToast('Alert Email został wysłany automatycznie!', 'warning');
+                        //     });
+                        // }
+                    } else {
+                        // window.alertSentToManager = false; // Reset po wgraniu dostawy
+                    }
+
+                    const rMap = getShipmentsReadinessMap();
+                    const pt = document.getElementById('products-dashboard'); 
+                    if(pt) { 
+                        pt.innerHTML = '';
+                        this.products.forEach(p => { 
+                            pt.innerHTML += `<tr><td>${escapeHTML(p.name)}</td><td><strong>${p.ready||0} szt</strong></td><td><span class="status-badge ${getStatusClass(p.id)}">${getStatusText(p.id)}</span></td></tr>`; 
+                        });
+                    }
+
+                    renderCalendar(rMap);
+                    if(document.getElementById('tab-dashboard').classList.contains('active')) {
+                        updateMapMarkers(this.shipments, this.adjustments);
+                    }
+
+                    const itb = document.getElementById('dashboard-recent-incoming');
+                    if (itb && this.history) {
+                        itb.innerHTML = '';
+                        const rI = this.history.filter(h => h && h.action && (h.action.includes('Dostawa opraw') || h.action.includes('Dostawa obudów'))).slice(0, 2);
+                        if(rI.length === 0) {
+                            itb.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 2rem !important; border:none; color: gray;">Brak historii dostaw.</td></tr>';
+                        } else {
+                            rI.forEach(e => { 
+                                if(!e||!e.details) return; 
+                                let s="-", p1="?", p2="?", p3="?", tv=0, cd=(e.details||"").replace(/\(przez:.*?\)/,'').trim();
+                                
+                                if(cd.includes('|')) { 
+                                    let ps=cd.split('|').map(x=>x.trim()); 
+                                    s=ps[0]; 
+                                    const pq=(str)=>{ let m=(str||"").match(/:(\d+)/); return m ? parseInt(m[1]) : 0; }; 
+                                    p1=pq(ps[1]); p2=pq(ps[2]); p3=pq(ps[3]); 
+                                    tv = p1+p2+p3; 
+                                } else { 
+                                    let m=cd.match(/(.*?)\s*\(\+(\d+)\s*szt\.\)/); 
+                                    if(m) { s=m[1].trim(); tv=parseInt(m[2]); } else { s=cd; } 
+                                }
+                                
+                                itb.innerHTML += `<tr><td><strong>${(e.timestamp||'').split(',')[0]}</strong></td><td>${escapeHTML(s)}</td><td>${p1!=='?'?`<b>${p1}</b>`:p1}</td><td>${p2!=='?'?`<b>${p2}</b>`:p2}</td><td>${p3!=='?'?`<b>${p3}</b>`:p3}</td><td><strong style="color:var(--success-status);">${tv}</strong> szt</td></tr>`;
+                            });
+                        }
+                    }
+
+                    updateInventoryTable();
+                    updateShipmentsTables(rMap); 
+                    updateAdjustmentsTable(); 
+                    if(currentRole !== 'worker') updateHistoryTable(); 
+                    updateServiceCasesTable();
+                    updateComponentsDisplay();
+
+                } catch (err) { 
+                    console.error("Błąd rysowania interfejsu:", err);
+                }
+            }
+        }
+
+        function getShipmentsReadinessMap() {
+            const m = {};
+            if (!window.inventory || !window.inventory.products) return m;
+            
+            let vR = {}, vA = {};
+            const angleMapMaster = { '1': '1', '2': '2', '4': '2', '3': '3', '5': '3' };
+
+            window.inventory.products.forEach(p => { 
+                vR[String(p.id)] = parseInt(p.ready)||0; 
+                let mId = angleMapMaster[p.id] || p.id;
+                if(vA[mId] === undefined) {
+                    const mP = window.inventory.products.find(x=>String(x.id)===String(mId));
+                    vA[mId] = mP ? (parseInt(mP.assembly)||0) : 0;
+                }
+            });
+            
+            let pend = (window.inventory.shipments || []).filter(s => s.status !== 'completed').sort((a,b)=>{
+                const ac=a.is_confirmed===true||a.is_confirmed==='true', bc=b.is_confirmed===true||b.is_confirmed==='true';
+                if(ac&&!bc) return -1;
+                if(!ac&&bc) return 1;
+                return(a.date||'').localeCompare(b.date||'');
+            });
+            pend.forEach(s => {
+                let ok = true; 
+                let rq = s.status === 'partial' ? s.partial_missing : s.products;
+                if(rq) {
+                    for(const [pid, q] of Object.entries(rq)) {
+                        let n = parseInt(q)||0; 
+                        if(n>0) { 
+                            const p = window.inventory.products.find(x=>String(x.id)===String(pid)); 
+                            if(!p) { ok=false; continue; }
+                            
+                            if(vR[pid]>=n) { 
+                                vR[pid]-=n; n=0; 
+                            } else { 
+                                n-=vR[pid]; vR[pid]=0; 
+                            }
+                            
+                            if(n>0) { 
+                                let mId = angleMapMaster[pid] || pid;
+                                if(vA[mId]>=n) { vA[mId]-=n; } else { vA[mId]-=n; ok=false; } 
+                            } 
+                        }
+                    }
+                } 
+                m[s.id] = ok;
+            }); 
+            return m;
+        }
+
+        function getStatusClass(productId) {
+            const status = window.inventory.getStatus(productId);
+            return status === 'ok' ? 'status-ok' : status === 'warning' ? 'status-warning' : 'status-error';
+        }
+
+        function getStatusText(productId) {
+            const status = window.inventory.getStatus(productId);
+            return status === 'ok' ? '<span class="material-symbols-outlined">check_circle</span> OK' : status === 'warning' ? '<span class="material-symbols-outlined">warning</span> Mało' : '<span class="material-symbols-outlined">error</span> Brak';
+        }
+
+        function updateInventoryTable() {
+            const tbodyMain = document.getElementById('products-table');
+            const tbodyService = document.getElementById('service-table');
+            if(!tbodyMain || !tbodyService) return;
+            
+            tbodyMain.innerHTML = ''; tbodyService.innerHTML = ''; 
+            const isViewer = currentRole === 'viewer';
+            const getP = (id) => window.inventory.products.find(x => String(x.id) === String(id)) || {};
+            
+            const angles = [
+                { name: 'Kąt 22°', id15: 1, id20: null, idAssm: 1 },
+                { name: 'Kąt 37°', id15: 2, id20: 4, idAssm: 2 },
+                { name: 'Kąt 58°', id15: 3, id20: 5, idAssm: 3 }
+            ];
+
+            angles.forEach(a => {
+                const p15 = getP(a.id15);
+                const p20 = a.id20 ? getP(a.id20) : null;
+                const pAssm = getP(a.idAssm);
+
+                const r15 = parseInt(p15.ready) || 0;
+                const r20 = p20 ? (parseInt(p20.ready) || 0) : 0;
+                const assm = parseInt(pAssm.assembly) || 0;
+                const s15 = (parseInt(p15.service)||0) + (parseInt(p15.damaged)||0);
+                const s20 = p20 ? ((parseInt(p20.service)||0) + (parseInt(p20.damaged)||0)) : 0;
+                const totSer = s15 + s20;
+                const total = r15 + r20 + assm + totSer;
+
+                const c15 = isViewer ? `<strong>${r15}</strong>` : `<td data-label="Gotowe 15W" onclick="editCell(this, 'ready', '${a.id15}')" class="editable"><strong>${r15}</strong></td>`;
+                const c20 = a.id20 ? (isViewer ? `<strong>${r20}</strong>` : `<td data-label="Gotowe 20W" onclick="editCell(this, 'ready', '${a.id20}')" class="editable"><strong>${r20}</strong></td>`) : `<td data-label="Gotowe 20W">-</td>`;
+                const cAssm = isViewer ? assm : `<td data-label="Surowe (W Montażu)" onclick="editCell(this, 'assembly', '${a.idAssm}')" class="editable">${assm}</td>`;
+
+                const rowHTML = `
+                    <td data-label="Kąt Oprawy"><strong>${a.name}</strong></td>
+                    ${isViewer ? `<td data-label="Gotowe 15W">${c15}</td>` : c15}
+                    ${isViewer ? (a.id20 ? `<td data-label="Gotowe 20W">${c20}</td>` : c20) : c20}
+                    ${isViewer ? `<td data-label="Surowe (W Montażu)">${cAssm}</td>` : cAssm}
+                    <td data-label="Serwis (Suma)">${totSer}</td>
+                    <td data-label="Łącznie Suma"><strong>${total}</strong></td>
+                    <td data-label="Dostępność"><span class="status-badge ${getStatusClass(a.id15)}">${getStatusText(a.id15)}</span></td>
+                `;
+                const tr = document.createElement('tr'); tr.innerHTML = rowHTML; tbodyMain.appendChild(tr);
+            });
+
+            window.inventory.products.forEach(p => {
+                const damaged = parseInt(p.damaged) || 0;
+                const inService = parseInt(p.service) || 0;
+                
+                let actionButtons = '';
+                if (!isViewer) {
+                    actionButtons = `
+                        <div class="action-cell-flex">
+                            <button class="btn-small btn-secondary" onclick="openSendToServiceUI('${p.id}', '${p.name}', ${damaged})">Na naprawę</button>
+                            <button class="btn-small btn-secondary" onclick="openReceiveFromServiceUI('${p.id}', '${p.name}', ${inService})">Odbierz</button>
+                        </div>
+                    `;
+                }
+
+                const serviceRowHTML = `
+                    <td data-label="Model Oprawy"><strong>${escapeHTML(p.name)}</strong></td>
+                    <td data-label="Uszkodzone (Oczekują)" style="color:var(--accent-red); font-weight:700;">${damaged}</td>
+                    <td data-label="W Serwisie (Wysyłka)" style="color:var(--info-status); font-weight:700;">${inService}</td>
+                    <td data-label="Akcja" class="${isViewer ? 'admin-only-col' : ''}">${actionButtons}</td>
+                `;
+                const trS = document.createElement('tr'); trS.innerHTML = serviceRowHTML; tbodyService.appendChild(trS);
+            });
+        }
+
+        function updateServiceCasesTable() {
+            const tbody = document.getElementById('service-cases-table');
+            if(!tbody) return;
+            tbody.innerHTML = '';
+            
+            if (!window.inventory.serviceCases || window.inventory.serviceCases.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 2rem !important; color: gray;">Brak historii serwisowej.</td></tr>';
+                return;
+            }
+
+            window.inventory.serviceCases.forEach(c => {
+                let badgeClass = 'status-neutral';
+                if(c.action_type === 'Przyjęcie z RMA') badgeClass = 'status-warning';
+                if(c.action_type === 'Odbiór z Serwisu') badgeClass = 'status-ok';
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td data-label="Data"><strong>${new Date(c.created_at).toLocaleDateString('pl-PL')}</strong></td>
+                    <td data-label="Typ Akcji"><span class="status-badge ${badgeClass}">${escapeHTML(c.action_type)}</span></td>
+                    <td data-label="Model Oprawy">${escapeHTML(c.product_name)}</td>
+                    <td data-label="Ilość"><strong>${c.quantity} szt.</strong></td>
+                    <td data-label="Notatka">${escapeHTML(c.description || '-')}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderShipmentRow(s, readinessMap, showActions = true) {
+            let total = s.products ? Object.values(s.products).reduce((a, b) => parseInt(a) + parseInt(b), 0) : 0;
+            
+            let statusBadge = '';
+            if (s.status === 'completed') statusBadge = '<span class="status-badge status-ok"><span class="material-symbols-outlined">check_circle</span> Zrealizowana</span>';
+            else if (s.status === 'partial') statusBadge = '<span class="status-badge status-warning"><span class="material-symbols-outlined">warning</span> Niepełna</span>';
+            else if (s.is_confirmed) statusBadge = '<span class="status-badge status-neutral"><span class="material-symbols-outlined">event_available</span> Potwierdzona</span>';
+            else statusBadge = '<span class="status-badge status-warning"><span class="material-symbols-outlined">pending_actions</span> Oczekująca</span>';
+            
+            let readinessBadge = '';
+            if (s.status === 'completed') readinessBadge = '<span style="color: var(--text-light); font-size: 0.85em;">-</span>';
+            else if (readinessMap && readinessMap[s.id]) readinessBadge = '<span class="status-badge status-ok" style="background:#ECFDF5; color:#059669; border: 1px solid #10B981;"><span class="material-symbols-outlined">inventory_2</span> Komplet</span>';
+            else readinessBadge = '<span class="status-badge status-error" style="background:#FEF2F2; color:#DC2626; border: 1px solid #EF4444;"><span class="material-symbols-outlined">production_quantity_limits</span> Braki</span>';
+
+            let typeBadge = s.is_replacement 
+                ? `<span class="status-badge" style="background:#FEE2E2; color:#B91C1C; border:1px solid #FECACA;"><span class="material-symbols-outlined">sync_problem</span> Wymiana</span>` 
+                : `<span class="status-badge status-neutral">Standard</span>`;
+
+            let actionButtons = '<div class="action-cell-flex">';
+            if (currentRole !== 'viewer' && showActions) {
+                actionButtons += `<button class="btn-small btn-secondary" onclick="editShipment('${s.id}')" title="Edytuj dane"><span class="material-symbols-outlined" style="margin:0;">edit</span></button>`;
+                if (currentRole === 'admin') actionButtons += `<button class="btn-small btn-secondary" onclick="deleteShipment('${s.id}')" title="Usuń trwale"><span class="material-symbols-outlined" style="color:var(--accent-red); margin:0;">delete</span></button>`;
+                if (s.status === 'planned' && !s.is_confirmed) {
+                    actionButtons = `<button class="btn-small btn-primary" onclick="confirmShipmentDateUI('${s.id}')"><span class="material-symbols-outlined">event_available</span> Zatwierdź</button>` + actionButtons;
+                } else if (s.status === 'planned' && s.is_confirmed) {
+                    actionButtons = `<button class="btn-small btn-primary" onclick="completeShipmentUI('${s.id}')">Wydaj Kurierowi</button>` + actionButtons;
+                } else if (s.status === 'partial') {
+                    actionButtons = `<button class="btn-small btn-primary" onclick="completeRemainingShipmentUI('${s.id}')">Wydaj braki</button>` + actionButtons;
+                }
+            }
+            if (s.status === 'partial' && showActions) {
+                actionButtons += `<button class="btn-small btn-secondary" onclick="showMissingItems('${s.id}')" title="Pokaż listę braków"><span class="material-symbols-outlined">list_alt</span> Braki</button>`;
+            }
+            actionButtons += '</div>';
+
+            let dateLabel = s.status === 'completed' ? 'Data Wysłania' : (s.is_confirmed ? 'Data Potw.' : 'Data Wstępna');
+
+            return `
+                <tr class="${s.status === 'completed' ? 'row-completed' : ''}">
+                    <td data-label="${dateLabel}"><strong>${escapeHTML(s.date || '-')}</strong></td>
+                    <td data-label="Cel">${escapeHTML(s.location)}</td>
+                    <td data-label="Typ">${typeBadge}</td>
+                    <td data-label="Sztuk"><strong>${total}</strong></td>
+                    <td data-label="Kąty"><button class="btn-small btn-secondary" onclick="showAnglesDemand('${s.id}')" style="margin:0;">Zestawienie</button></td>
+                    ${s.status !== 'completed' ? `<td data-label="Wirtualny Magazyn">${readinessBadge}</td>` : ''}
+                    <td data-label="Status">${statusBadge}</td>
+                    ${showActions ? `<td data-label="Akcja" class="${currentRole === 'viewer' ? 'admin-only-col' : ''}">${actionButtons}</td>` : ''}
+                </tr>
+            `;
+        }
+
+        function updateShipmentsTables(readinessMap) {
+            const tbodyUnconf = document.getElementById('shipments-unconfirmed-table');
+            const tbodyConf = document.getElementById('shipments-confirmed-table');
+            const tbodyComp = document.getElementById('shipments-completed-table');
+            if(!tbodyUnconf || !tbodyConf || !tbodyComp) return;
+            
+            tbodyUnconf.innerHTML = ''; tbodyConf.innerHTML = ''; tbodyComp.innerHTML = '';
+
+            let confCount = 0;
+            const sortedShipments = [...window.inventory.shipments].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+            
+            sortedShipments.forEach(s => {
+                if (s.status === 'completed') {
+                    tbodyComp.innerHTML += renderShipmentRow(s, readinessMap, false);
+                } else if (s.is_confirmed) {
+                    tbodyConf.innerHTML += renderShipmentRow(s, readinessMap, true);
+                    confCount++;
+                } else {
+                    tbodyUnconf.innerHTML += renderShipmentRow(s, readinessMap, true);
+                }
+            });
+            document.getElementById('shipments-count').textContent = confCount + ' rekordów';
+        }
+
+        function updateAdjustmentsTable() {
+            const tbody = document.getElementById('adjustments-table');
+            if(!tbody) return;
+            tbody.innerHTML = '';
+            window.inventory.adjustments.forEach(a => {
+                const tr = document.createElement('tr');
+                let action = currentRole === 'admin' ? `<td data-label="Akcja"><button class="btn-small btn-secondary" onclick="deleteAdjustment('${a.id}')" style="margin:0;"><span class="material-symbols-outlined" style="color:var(--accent-red); margin:0;">delete</span></button></td>` : `<td class="admin-only-col"></td>`;
+                tr.innerHTML = `<td data-label="Data Wyjazdu"><strong>${escapeHTML(a.date || '-')}</strong></td><td data-label="Miejscowość / Obiekt">${escapeHTML(a.location)}</td>${action}`;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function updateHistoryTable() {
+            const tbody = document.getElementById('history-table');
+            if(!tbody) return;
+            tbody.innerHTML = '';
+            window.inventory.history.forEach(h => {
+                const tr = document.createElement('tr');
+                const detailsStr = h.details || '';
+                const match = detailsStr.match(/\(przez: (.*?)\)/);
+                const worker = match ? match[1] : 'System';
+                const cleanDetails = detailsStr.replace(/\(przez:.*?\)/, '').trim();
+
+                tr.innerHTML = `<td data-label="Data i Czas" style="color:var(--text-light); font-size:0.85em;">${escapeHTML(h.timestamp)}</td><td data-label="Pracownik"><strong>${escapeHTML(worker)}</strong></td><td data-label="Typ Operacji">${escapeHTML(h.action)}</td><td data-label="Szczegóły">${escapeHTML(cleanDetails)}</td>`;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function updateComponentsDisplay() {
+            if(!window.inventory.components) return;
+            const comps = window.inventory.components;
+            
+            const elRaw = document.getElementById('ps-raw-cell');
+            const elNorm = document.getElementById('clips-normal-cell');
+            const elPass = document.getElementById('clips-pass-cell');
+            
+            if(elRaw) elRaw.innerHTML = `<strong>${comps.ps_raw || 0} szt.</strong>`;
+            if(elNorm) elNorm.innerHTML = `<strong>${comps.clips_normal || 0} szt.</strong>`;
+            if(elPass) elPass.innerHTML = `<strong>${comps.clips_pass || 0} szt.</strong>`;
+            
+            if (currentRole !== 'viewer') {
+                document.querySelectorAll('#tab-components .table-responsive td:last-child').forEach(td => td.classList.add('editable'));
+            }
+        }
+
+        function editCell(cell, field, productId) {
+            if (currentRole === 'viewer') return;
+            if (cell.querySelector('input')) return;
+            
+            const product = window.inventory.products.find(p => String(p.id) === String(productId));
+            const input = document.createElement('input');
+            input.type = 'number';
+            input.value = product[field] || 0; 
+            input.style.width = '100%'; input.style.textAlign = 'inherit';
+            
+            const originalHTML = cell.innerHTML;
+            cell.innerHTML = ''; cell.appendChild(input);
+            cell.classList.remove('editable');
+            input.focus(); input.select();
+
+            const save = async () => {
+                const newValue = parseInt(input.value);
+                if (!isNaN(newValue) && newValue !== (product[field]||0)) {
+                    cell.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite; color: var(--primary-terracotta);">autorenew</span>';
+                    await window.inventory.updateProduct(productId, { [field]: newValue });
+                } else {
+                    cell.innerHTML = originalHTML;
+                }
+                cell.classList.add('editable');
+            };
+
+            input.addEventListener('blur', save);
+            input.addEventListener('keypress', (e) => { if (e.key === 'Enter') input.blur(); });
+        }
+
+        function editComponentCell(cell, field) {
+            if (currentRole === 'viewer') return;
+            if (cell.querySelector('input')) return;
+            
+            const currentVal = window.inventory.components[field] || 0;
+            const input = document.createElement('input');
+            input.type = 'number'; input.value = currentVal;
+            input.style.width = '100%'; input.style.textAlign = 'inherit';
+            
+            const originalHTML = cell.innerHTML;
+            cell.innerHTML = ''; cell.appendChild(input);
+            cell.classList.remove('editable');
+            input.focus(); input.select();
+            
+            const save = async () => {
+                const newValue = parseInt(input.value);
+                if (!isNaN(newValue) && newValue !== currentVal) {
+                    cell.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite; color: var(--primary-terracotta);">autorenew</span>';
+                    await window.inventory.updateComponent(field, newValue);
+                } else {
+                    cell.innerHTML = originalHTML;
+                }
+                cell.classList.add('editable');
+            };
+
+            input.addEventListener('blur', save);
+            input.addEventListener('keypress', (e) => { if (e.key === 'Enter') input.blur(); });
+        }
+
+        // --- FUNKCJE UI: SERWIS/RMA Z HISTORIĄ ---
+        function openReceiveDamagedUI() {
+            let opts = window.inventory.products.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+            let html = `
+                <div class="form-group"><label>Model oprawy (zwrot ze sklepu)</label><select id="rma_prod_id" style="width:100%; padding:0.75rem; border-radius:10px; font-family:'Inter',sans-serif; border:1px solid #D1D5DB;">${opts}</select></div>
+                <div class="form-group"><label>Liczba zwróconych (uszkodzonych) sztuk</label><input type="number" id="rma_qty" min="1" value="1"></div>
+                <div class="form-group" style="background:#ECFDF5; padding:1rem; border-radius:8px; border:1px solid #A7F3D0;"><label style="color:#065F46; font-size:0.8rem;">Ile z nich miało w pełni sprawne zasilacze (odzyskiwane do puli komponentów)?</label><input type="number" id="rma_salvaged" min="0" value="0"></div>
+                <div class="form-group"><label>Opis usterki / Notatka (Opcjonalnie)</label><input type="text" id="rma_desc" placeholder="np. uszkodzony klosz, miga..."></div>
+                <button class="btn-primary" onclick="submitDamagedReturn()" style="width:100%; margin-top:10px;"><span class="material-symbols-outlined">assignment_return</span> Przyjmij zwrot</button>
+            `;
+            showModal('Przyjęcie zwrotu RMA', html);
+        }
+
+        async function submitDamagedReturn() {
+            let id = document.getElementById('rma_prod_id').value;
+            let qty = parseInt(document.getElementById('rma_qty').value)||0;
+            let sal = parseInt(document.getElementById('rma_salvaged').value)||0;
+            let desc = document.getElementById('rma_desc').value.trim();
+            if(qty>0) { closeModal(); showLoading(); await window.inventory.processDamagedReturn(id, qty, sal, desc); hideLoading(); }
+        }
+
+        function openSendToServiceUI(id, name, available) {
+            let html = `
+                <p style="margin-bottom:1rem; font-size:0.95rem;">Wysyłasz oprawy <strong>${name}</strong> na naprawę. Dostępne na magazynie (uszkodzone): <strong>${available}</strong> szt.</p>
+                <div class="form-group"><label>Ilość do wydania na serwis:</label><input type="number" id="rma_send_qty" min="1" max="${available}" value="1"></div>
+                <div class="form-group"><label>Opis przekazany serwisowi / Notatka</label><input type="text" id="rma_send_desc" placeholder="np. wysłano kurierem DPD..."></div>
+                <button class="btn-primary" onclick="submitSendService('${id}')" style="width:100%;"><span class="material-symbols-outlined">handyman</span> Wydaj do Serwisu</button>
+            `;
+            showModal('Wydanie na naprawę', html);
+        }
+
+        async function submitSendService(id) {
+            let qty = parseInt(document.getElementById('rma_send_qty').value)||0;
+            let desc = document.getElementById('rma_send_desc').value.trim();
+            if(qty>0) { closeModal(); showLoading(); await window.inventory.sendToService(id, qty, desc); hideLoading(); }
+        }
+
+        function openReceiveFromServiceUI(id, name, inService) {
+            let html = `
+                <p style="margin-bottom:1rem; font-size:0.95rem;">Odbierasz oprawy <strong>${name}</strong> po naprawie. Obecnie w serwisie: <strong>${inService}</strong> szt.</p>
+                <div class="form-group"><label>Ilość odebranych (naprawionych) sztuk:</label><input type="number" id="rma_rec_qty" min="1" max="${inService}" value="1"></div>
+                <div class="form-group" style="background:#FEF2F2; padding:1rem; border-radius:8px; border:1px solid #FECACA;"><label style="color:#991B1B; font-size:0.8rem;">Ile NOWYCH zasilaczy (z puli komponentów) zużyto do naprawy?</label><input type="number" id="rma_used_ps" min="0" value="0"></div>
+                <div class="form-group"><label>Komentarz / Notatka (Opcjonalnie)</label><input type="text" id="rma_rec_desc" placeholder="np. wymieniono 2 zasilacze i diody..."></div>
+                <button class="btn-primary" onclick="submitReceiveService('${id}')" style="width:100%; margin-top:10px;"><span class="material-symbols-outlined">task_alt</span> Zakończ Naprawę</button>
+            `;
+            showModal('Odbiór z naprawy', html);
+        }
+
+        async function submitReceiveService(id) {
+            let qty = parseInt(document.getElementById('rma_rec_qty').value)||0;
+            let used = parseInt(document.getElementById('rma_used_ps').value)||0;
+            let desc = document.getElementById('rma_rec_desc').value.trim();
+            if(qty>0) { closeModal(); showLoading(); await window.inventory.receiveFromService(id, qty, used, desc); hideLoading(); }
+        }
+
+        async function confirmShipmentDateUI(id) {
+            if (confirm('Zatwierdzić termin wysyłki i przenieść do kolejki realizacji?')) {
+                showLoading();
+                await window.inventory.confirmShipment(id);
+                hideLoading();
+                showToast('Termin zatwierdzony.', 'success');
+            }
+        }
+
+        async function completeShipmentUI(id) {
+            const s = window.inventory.shipments.find(x => String(x.id) === String(id));
+            if (!s) return;
+            const total = s.products ? Object.values(s.products).reduce((a, b) => parseInt(a) + parseInt(b), 0) : 0;
+            if (confirm(`Wydano towar z magazynu (${total} szt.)? \nStany zostaną zaktualizowane.`)) {
+                showLoading();
+                await window.inventory.completeShipment(id);
+                hideLoading();
+                showToast('Towar wydany.', 'success');
+            }
+        }
+
+        async function completeRemainingShipmentUI(id) {
+            if (confirm('Wydano brakującą część towaru? \nZamówienie zostanie zamknięte jako kompletne.')) {
+                showLoading();
+                await window.inventory.completeRemainingShipment(id);
+                hideLoading();
+                showToast('Zamówienie sfinalizowane.', 'success');
+            }
+        }
+
+        async function deleteShipment(id) { 
+            if (currentRole === 'admin' && confirm('Czy na pewno trwale usunąć to zamówienie z bazy danych?')) { 
+                showLoading();
+                await window.inventory.deleteShipment(id); 
+                hideLoading();
+                showToast('Zamówienie usunięte z bazy.', 'warning');
+            } 
+        }
+
+        async function deleteAdjustment(id) {
+            if (currentRole === 'admin' && confirm('Usunąć ten wpis z regulacji?')) {
+                showLoading();
+                await window.inventory.deleteAdjustment(id);
+                hideLoading();
+                showToast('Termin usunięty.', 'success');
+            }
+        }
+
+        function showAnglesDemand(id) {
+            const shipment = window.inventory.shipments.find(s => String(s.id) === String(id));
+            if(!shipment) return;
+            
+            const p = shipment.products || {};
+            const a22 = parseInt(p[1]) || 0;
+            const a37 = (parseInt(p[2]) || 0) + (parseInt(p[4]) || 0);
+            const a58 = (parseInt(p[3]) || 0) + (parseInt(p[5]) || 0);
+            
+            const content = `
+                <div style="text-align: center;">
+                    <p style="color: var(--text-light); margin-bottom: 1.5rem; font-size:0.95rem;">Zapotrzebowanie dla: <br><strong style="color:var(--text-dark); font-size:1.2rem;">${escapeHTML(shipment.location)}</strong></p>
+                    <div style="display:flex; justify-content: space-around; background: var(--background); padding: 2rem 1rem; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: inset 0 2px 4px rgba(0,0,0,0.03);">
+                        <div><div style="font-size: 0.8rem; color: var(--text-light); text-transform:uppercase; letter-spacing:1px; margin-bottom:5px; font-weight:600;">Kąt 22°</div><div style="font-size: 2.5rem; font-weight: 700; color:var(--primary-dark);">${a22}</div></div>
+                        <div><div style="font-size: 0.8rem; color: var(--text-light); text-transform:uppercase; letter-spacing:1px; margin-bottom:5px; font-weight:600;">Kąt 37°</div><div style="font-size: 2.5rem; font-weight: 700; color:var(--primary-dark);">${a37}</div></div>
+                        <div><div style="font-size: 0.8rem; color: var(--text-light); text-transform:uppercase; letter-spacing:1px; margin-bottom:5px; font-weight:600;">Kąt 58°</div><div style="font-size: 2.5rem; font-weight: 700; color:var(--primary-dark);">${a58}</div></div>
+                    </div>
+                </div>
+            `;
+            showModal('Zestawienie Kątowe', content);
+        }
+
+        function editShipment(id) {
+            if (currentRole === 'viewer') return;
+            const shipment = window.inventory.shipments.find(s => String(s.id) === String(id));
+            if (!shipment) return;
+
+            const p = shipment.products || {};
+            const p1 = p[1] || 0, p2 = p[2] || 0, p3 = p[3] || 0, p4 = p[4] || 0, p5 = p[5] || 0;
+            const isPartial = shipment.status === 'partial';
+            const disableProducts = isPartial ? 'disabled' : '';
+            
+            const formHTML = `
+                <div style="display: grid; gap: 1.25rem;">
+                    <div class="form-group"><label>Data Wysyłki</label><input type="date" id="edit_shipment_date" value="${escapeHTML(shipment.date)}"></div>
+                    <div class="form-group"><label>Pełny Cel / Adresat</label><input type="text" id="edit_shipment_location" value="${escapeHTML(shipment.location)}"></div>
+                    <div class="form-group"><label>Spedytor / Firma Przewozowa</label><input type="text" id="edit_shipment_company" value="${escapeHTML(shipment.company || '')}"></div>
+                    
+                    <div style="margin-top: 0.5rem; background-color: var(--background); padding: 1.25rem; border-radius: 12px; border: 1px solid var(--border-color);">
+                        <h3 style="margin-bottom: 1rem; font-size: 0.85rem; color: var(--text-light); text-transform:uppercase; letter-spacing:1px;">Ilości Opraw (szt.)</h3>
+                        ${isPartial ? '<p style="color: var(--accent-red); font-size:0.8rem; margin-top:-10px; margin-bottom:10px; font-weight:500;">Edycja ilości zablokowana dla wysyłki częściowej.</p>' : ''}
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
+                            <div class="form-group" style="margin:0;"><label>22° - 15W</label><input type="number" id="edit_p1" value="${p1}" min="0" ${disableProducts}></div>
+                            <div class="form-group" style="margin:0;"><label>37° - 15W</label><input type="number" id="edit_p2" value="${p2}" min="0" ${disableProducts}></div>
+                            <div class="form-group" style="margin:0;"><label>58° - 15W</label><input type="number" id="edit_p3" value="${p3}" min="0" ${disableProducts}></div>
+                            <div class="form-group" style="margin:0;"><label>37° - 20W</label><input type="number" id="edit_p4" value="${p4}" min="0" ${disableProducts}></div>
+                            <div class="form-group" style="margin:0;"><label>58° - 20W</label><input type="number" id="edit_p5" value="${p5}" min="0" ${disableProducts}></div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 1rem;">
+                        <button class="btn-primary" onclick="saveShipment('${id}')" style="width:100%; padding: 1rem;"><span class="material-symbols-outlined">save</span> Zapisz Zmiany</button>
+                    </div>
+                </div>
+            `;
+            showModal('Edycja Zamówienia', formHTML);
+        }
+
+        async function saveShipment(id) {
+            const newDate = document.getElementById('edit_shipment_date').value;
+            const newLocation = document.getElementById('edit_shipment_location').value;
+            const newCompany = document.getElementById('edit_shipment_company').value;
+            
+            if (!newDate || !newLocation) { showToast('Data i cel są wymagane.', 'error'); return; }
+
+            const shipment = window.inventory.shipments.find(s => String(s.id) === String(id));
+            const data = { date: newDate, location: newLocation, company: newCompany };
+
+            if (shipment.status !== 'partial') {
+                data.products = {
+                    1: parseInt(document.getElementById('edit_p1').value) || 0,
+                    2: parseInt(document.getElementById('edit_p2').value) || 0,
+                    3: parseInt(document.getElementById('edit_p3').value) || 0,
+                    4: parseInt(document.getElementById('edit_p4').value) || 0,
+                    5: parseInt(document.getElementById('edit_p5').value) || 0,
+                };
+            }
+
+            closeModal();
+            showLoading();
+            await window.inventory.updateShipmentInDB(id, data);
+            hideLoading();
+            showToast('Zmiany zostały zapisane.', 'success');
+        }
+
+        // Bindowanie akcji formularzy 
+        document.getElementById('shipmentForm').addEventListener('submit', async function(e) { 
+            e.preventDefault(); if (currentRole === 'viewer') return; 
+            const btn = this.querySelector('button[type="submit"]'); const txt = btn.innerHTML; 
+            btn.innerHTML = 'Przetwarzanie...'; btn.disabled = true; 
+            const fd = new FormData(this); 
+            const prods = { 1:parseInt(fd.get('p1'))||0, 2:parseInt(fd.get('p2'))||0, 3:parseInt(fd.get('p3'))||0, 4:parseInt(fd.get('p4'))||0, 5:parseInt(fd.get('p5'))||0 }; 
+            let loc = fd.get('ship_city').trim(); 
+            if(fd.get('ship_street').trim()) loc += `, ${fd.get('ship_street').trim()}`; 
+            if(fd.get('ship_target').trim()) loc += ` (${fd.get('ship_target').trim()})`; 
+            
+            const isRep = document.getElementById('form-is-replacement').checked;
+
+            showLoading(); 
+            await window.inventory.addShipment({ date: fd.get('date'), location: loc, company: fd.get('company'), products: prods, is_replacement: isRep }); 
+            hideLoading(); this.reset(); btn.innerHTML = txt; btn.disabled = false; showToast('Dodano zamówienie', 'success');
+        });
+
+        document.getElementById('adjustmentForm').addEventListener('submit', async function(e) { 
+            e.preventDefault(); const btn = this.querySelector('button[type="submit"]'); const txt = btn.innerHTML; 
+            btn.innerHTML = 'Zapisywanie...'; btn.disabled = true; 
+            const fd = new FormData(this); 
+            let loc = fd.get('adj_city').trim(); 
+            if(fd.get('adj_street').trim()) loc += `, ${fd.get('adj_street').trim()}`; 
+            if(fd.get('adj_target').trim()) loc += ` (${fd.get('adj_target').trim()})`; 
+            showLoading(); await window.inventory.addAdjustment(fd.get('adj_date'), loc); hideLoading(); 
+            this.reset(); btn.innerHTML = txt; btn.disabled = false; showToast('Zapisano wyjazd', 'success'); 
+        });
+
+        document.getElementById('incomingForm').addEventListener('submit', async function(e) { 
+            e.preventDefault(); const btn = this.querySelector('button[type="submit"]'); const txt = btn.innerHTML; 
+            btn.innerHTML = 'Zapisywanie...'; btn.disabled = true; 
+            const fd = new FormData(this); 
+            showLoading(); 
+            await window.inventory.addIncomingShipment(fd.get('supplier'), { 1:parseInt(fd.get('p1'))||0, 2:parseInt(fd.get('p2'))||0, 3:parseInt(fd.get('p3'))||0 }); 
+            hideLoading(); this.reset(); btn.innerHTML = txt; btn.disabled = false; showToast('Przyjęto obudowy na magazyn.', 'success'); 
+        });
+
+        document.getElementById('productionForm').addEventListener('submit', async function(e) { 
+            e.preventDefault(); const btn = this.querySelector('button[type="submit"]'); const txt = btn.innerHTML; 
+            btn.innerHTML = 'Przetwarzanie...'; btn.disabled = true; 
+            const fd = new FormData(this); 
+            showLoading(); 
+            await window.inventory.registerProduction({ 1:parseInt(fd.get('p1'))||0, 2:parseInt(fd.get('p2'))||0, 3:parseInt(fd.get('p3'))||0, 4:parseInt(fd.get('p4'))||0, 5:parseInt(fd.get('p5'))||0 }); 
+            hideLoading(); this.reset(); btn.innerHTML = txt; btn.disabled = false; 
+        });
+
+        document.getElementById('componentsIncomingForm').addEventListener('submit', async function(e) { 
+            e.preventDefault(); const btn = this.querySelector('button[type="submit"]'); const txt = btn.innerHTML; 
+            btn.innerHTML = 'Zapisywanie...'; btn.disabled = true; 
+            const fd = new FormData(this); 
+            showLoading(); 
+            await window.inventory.addComponentsShipment(fd.get('supplier'), { ps_raw:parseInt(fd.get('ps_raw'))||0, clips_normal:parseInt(fd.get('clips_normal'))||0, clips_pass:parseInt(fd.get('clips_pass'))||0 }); 
+            hideLoading(); this.reset(); btn.innerHTML = txt; btn.disabled = false; showToast('Zapisano komponenty.', 'success'); 
+        });
+    </script>
 </body>
 </html>
