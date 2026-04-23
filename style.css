@@ -281,3 +281,26 @@ button { display: inline-flex; align-items: center; justify-content: center; pad
     .map-container { display: none !important; }
     #map-section-container, #adj-map-section-container { display: none !important; }
 }
+
+/* --- POPRAWKI DETALI WIZUALNYCH (PXF TABELE) --- */
+
+/* 1. Usuwa białą przerwę i podwójne ramki między nagłówkiem sekcji a tabelą */
+.section-content[style*="padding:0"] .table-responsive,
+.section-content[style*="padding: 0"] .table-responsive {
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+}
+
+/* 2. Usuwa gryzącą się dolną linię z nagłówka sekcji PXF (nadpisuje styl wpisany w HTML) */
+.section-pxf .section-header,
+div[style*="border-bottom: 2px solid #3B82F6"] {
+    border-bottom: none !important; 
+}
+
+/* 3. Zmienia kolor nagłówka tabel PXF na głębszy i bardziej profesjonalny */
+.section-pxf th,
+div[style*="background-color: #E0F2FE"] + .section-content th {
+    background-color: #2563EB !important; /* Szlachetny odcień niebieskiego */
+    border-bottom: 2px solid #1D4ED8 !important;
+}
