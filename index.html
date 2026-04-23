@@ -156,9 +156,9 @@
                         </div>
                     </div>
 
-                    <div class="section">
-                        <div class="section-header" style="background-color: #E0F2FE; border-bottom: 2px solid #3B82F6;">
-                            <h2 style="color: #1E3A8A;"><span class="material-symbols-outlined" style="color: #3B82F6;">lightbulb</span> Stan Magazynowy: PXF (Zintegrowane)</h2>
+                    <div class="section section-pxf">
+                        <div class="section-header">
+                            <h2><span class="material-symbols-outlined">lightbulb</span> Stan Magazynowy: PXF (Zintegrowane)</h2>
                         </div>
                         <div class="section-content" style="padding:0;">
                             <div class="table-responsive">
@@ -173,7 +173,7 @@
                     <div class="section" style="max-width: 1200px;">
                         <div class="section-header">
                             <h2><span class="material-symbols-outlined">plumbing</span> Stan Serwisowy Opraw (RMA)</h2>
-                            <button class="btn-primary btn-small" onclick="openReceiveDamagedUI()" style="margin: 0; background-color:#3B82F6; height:auto; padding:0.5rem 1rem;"><span class="material-symbols-outlined">assignment_return</span> Przyjmij zwrot ze sklepu</button>
+                            <button class="btn-primary btn-small" onclick="openReceiveDamagedUI()" style="margin: 0; height:auto; padding:0.5rem 1rem;"><span class="material-symbols-outlined">assignment_return</span> Przyjmij zwrot ze sklepu</button>
                         </div>
                         <div class="section-content" style="padding:0;">
                             <div class="table-responsive">
@@ -217,9 +217,9 @@
                             </div>
                         </div>
 
-                        <div id="form-incoming-pxf-container" class="section" style="margin-bottom:0;">
-                            <div class="section-header" style="background-color: #E0F2FE;">
-                                <h2 style="color: #1E3A8A;"><span class="material-symbols-outlined" style="color: #3B82F6;">local_shipping</span> Przyjęcie Gotowych (PXF)</h2>
+                        <div id="form-incoming-pxf-container" class="section section-pxf" style="margin-bottom:0;">
+                            <div class="section-header">
+                                <h2><span class="material-symbols-outlined">local_shipping</span> Przyjęcie Gotowych (PXF)</h2>
                             </div>
                             <div class="section-content">
                                 <form id="incomingPxfForm">
@@ -231,7 +231,7 @@
                                         <div class="form-group"><label>37° - 20W</label><input type="number" name="p9" value="0" min="0"></div>
                                         <div class="form-group"><label>58° - 20W</label><input type="number" name="p10" value="0" min="0"></div>
                                     </div>
-                                    <button type="submit" class="btn-primary" style="width:100%; background-color: #3B82F6;"><span class="material-symbols-outlined">add_circle</span> Przyjmij gotowe lampy</button>
+                                    <button type="submit" class="btn-primary btn-pxf" style="width:100%;"><span class="material-symbols-outlined">add_circle</span> Przyjmij gotowe lampy</button>
                                 </form>
                             </div>
                         </div>
@@ -242,7 +242,7 @@
                             <h2><span class="material-symbols-outlined">add_location_alt</span> Dodaj Zamówienie / Plan Wysyłki</h2>
                             <div style="display:flex; align-items:center; gap:10px;">
                                 <input type="file" id="pdf-input" accept="application/pdf" style="display: none;" onchange="scanOfferFromPDF(this.files[0])">
-                                <button type="button" id="pdf-scan-btn" class="btn-primary btn-small" onclick="document.getElementById('pdf-input').click()" style="background-color: #3B82F6; margin: 0; padding: 0.5rem 1rem; height:auto;">
+                                <button type="button" id="pdf-scan-btn" class="btn-primary btn-small" onclick="document.getElementById('pdf-input').click()" style="margin: 0; padding: 0.5rem 1rem; height:auto;">
                                     <span class="material-symbols-outlined">document_scanner</span> Skanuj z PDF
                                 </button>
                             </div>
@@ -389,9 +389,9 @@
 
                 <div id="tab-components" class="tab-content">
                     <div class="stats-bar">
-                        <div class="stat-card" style="border-left: 5px solid #3B82F6;"><h3>Odbłyśniki PXF 22°</h3><div class="value" id="stat-refl-22">0</div></div>
-                        <div class="stat-card" style="border-left: 5px solid #3B82F6;"><h3>Odbłyśniki PXF 37°</h3><div class="value" id="stat-refl-37">0</div></div>
-                        <div class="stat-card" style="border-left: 5px solid #3B82F6;"><h3>Odbłyśniki PXF 58°</h3><div class="value" id="stat-refl-58">0</div></div>
+                        <div class="stat-card pxf-card"><h3>Odbłyśniki PXF 22°</h3><div class="value text-pxf" id="stat-refl-22">0</div></div>
+                        <div class="stat-card pxf-card"><h3>Odbłyśniki PXF 37°</h3><div class="value text-pxf" id="stat-refl-37">0</div></div>
+                        <div class="stat-card pxf-card"><h3>Odbłyśniki PXF 58°</h3><div class="value text-pxf" id="stat-refl-58">0</div></div>
                     </div>
 
                     <div id="form-components-container" class="section">
@@ -405,7 +405,7 @@
                                     <div class="form-group"><label>Klapki Przelot.</label><input type="number" name="clips_pass" value="0" min="0"></div>
                                     <div class="form-group"><button type="submit" class="btn-primary" style="width:100%;"><span class="material-symbols-outlined">add_circle</span> Dodaj</button></div>
                                 </div>
-                                <h3 style="font-size: 0.85rem; color: #3B82F6; margin-bottom: 0.5rem; text-transform:uppercase;">Dostawa luźnych odbłyśników PXF</h3>
+                                <h3 style="font-size: 0.85rem; margin-bottom: 0.5rem; text-transform:uppercase;" class="text-pxf">Dostawa luźnych odbłyśników PXF</h3>
                                 <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 1rem; align-items: end;">
                                     <div class="form-group"><label>Odbłyśniki 22°</label><input type="number" name="r22" value="0" min="0"></div>
                                     <div class="form-group"><label>Odbłyśniki 37°</label><input type="number" name="r37" value="0" min="0"></div>
@@ -425,9 +425,6 @@
                                         <tr><td data-label="Typ"><strong>Zasilacze LED</strong></td><td data-label="Ilość" onclick="editComponentCell(this, 'ps_raw')" class="editable" id="ps-raw-cell">0</td></tr>
                                         <tr><td data-label="Typ"><strong>Klapki Montażowe Zwykłe</strong></td><td data-label="Ilość" onclick="editComponentCell(this, 'clips_normal')" class="editable" id="clips-normal-cell">0</td></tr>
                                         <tr><td data-label="Typ"><strong>Klapki Montażowe Przelotowe</strong></td><td data-label="Ilość" onclick="editComponentCell(this, 'clips_pass')" class="editable" id="clips-pass-cell">0</td></tr>
-                                        <tr style="background:#F0F9FF;"><td data-label="Typ"><strong style="color:#1E3A8A;">Odbłyśnik PXF 22°</strong></td><td data-label="Ilość" onclick="editComponentCell(this, 'reflector_22')" class="editable" id="reflector-22-cell">0</td></tr>
-                                        <tr style="background:#F0F9FF;"><td data-label="Typ"><strong style="color:#1E3A8A;">Odbłyśnik PXF 37°</strong></td><td data-label="Ilość" onclick="editComponentCell(this, 'reflector_37')" class="editable" id="reflector-37-cell">0</td></tr>
-                                        <tr style="background:#F0F9FF;"><td data-label="Typ"><strong style="color:#1E3A8A;">Odbłyśnik PXF 58°</strong></td><td data-label="Ilość" onclick="editComponentCell(this, 'reflector_58')" class="editable" id="reflector-58-cell">0</td></tr>
                                     </tbody>
                                 </table>
                             </div>
@@ -461,40 +458,40 @@
                             </div>
                         </div>
 
-                        <div class="section">
-                            <div class="section-header" style="background-color: #E0F2FE;">
-                                <h2 style="color: #1E3A8A;"><span class="material-symbols-outlined" style="color: #3B82F6;">swap_horiz</span> Przezbrojenie kątów (PXF)</h2>
+                        <div class="section section-pxf">
+                            <div class="section-header">
+                                <h2><span class="material-symbols-outlined">swap_horiz</span> Przezbrojenie kątów (PXF)</h2>
                             </div>
                             <div class="section-content">
                                 <form id="pxfSwapForm">
-                                    <div style="background-color: #F0F9FF; border: 1px solid #BAE6FD; padding: 1.5rem; border-radius: 12px; margin-bottom: 1.5rem;">
+                                    <div style="background-color: var(--pxf-light); border: 1px solid #D1D9E0; padding: 1.5rem; border-radius: 12px; margin-bottom: 1.5rem;">
                                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem;">
                                             <div class="form-group">
-                                                <label style="color:#1E3A8A;">Z kąta (Zabieram z półki):</label>
-                                                <select name="angleFrom" style="border-color:#93C5FD; padding: 0.75rem; border-radius: 8px; width: 100%;">
+                                                <label>Z kąta (Zabieram z półki):</label>
+                                                <select name="angleFrom">
                                                     <option value="22">22°</option><option value="37">37°</option><option value="58">58°</option>
                                                 </select>
                                             </div>
                                             <div class="form-group">
-                                                <label style="color:#1E3A8A;">Na kąt (Wrzucam na półkę):</label>
-                                                <select name="angleTo" style="border-color:#93C5FD; padding: 0.75rem; border-radius: 8px; width: 100%;">
+                                                <label>Na kąt (Wrzucam na półkę):</label>
+                                                <select name="angleTo">
                                                     <option value="37">37°</option><option value="22">22°</option><option value="58">58°</option>
                                                 </select>
                                             </div>
                                             <div class="form-group">
-                                                <label style="color:#1E3A8A;">Dla jakiej mocy?</label>
-                                                <select name="swapPower" style="border-color:#93C5FD; padding: 0.75rem; border-radius: 8px; width: 100%;">
+                                                <label>Dla jakiej mocy?</label>
+                                                <select name="swapPower">
                                                     <option value="15">15W</option><option value="20">20W</option>
                                                 </select>
                                             </div>
                                             <div class="form-group">
-                                                <label style="color:#1E3A8A;">Liczba przerabianych lamp:</label>
-                                                <input type="number" name="swapQty" value="1" min="1" style="border-color:#93C5FD;">
+                                                <label>Liczba przerabianych lamp:</label>
+                                                <input type="number" name="swapQty" value="1" min="1">
                                             </div>
                                         </div>
                                     </div>
                                     <div style="text-align: right;">
-                                        <button type="submit" class="btn-primary" style="padding: 0 2.5rem; background-color: #3B82F6;"><span class="material-symbols-outlined">sync</span> Wykonaj Konwersję</button>
+                                        <button type="submit" class="btn-primary btn-pxf" style="padding: 0 2.5rem;"><span class="material-symbols-outlined">sync</span> Wykonaj Konwersję</button>
                                     </div>
                                 </form>
                                 <div style="margin-top: 1rem; background: #FFFBEB; padding: 1rem; border-radius: 12px; font-size: 0.8rem; color: #B45309;">
