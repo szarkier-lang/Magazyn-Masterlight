@@ -87,436 +87,454 @@
                 </div>
             </header>
 
-            <div class="content">
-                <div id="tab-dashboard" class="tab-content active">
-                    <div id="dashboard-alerts"></div>
-                    
-                    <div class="stats-bar">
-                        <div class="stat-card"><h3>Razem w Systemie</h3><div class="value" data-stat="total">0</div></div>
-                        <div class="stat-card"><h3>Gotowe do Wysyłki</h3><div class="value" data-stat="ready" style="color: var(--success-status);">0</div></div>
-                        <div class="stat-card"><h3>Otwarte Zamówienia</h3><div class="value" data-stat="shipments" style="color: var(--warning-status);">0</div></div>
-                        <div class="stat-card"><h3>Oprawy w Serwisie</h3><div class="value" data-stat="service" style="color: var(--error-status);">0</div></div>
-                    </div>
-
-                    <div class="section">
-                        <div class="section-header">
-                            <h2><span class="material-symbols-outlined">calendar_month</span> Harmonogram Działań (Kalendarz)</h2>
-                            <div class="cal-month-nav">
-                                <button class="btn-secondary btn-small" onclick="changeMonth(-1)" style="margin:0; height:auto; padding:0.4rem;"><span class="material-symbols-outlined" style="margin:0;">chevron_left</span></button>
-                                <strong id="calendar-month-label" style="margin: 0 15px; font-size: 1.1rem; color: var(--primary-dark);">...</strong>
-                                <button class="btn-secondary btn-small" onclick="changeMonth(1)" style="margin:0; height:auto; padding:0.4rem;"><span class="material-symbols-outlined" style="margin:0;">chevron_right</span></button>
-                            </div>
-                        </div>
-                        <div class="section-content" style="padding: 1.5rem;">
-                            <div class="calendar-header">
-                                <div>Pn</div><div>Wt</div><div>Śr</div><div>Cz</div><div>Pt</div><div>Sb</div><div>Nd</div><div style="color:var(--primary-terracotta);">SUMA OPRAW</div>
-                            </div>
-                            <div id="dashboard-calendar-container" style="display: flex; flex-direction: column; gap: 8px;"></div>
-                        </div>
-                    </div>
-
-                    <div class="section" id="map-section-container">
-                        <div class="section-header">
-                            <h2><span class="material-symbols-outlined">map</span> Mapa Logistyczna (Dostawy i Serwis)</h2>
-                            <div style="display:flex; gap:15px; align-items:center;">
-                                <span id="map-status" style="font-size:0.8rem; color:var(--text-light);"><span class="material-symbols-outlined" style="font-size:1em; animation: spin 1s linear infinite;">autorenew</span> Oczekiwanie na dane...</span>
-                            </div>
-                        </div>
-                        <div class="section-content" style="padding:0;">
-                            <div id="shipments-map" class="map-container"></div>
-                        </div>
-                    </div>
-
-                    <div class="section">
-                        <div class="section-header"><h2><span class="material-symbols-outlined">conveyor_belt</span> Ostatnie Przyjęcia Opraw</h2></div>
-                        <div class="section-content" style="padding:0;">
-                            <div class="table-responsive">
-                                <table>
-                                    <thead><tr><th>Data Przyjęcia</th><th>Dostawca / Marka</th><th>Szczegóły</th><th>Suma Sztuk</th></tr></thead>
-                                    <tbody id="dashboard-recent-incoming"></tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="tab-inventory" class="tab-content">
-                    <div class="section">
-                        <div class="section-header">
-                            <h2><span class="material-symbols-outlined">inventory_2</span> Stan Magazynowy: IMPERIAL (Składane)</h2>
-                            <button class="btn-secondary btn-small" onclick="printInventoryPdf()" style="margin: 0; height: auto;"><span class="material-symbols-outlined">print</span> Generuj PDF</button>
-                        </div>
-                        <div class="section-content" style="padding:0;">
-                            <div class="table-responsive">
-                                <table>
-                                    <thead><tr><th>Kąt Oprawy</th><th>Gotowe 15W</th><th>Gotowe 20W</th><th>Surowe (W Montażu)</th><th>Serwis (Suma)</th><th>Łącznie Suma</th><th>Dostępność</th></tr></thead>
-                                    <tbody id="products-imperial-table"></tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="section section-pxf">
-                        <div class="section-header">
-                            <h2><span class="material-symbols-outlined">lightbulb</span> Stan Magazynowy: PXF (Zintegrowane)</h2>
-                        </div>
-                        <div class="section-content" style="padding:0;">
-                            <div class="table-responsive">
-                                <table>
-                                    <thead><tr><th>Kąt Oprawy</th><th>Gotowe 15W</th><th>Gotowe 20W</th><th>Serwis (Suma)</th><th>Łącznie Suma</th><th>Dostępność</th></tr></thead>
-                                    <tbody id="products-pxf-table"></tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="section" style="max-width: 1200px;">
-                        <div class="section-header">
-                            <h2><span class="material-symbols-outlined">plumbing</span> Stan Serwisowy Opraw (RMA)</h2>
-                            <button class="btn-primary btn-small" onclick="openReceiveDamagedUI()" style="margin: 0; height:auto; padding:0.5rem 1rem;"><span class="material-symbols-outlined">assignment_return</span> Przyjmij zwrot ze sklepu</button>
-                        </div>
-                        <div class="section-content" style="padding:0;">
-                            <div class="table-responsive">
-                                <table style="min-width: 0;">
-                                    <thead><tr><th>Model Oprawy</th><th>Uszkodzone (Oczekują)</th><th>W Serwisie (Wysyłka)</th><th class="admin-only-col" style="width:240px;">Akcja</th></tr></thead>
-                                    <tbody id="service-table"></tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="section" style="max-width: 1200px;">
-                        <div class="section-header">
-                            <h2><span class="material-symbols-outlined">history</span> Rejestr Przypadków Serwisowych</h2>
-                        </div>
-                        <div class="section-content" style="padding:0;">
-                            <div class="table-responsive" style="max-height: 400px; overflow-y:auto;">
-                                <table style="min-width: 0;">
-                                    <thead><tr><th>Data</th><th>Typ Akcji</th><th>Model Oprawy</th><th>Ilość</th><th>Opis usterki / Notatka</th></tr></thead>
-                                    <tbody id="service-cases-table"></tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="tab-shipments" class="tab-content">
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 1.5rem; margin-bottom: 2.5rem;">
-                        <div id="form-incoming-imperial-container" class="section" style="margin-bottom:0;">
-                            <div class="section-header"><h2><span class="material-symbols-outlined">move_to_inbox</span> Przyjęcie z Huty (IMPERIAL)</h2></div>
-                            <div class="section-content">
-                                <form id="incomingImperialForm">
-                                    <div class="form-group" style="margin-bottom: 1rem;"><label>Huta / Dostawca</label><input type="text" name="supplier" required placeholder="np. Alumetal"></div>
-                                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
-                                        <div class="form-group"><label>Surowe 22°</label><input type="number" name="p1" value="0" min="0"></div>
-                                        <div class="form-group"><label>Surowe 37°</label><input type="number" name="p2" value="0" min="0"></div>
-                                        <div class="form-group"><label>Surowe 58°</label><input type="number" name="p3" value="0" min="0"></div>
-                                    </div>
-                                    <button type="submit" class="btn-primary" style="width:100%;"><span class="material-symbols-outlined">add_circle</span> Przyjmij obudowy</button>
-                                </form>
-                            </div>
+            <div class="main-wrapper">
+                <div class="content">
+                    <div id="tab-dashboard" class="tab-content active">
+                        <div id="dashboard-alerts"></div>
+                        
+                        <div class="stats-bar">
+                            <div class="stat-card"><h3>Razem w Systemie</h3><div class="value" data-stat="total">0</div></div>
+                            <div class="stat-card"><h3>Gotowe do Wysyłki</h3><div class="value" data-stat="ready" style="color: var(--success-status);">0</div></div>
+                            <div class="stat-card"><h3>Otwarte Zamówienia</h3><div class="value" data-stat="shipments" style="color: var(--warning-status);">0</div></div>
+                            <div class="stat-card"><h3>Oprawy w Serwisie</h3><div class="value" data-stat="service" style="color: var(--error-status);">0</div></div>
                         </div>
 
-                        <div id="form-incoming-pxf-container" class="section section-pxf" style="margin-bottom:0;">
+                        <div class="section">
                             <div class="section-header">
-                                <h2><span class="material-symbols-outlined">local_shipping</span> Przyjęcie Gotowych (PXF)</h2>
+                                <h2><span class="material-symbols-outlined">insights</span> Analiza dostępności komponentów (Prognoza)</h2>
                             </div>
                             <div class="section-content">
-                                <form id="incomingPxfForm">
-                                    <div class="form-group" style="margin-bottom: 1rem;"><label>Dostawca</label><input type="text" name="supplier" required placeholder="np. PXF Lighting"></div>
-                                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1rem;">
-                                        <div class="form-group"><label>22° - 15W</label><input type="number" name="p6" value="0" min="0"></div>
-                                        <div class="form-group"><label>37° - 15W</label><input type="number" name="p7" value="0" min="0"></div>
-                                        <div class="form-group"><label>58° - 15W</label><input type="number" name="p8" value="0" min="0"></div>
-                                        <div class="form-group"><label>37° - 20W</label><input type="number" name="p9" value="0" min="0"></div>
-                                        <div class="form-group"><label>58° - 20W</label><input type="number" name="p10" value="0" min="0"></div>
-                                    </div>
-                                    <button type="submit" class="btn-primary btn-pxf" style="width:100%;"><span class="material-symbols-outlined">add_circle</span> Przyjmij gotowe lampy</button>
-                                </form>
+                                <div class="stats-bar" id="prediction-cards-container" style="margin-bottom: 0;">
+                                    <p style="color:gray;">Trwa obliczanie zapotrzebowania...</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="section">
+                            <div class="section-header">
+                                <h2><span class="material-symbols-outlined">calendar_month</span> Harmonogram Działań (Kalendarz)</h2>
+                                <div class="cal-month-nav">
+                                    <button class="btn-secondary btn-small" onclick="changeMonth(-1)" style="margin:0; height:auto; padding:0.4rem;"><span class="material-symbols-outlined" style="margin:0;">chevron_left</span></button>
+                                    <strong id="calendar-month-label" style="margin: 0 15px; font-size: 1.1rem; color: var(--primary-dark);">...</strong>
+                                    <button class="btn-secondary btn-small" onclick="changeMonth(1)" style="margin:0; height:auto; padding:0.4rem;"><span class="material-symbols-outlined" style="margin:0;">chevron_right</span></button>
+                                </div>
+                            </div>
+                            <div class="section-content" style="padding: 1.5rem;">
+                                <div class="calendar-header">
+                                    <div>Pn</div><div>Wt</div><div>Śr</div><div>Cz</div><div>Pt</div><div>Sb</div><div>Nd</div><div style="color:var(--primary-terracotta);">SUMA OPRAW</div>
+                                </div>
+                                <div id="dashboard-calendar-container" style="display: flex; flex-direction: column; gap: 8px;"></div>
+                            </div>
+                        </div>
+
+                        <div class="section" id="map-section-container">
+                            <div class="section-header">
+                                <h2><span class="material-symbols-outlined">map</span> Mapa Logistyczna (Dostawy i Serwis)</h2>
+                                <div style="display:flex; gap:15px; align-items:center;">
+                                    <span id="map-status" style="font-size:0.8rem; color:var(--text-light);"><span class="material-symbols-outlined" style="font-size:1em; animation: spin 1s linear infinite;">autorenew</span> Oczekiwanie na dane...</span>
+                                </div>
+                            </div>
+                            <div class="section-content" style="padding:0;">
+                                <div id="shipments-map" class="map-container"></div>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <div class="section-header"><h2><span class="material-symbols-outlined">conveyor_belt</span> Ostatnie Przyjęcia Opraw</h2></div>
+                            <div class="section-content" style="padding:0;">
+                                <div class="table-responsive">
+                                    <table>
+                                        <thead><tr><th>Data Przyjęcia</th><th>Dostawca / Marka</th><th>Szczegóły</th><th>Suma Sztuk</th></tr></thead>
+                                        <tbody id="dashboard-recent-incoming"></tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <div id="form-shipment-container" class="section">
-                        <div class="section-header">
-                            <h2><span class="material-symbols-outlined">add_location_alt</span> Dodaj Zamówienie / Plan Wysyłki</h2>
-                            <div style="display:flex; align-items:center; gap:10px;">
-                                <input type="file" id="pdf-input" accept="application/pdf" style="display: none;" onchange="scanOfferFromPDF(this.files[0])">
-                                <button type="button" id="pdf-scan-btn" class="btn-primary btn-small" onclick="document.getElementById('pdf-input').click()" style="margin: 0; padding: 0.5rem 1rem; height:auto;">
-                                    <span class="material-symbols-outlined">document_scanner</span> Skanuj z PDF
-                                </button>
+                    <div id="tab-inventory" class="tab-content">
+                        <div class="section">
+                            <div class="section-header">
+                                <h2><span class="material-symbols-outlined">inventory_2</span> Stan Magazynowy: IMPERIAL (Składane)</h2>
+                                <button class="btn-secondary btn-small" onclick="printInventoryPdf()" style="margin: 0; height: auto;"><span class="material-symbols-outlined">print</span> Generuj PDF</button>
                             </div>
-                        </div>
-                        <div class="section-content">
-                            <form id="shipmentForm">
-                                <div style="background-color: var(--primary-light); padding: 1rem; border-radius: 8px; border: 1px solid var(--primary-terracotta); margin-bottom: 1.5rem;">
-                                    <label style="font-weight: 700; color: var(--primary-dark); display: block; margin-bottom: 0.5rem;">Z jakiej puli wysyłamy towar?</label>
-                                    <select id="form-brand" name="brand" style="border-color: var(--primary-terracotta); background-color: #fff; font-weight: 600; padding: 0.75rem; border-radius: 8px; width: 100%;">
-                                        <option value="imperial">Pula: IMPERIAL (Składane)</option>
-                                        <option value="pxf">Pula: PXF (Zintegrowane)</option>
-                                    </select>
-                                </div>
-
-                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.25rem;">
-                                    <div class="form-group"><label>Miejscowość *</label><input type="text" name="ship_city" id="form-city" required placeholder="np. Warszawa"></div>
-                                    <div class="form-group"><label>Ulica i nr (opcjonalnie)</label><input type="text" name="ship_street" id="form-street" placeholder="np. Złota 44"></div>
-                                    <div class="form-group"><label>Obiekt / Inwestycja (opcjonalnie)</label><input type="text" name="ship_target" id="form-target" placeholder="np. Biurowiec Skylight"></div>
-                                </div>
-                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.25rem; margin-top: 1.25rem;">
-                                    <div class="form-group"><label>Data Wstępna</label><input type="date" name="date" id="form-date" required></div>
-                                    <div class="form-group"><label>Spedytor / Odbiór</label><input type="text" name="company" id="form-company" placeholder="np. DPD, Własny" required></div>
-                                </div>
-                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem; margin-top: 1.25rem; background-color: var(--background); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border-color);">
-                                    <div class="form-group"><label>22° - 15W</label><input type="number" name="p_22_15" id="form-p1" value="0" min="0"></div>
-                                    <div class="form-group"><label>37° - 15W</label><input type="number" name="p_37_15" id="form-p2" value="0" min="0"></div>
-                                    <div class="form-group"><label>58° - 15W</label><input type="number" name="p_58_15" id="form-p3" value="0" min="0"></div>
-                                    <div class="form-group"><label>37° - 20W</label><input type="number" name="p_37_20" id="form-p4" value="0" min="0"></div>
-                                    <div class="form-group"><label>58° - 20W</label><input type="number" name="p_58_20" id="form-p5" value="0" min="0"></div>
-                                </div>
-                                
-                                <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; margin-top: 1.5rem; gap: 1rem;">
-                                    <label class="checkbox-wrapper">
-                                        <input type="checkbox" id="form-is-replacement">
-                                        Wysyłka serwisowa (Wymiana RMA)
-                                    </label>
-                                    <button type="submit" class="btn-primary" style="padding: 0 2.5rem;"><span class="material-symbols-outlined">save</span> Zapisz i Dodaj do Kolejki</button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-
-                    <div class="section">
-                        <div class="section-header"><h2><span class="material-symbols-outlined" style="color:var(--warning-status);">pending_actions</span> 1. Zamówienia Oczekujące (Brak Potwierdzenia Terminu)</h2></div>
-                        <div class="section-content" style="padding:0;">
-                            <div class="table-responsive">
-                                <table>
-                                    <thead><tr><th>Data Wstępna</th><th>Pula</th><th>Cel</th><th>Typ</th><th>Sztuk</th><th>Kąty</th><th>Status Magazynu</th><th>Stan</th><th class="admin-only-col" style="width:200px;">Akcja</th></tr></thead>
-                                    <tbody id="shipments-unconfirmed-table"></tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="section">
-                        <div class="section-header">
-                            <h2><span class="material-symbols-outlined" style="color:var(--info-status);">inventory</span> 2. Kolejka Wysyłek (Potwierdzone)</h2>
-                            <div class="badge" id="shipments-count">0 rekordów</div>
-                        </div>
-                        <div class="section-content" style="padding:0;">
-                            <div class="table-responsive">
-                                <table>
-                                    <thead><tr><th>Data Potw.</th><th>Pula</th><th>Cel</th><th>Typ</th><th>Sztuk</th><th>Kąty</th><th>Status Magazynu</th><th>Stan</th><th class="admin-only-col" style="width:200px;">Akcja</th></tr></thead>
-                                    <tbody id="shipments-confirmed-table"></tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="section">
-                        <div class="section-header">
-                            <h2><span class="material-symbols-outlined" style="color:var(--success-status);">task_alt</span> 3. Wysyłki Zrealizowane (Historia)</h2>
-                        </div>
-                        <div class="section-content" style="padding:0;">
-                            <div class="table-responsive">
-                                <table>
-                                    <thead><tr><th>Data Wysłania</th><th>Pula</th><th>Cel</th><th>Typ</th><th>Sztuk</th><th>Kąty</th><th>Stan</th><th class="admin-only-col">Akcja</th></tr></thead>
-                                    <tbody id="shipments-completed-table"></tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="tab-adjustments" class="tab-content">
-                    <div class="section" id="adj-map-section-container">
-                        <div class="section-header">
-                            <h2><span class="material-symbols-outlined">map</span> Mapa Wyjazdów Serwisowych</h2>
-                            <div style="display:flex; gap:15px; align-items:center;">
-                                <span id="map-adj-status" style="font-size:0.8rem; color:var(--text-light);"><span class="material-symbols-outlined" style="font-size:1em; animation: spin 1s linear infinite;">autorenew</span> Ładowanie mapy...</span>
-                            </div>
-                        </div>
-                        <div class="section-content" style="padding:0;">
-                            <div id="adjustments-map" class="map-container"></div>
-                        </div>
-                    </div>
-
-                    <div class="section" style="max-width: 900px;">
-                        <div class="section-header"><h2><span class="material-symbols-outlined">handyman</span> Harmonogram Wyjazdów Serwisowych</h2></div>
-                        <div class="section-content" style="padding:0;">
-                            <div class="table-responsive">
-                                <table style="min-width: 0;">
-                                    <thead><tr><th>Data Wyjazdu</th><th>Miejscowość / Obiekt</th><th class="admin-only-col" style="width: 100px;">Akcja</th></tr></thead>
-                                    <tbody id="adjustments-table"></tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div id="form-adjustments-container" class="section" style="max-width: 900px;">
-                        <div class="section-header"><h2><span class="material-symbols-outlined">add_circle</span> Dodaj Nowy Termin Regulacji</h2></div>
-                        <div class="section-content">
-                            <form id="adjustmentForm">
-                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.25rem;">
-                                    <div class="form-group"><label>Miejscowość *</label><input type="text" name="adj_city" required placeholder="np. Gdańsk"></div>
-                                    <div class="form-group"><label>Ulica i nr</label><input type="text" name="adj_street" placeholder="np. Długa 5"></div>
-                                    <div class="form-group"><label>Obiekt / Klient</label><input type="text" name="adj_target" placeholder="np. Hotel Seaside"></div>
-                                </div>
-                                <div style="display: grid; grid-template-columns: 1fr auto; gap: 1rem; align-items: end; margin-top: 1.25rem;">
-                                    <div class="form-group"><label>Data Wyjazdu</label><input type="date" name="adj_date" required></div>
-                                    <div class="form-group"><button type="submit" class="btn-primary" style="width:100%; padding: 0 2rem;"><span class="material-symbols-outlined">save</span> Zaplanuj Wyjazd</button></div>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="tab-history" class="tab-content">
-                    <div class="section">
-                        <div class="section-header">
-                            <h2><span class="material-symbols-outlined">receipt_long</span> Rejestr Zmian i Operacji Magazynowych</h2>
-                            <button class="btn-secondary btn-small" onclick="window.print()" style="margin: 0; height:auto;"><span class="material-symbols-outlined">print</span> Drukuj Logi</button>
-                        </div>
-                        <div class="section-content" style="padding:0;">
-                            <div class="table-responsive" style="max-height: 75vh;">
-                                <table>
-                                    <thead><tr><th>Data i Czas</th><th>Pracownik</th><th>Typ Operacji</th><th>Szczegóły</th></tr></thead>
-                                    <tbody id="history-table"></tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="tab-components" class="tab-content">
-                    <div class="stats-bar">
-                        <div class="stat-card pxf-card"><h3>Odbłyśniki PXF 22°</h3><div class="value text-pxf" id="stat-refl-22">0</div></div>
-                        <div class="stat-card pxf-card"><h3>Odbłyśniki PXF 37°</h3><div class="value text-pxf" id="stat-refl-37">0</div></div>
-                        <div class="stat-card pxf-card"><h3>Odbłyśniki PXF 58°</h3><div class="value text-pxf" id="stat-refl-58">0</div></div>
-                    </div>
-
-                    <div id="form-components-container" class="section">
-                        <div class="section-header"><h2><span class="material-symbols-outlined">inventory</span> Przyjęcie Komponentów</h2></div>
-                        <div class="section-content">
-                            <form id="componentsIncomingForm">
-                                <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 1rem; align-items: end; margin-bottom: 1rem;">
-                                    <div class="form-group"><label>Dostawca</label><input type="text" name="supplier" required placeholder="Dostawca"></div>
-                                    <div class="form-group"><label>Zasilacze (szt)</label><input type="number" name="ps_raw" value="0" min="0"></div>
-                                    <div class="form-group"><label>Klapki Zwykłe</label><input type="number" name="clips_normal" value="0" min="0"></div>
-                                    <div class="form-group"><label>Klapki Przelot.</label><input type="number" name="clips_pass" value="0" min="0"></div>
-                                    <div class="form-group"><button type="submit" class="btn-primary" style="width:100%;"><span class="material-symbols-outlined">add_circle</span> Dodaj</button></div>
-                                </div>
-                                <h3 style="font-size: 0.85rem; margin-bottom: 0.5rem; text-transform:uppercase;" class="text-pxf">Dostawa luźnych odbłyśników PXF</h3>
-                                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 1rem; align-items: end;">
-                                    <div class="form-group"><label>Odbłyśniki 22°</label><input type="number" name="r22" value="0" min="0"></div>
-                                    <div class="form-group"><label>Odbłyśniki 37°</label><input type="number" name="r37" value="0" min="0"></div>
-                                    <div class="form-group"><label>Odbłyśniki 58°</label><input type="number" name="r58" value="0" min="0"></div>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-
-                    <div class="section" style="max-width: 600px;">
-                        <div class="section-header"><h2><span class="material-symbols-outlined">memory</span> Aktualny Stan Zasilaczy i Klapek</h2></div>
-                        <div class="section-content" style="padding:0;">
-                            <div class="table-responsive">
-                                <table style="min-width: 0;">
-                                    <thead><tr><th>Typ Komponentu</th><th>Ilość na stanie (szt)</th></tr></thead>
-                                    <tbody>
-                                        <tr><td data-label="Typ"><strong>Zasilacze LED</strong></td><td data-label="Ilość" onclick="editComponentCell(this, 'ps_raw')" class="editable" id="ps-raw-cell">0</td></tr>
-                                        <tr><td data-label="Typ"><strong>Klapki Montażowe Zwykłe</strong></td><td data-label="Ilość" onclick="editComponentCell(this, 'clips_normal')" class="editable" id="clips-normal-cell">0</td></tr>
-                                        <tr><td data-label="Typ"><strong>Klapki Montażowe Przelotowe</strong></td><td data-label="Ilość" onclick="editComponentCell(this, 'clips_pass')" class="editable" id="clips-pass-cell">0</td></tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="tab-reports" class="tab-content">
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 1.5rem;">
-                        <div id="form-production-container" class="section">
-                            <div class="section-header"><h2><span class="material-symbols-outlined">precision_manufacturing</span> Rejestracja Produkcji (IMPERIAL)</h2></div>
-                            <div class="section-content">
-                                <form id="productionForm">
-                                    <div style="background-color: var(--background); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 1.5rem;">
-                                        <h3 style="font-size: 0.9rem; color: var(--text-light); text-transform:uppercase; letter-spacing:1px; margin-bottom: 1rem;">Zmontowane oprawy IMPERIAL</h3>
-                                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1.25rem;">
-                                            <div class="form-group"><label>22° - 15W</label><input type="number" name="p1" value="0" min="0"></div>
-                                            <div class="form-group"><label>37° - 15W</label><input type="number" name="p2" value="0" min="0"></div>
-                                            <div class="form-group"><label>58° - 15W</label><input type="number" name="p3" value="0" min="0"></div>
-                                            <div class="form-group"><label>37° - 20W</label><input type="number" name="p4" value="0" min="0"></div>
-                                            <div class="form-group"><label>58° - 20W</label><input type="number" name="p5" value="0" min="0"></div>
-                                        </div>
-                                    </div>
-                                    <div style="text-align: right;">
-                                        <button type="submit" class="btn-primary" style="padding: 0 2.5rem;"><span class="material-symbols-outlined">task_alt</span> Zarejestruj Produkcję</button>
-                                    </div>
-                                </form>
-                                <div style="margin-top: 1rem; background: var(--primary-light); padding: 1rem; border-radius: 12px; font-size: 0.8rem; color: var(--primary-dark);">
-                                    <p>System zdejmuje "Surowe" z danego kąta i zużywa po 1 szt. zasilacza i klapek.</p>
+                            <div class="section-content" style="padding:0;">
+                                <div class="table-responsive">
+                                    <table>
+                                        <thead><tr><th>Kąt Oprawy</th><th>Gotowe 15W</th><th>Gotowe 20W</th><th>Surowe (W Montażu)</th><th>Serwis (Suma)</th><th>Łącznie Suma</th><th>Dostępność</th></tr></thead>
+                                        <tbody id="products-imperial-table"></tbody>
+                                    </table>
                                 </div>
                             </div>
                         </div>
 
                         <div class="section section-pxf">
                             <div class="section-header">
-                                <h2><span class="material-symbols-outlined">swap_horiz</span> Przezbrojenie kątów (PXF)</h2>
+                                <h2><span class="material-symbols-outlined">lightbulb</span> Stan Magazynowy: PXF (Zintegrowane)</h2>
                             </div>
-                            <div class="section-content">
-                                <form id="pxfSwapForm">
-                                    <div style="background-color: var(--pxf-light); border: 1px solid #D1D9E0; padding: 1.5rem; border-radius: 12px; margin-bottom: 1.5rem;">
-                                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem;">
-                                            <div class="form-group">
-                                                <label>Z kąta (Zabieram z półki):</label>
-                                                <select name="angleFrom">
-                                                    <option value="22">22°</option><option value="37">37°</option><option value="58">58°</option>
-                                                </select>
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Na kąt (Wrzucam na półkę):</label>
-                                                <select name="angleTo">
-                                                    <option value="37">37°</option><option value="22">22°</option><option value="58">58°</option>
-                                                </select>
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Dla jakiej mocy?</label>
-                                                <select name="swapPower">
-                                                    <option value="15">15W</option><option value="20">20W</option>
-                                                </select>
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Liczba przerabianych lamp:</label>
-                                                <input type="number" name="swapQty" value="1" min="1">
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div style="text-align: right;">
-                                        <button type="submit" class="btn-primary btn-pxf" style="padding: 0 2.5rem;"><span class="material-symbols-outlined">sync</span> Wykonaj Konwersję</button>
-                                    </div>
-                                </form>
-                                <div style="margin-top: 1rem; background: #FFFBEB; padding: 1rem; border-radius: 12px; font-size: 0.8rem; color: #B45309;">
-                                    <p>System automatycznie zamieni odbłyśniki w lampach oraz zaksięguje zdemontowane odbłyśniki na magazynie komponentów.</p>
+                            <div class="section-content" style="padding:0;">
+                                <div class="table-responsive">
+                                    <table>
+                                        <thead><tr><th>Kąt Oprawy</th><th>Gotowe 15W</th><th>Gotowe 20W</th><th>Serwis (Suma)</th><th>Łącznie Suma</th><th>Dostępność</th></tr></thead>
+                                        <tbody id="products-pxf-table"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section" style="max-width: 1200px;">
+                            <div class="section-header">
+                                <h2><span class="material-symbols-outlined">plumbing</span> Stan Serwisowy Opraw (RMA)</h2>
+                                <button class="btn-primary btn-small" onclick="openReceiveDamagedUI()" style="margin: 0; height:auto; padding:0.5rem 1rem;"><span class="material-symbols-outlined">assignment_return</span> Przyjmij zwrot ze sklepu</button>
+                            </div>
+                            <div class="section-content" style="padding:0;">
+                                <div class="table-responsive">
+                                    <table style="min-width: 0;">
+                                        <thead><tr><th>Model Oprawy</th><th>Uszkodzone (Oczekują)</th><th>W Serwisie (Wysyłka)</th><th class="admin-only-col" style="width:240px;">Akcja</th></tr></thead>
+                                        <tbody id="service-table"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="section" style="max-width: 1200px;">
+                            <div class="section-header">
+                                <h2><span class="material-symbols-outlined">history</span> Rejestr Przypadków Serwisowych</h2>
+                            </div>
+                            <div class="section-content" style="padding:0;">
+                                <div class="table-responsive" style="max-height: 400px; overflow-y:auto;">
+                                    <table style="min-width: 0;">
+                                        <thead><tr><th>Data</th><th>Typ Akcji</th><th>Model Oprawy</th><th>Ilość</th><th>Opis usterki / Notatka</th></tr></thead>
+                                        <tbody id="service-cases-table"></tbody>
+                                    </table>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>
 
-                <footer class="footer">
-                    <p>© 2026 Masterlight Sp. z o.o. - Wszelkie prawa zastrzeżone</p>
-                    <p style="font-size: 0.75rem; color: var(--text-light); margin-top: 5px;">Cloud WMS Engine v4.0 | Zalogowano jako: <span id="footer-user">...</span></p>
-                </footer>
-            </div>
-        </div>
-    </div>
+                    <div id="tab-shipments" class="tab-content">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 1.5rem; margin-bottom: 2.5rem;">
+                            <div id="form-incoming-imperial-container" class="section" style="margin-bottom:0;">
+                                <div class="section-header"><h2><span class="material-symbols-outlined">move_to_inbox</span> Przyjęcie z Huty (IMPERIAL)</h2></div>
+                                <div class="section-content">
+                                    <form id="incomingImperialForm">
+                                        <div class="form-group" style="margin-bottom: 1rem;"><label>Huta / Dostawca</label><input type="text" name="supplier" required placeholder="np. Alumetal"></div>
+                                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                                            <div class="form-group"><label>Surowe 22°</label><input type="number" name="p1" value="0" min="0"></div>
+                                            <div class="form-group"><label>Surowe 37°</label><input type="number" name="p2" value="0" min="0"></div>
+                                            <div class="form-group"><label>Surowe 58°</label><input type="number" name="p3" value="0" min="0"></div>
+                                        </div>
+                                        <button type="submit" class="btn-primary" style="width:100%;"><span class="material-symbols-outlined">add_circle</span> Przyjmij obudowy</button>
+                                    </form>
+                                </div>
+                            </div>
 
-    <div id="modal" class="modal">
+                            <div id="form-incoming-pxf-container" class="section section-pxf" style="margin-bottom:0;">
+                                <div class="section-header">
+                                    <h2><span class="material-symbols-outlined">local_shipping</span> Przyjęcie Gotowych (PXF)</h2>
+                                </div>
+                                <div class="section-content">
+                                    <form id="incomingPxfForm">
+                                        <div class="form-group" style="margin-bottom: 1rem;"><label>Dostawca</label><input type="text" name="supplier" required placeholder="np. PXF Lighting"></div>
+                                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1rem;">
+                                            <div class="form-group"><label>22° - 15W</label><input type="number" name="p6" value="0" min="0"></div>
+                                            <div class="form-group"><label>37° - 15W</label><input type="number" name="p7" value="0" min="0"></div>
+                                            <div class="form-group"><label>58° - 15W</label><input type="number" name="p8" value="0" min="0"></div>
+                                            <div class="form-group"><label>37° - 20W</label><input type="number" name="p9" value="0" min="0"></div>
+                                            <div class="form-group"><label>58° - 20W</label><input type="number" name="p10" value="0" min="0"></div>
+                                        </div>
+                                        <button type="submit" class="btn-primary btn-pxf" style="width:100%;"><span class="material-symbols-outlined">add_circle</span> Przyjmij gotowe lampy</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="form-shipment-container" class="section">
+                            <div class="section-header">
+                                <h2><span class="material-symbols-outlined">add_location_alt</span> Dodaj Zamówienie / Plan Wysyłki</h2>
+                                <div style="display:flex; align-items:center; gap:10px;">
+                                    <input type="file" id="pdf-input" accept="application/pdf" style="display: none;" onchange="scanOfferFromPDF(this.files[0])">
+                                    <button type="button" id="pdf-scan-btn" class="btn-secondary btn-small" onclick="document.getElementById('pdf-input').click()" style="margin: 0; padding: 0.5rem 1rem; height:auto;">
+                                        <span class="material-symbols-outlined">document_scanner</span> Skanuj z PDF
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="section-content">
+                                <form id="shipmentForm">
+                                    <div style="background-color: var(--primary-light); padding: 1rem; border-radius: 8px; border: 1px solid var(--primary-terracotta); margin-bottom: 1.5rem;">
+                                        <label style="font-weight: 700; color: var(--primary-dark); display: block; margin-bottom: 0.5rem;">Z jakiej puli wysyłamy towar?</label>
+                                        <select id="form-brand" name="brand" style="border-color: var(--primary-terracotta); background-color: #fff; font-weight: 600; padding: 0.75rem; border-radius: 8px; width: 100%;">
+                                            <option value="imperial">Pula: IMPERIAL (Składane)</option>
+                                            <option value="pxf">Pula: PXF (Zintegrowane)</option>
+                                        </select>
+                                    </div>
+
+                                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.25rem;">
+                                        <div class="form-group"><label>Miejscowość *</label><input type="text" name="ship_city" id="form-city" required placeholder="np. Warszawa"></div>
+                                        <div class="form-group"><label>Ulica i nr (opcjonalnie)</label><input type="text" name="ship_street" id="form-street" placeholder="np. Złota 44"></div>
+                                        <div class="form-group"><label>Obiekt / Inwestycja (opcjonalnie)</label><input type="text" name="ship_target" id="form-target" placeholder="np. Biurowiec Skylight"></div>
+                                    </div>
+                                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.25rem; margin-top: 1.25rem;">
+                                        <div class="form-group"><label>Data Wstępna</label><input type="date" name="date" id="form-date" required></div>
+                                        <div class="form-group"><label>Spedytor / Odbiór</label><input type="text" name="company" id="form-company" placeholder="np. DPD, Własny" required></div>
+                                    </div>
+                                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem; margin-top: 1.25rem; background-color: var(--background); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border-color);">
+                                        <div class="form-group"><label>22° - 15W</label><input type="number" name="p_22_15" id="form-p1" value="0" min="0"></div>
+                                        <div class="form-group"><label>37° - 15W</label><input type="number" name="p_37_15" id="form-p2" value="0" min="0"></div>
+                                        <div class="form-group"><label>58° - 15W</label><input type="number" name="p_58_15" id="form-p3" value="0" min="0"></div>
+                                        <div class="form-group"><label>37° - 20W</label><input type="number" name="p_37_20" id="form-p4" value="0" min="0"></div>
+                                        <div class="form-group"><label>58° - 20W</label><input type="number" name="p_58_20" id="form-p5" value="0" min="0"></div>
+                                    </div>
+                                    
+                                    <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; margin-top: 1.5rem; gap: 1rem;">
+                                        <label class="checkbox-wrapper">
+                                            <input type="checkbox" id="form-is-replacement">
+                                            Wysyłka serwisowa (Wymiana RMA)
+                                        </label>
+                                        <button type="submit" class="btn-primary" style="padding: 0 2.5rem;"><span class="material-symbols-outlined">save</span> Zapisz i Dodaj do Kolejki</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <div class="section-header"><h2><span class="material-symbols-outlined" style="color:var(--warning-status);">pending_actions</span> 1. Zamówienia Oczekujące (Brak Potwierdzenia Terminu)</h2></div>
+                            <div class="section-content" style="padding:0;">
+                                <div class="table-responsive">
+                                    <table>
+                                        <thead><tr><th>Data Wstępna</th><th>Pula</th><th>Cel</th><th>Typ</th><th>Sztuk</th><th>Kąty</th><th>Status Magazynu</th><th>Stan</th><th class="admin-only-col" style="width:200px;">Akcja</th></tr></thead>
+                                        <tbody id="shipments-unconfirmed-table"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <div class="section-header">
+                                <h2><span class="material-symbols-outlined" style="color:var(--info-status);">inventory</span> 2. Kolejka Wysyłek (Potwierdzone)</h2>
+                                <div class="badge" id="shipments-count">0 rekordów</div>
+                            </div>
+                            <div class="section-content" style="padding:0;">
+                                <div class="table-responsive">
+                                    <table>
+                                        <thead><tr><th>Data Potw.</th><th>Pula</th><th>Cel</th><th>Typ</th><th>Sztuk</th><th>Kąty</th><th>Status Magazynu</th><th>Stan</th><th class="admin-only-col" style="width:200px;">Akcja</th></tr></thead>
+                                        <tbody id="shipments-confirmed-table"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <div class="section-header">
+                                <h2><span class="material-symbols-outlined" style="color:var(--success-status);">task_alt</span> 3. Wysyłki Zrealizowane (Historia)</h2>
+                            </div>
+                            <div class="section-content" style="padding:0;">
+                                <div class="table-responsive">
+                                    <table>
+                                        <thead><tr><th>Data Wysłania</th><th>Pula</th><th>Cel</th><th>Typ</th><th>Sztuk</th><th>Kąty</th><th>Stan</th><th class="admin-only-col">Akcja</th></tr></thead>
+                                        <tbody id="shipments-completed-table"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="tab-adjustments" class="tab-content">
+                        <div class="section" id="adj-map-section-container">
+                            <div class="section-header">
+                                <h2><span class="material-symbols-outlined">map</span> Mapa Wyjazdów Serwisowych</h2>
+                                <div style="display:flex; gap:15px; align-items:center;">
+                                    <span id="map-adj-status" style="font-size:0.8rem; color:var(--text-light);"><span class="material-symbols-outlined" style="font-size:1em; animation: spin 1s linear infinite;">autorenew</span> Ładowanie mapy...</span>
+                                </div>
+                            </div>
+                            <div class="section-content" style="padding:0;">
+                                <div id="adjustments-map" class="map-container"></div>
+                            </div>
+                        </div>
+
+                        <div class="section" style="max-width: 900px;">
+                            <div class="section-header"><h2><span class="material-symbols-outlined">handyman</span> Harmonogram Wyjazdów Serwisowych</h2></div>
+                            <div class="section-content" style="padding:0;">
+                                <div class="table-responsive">
+                                    <table style="min-width: 0;">
+                                        <thead><tr><th>Data Wyjazdu</th><th>Miejscowość / Obiekt</th><th class="admin-only-col" style="width: 100px;">Akcja</th></tr></thead>
+                                        <tbody id="adjustments-table"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="form-adjustments-container" class="section" style="max-width: 900px;">
+                            <div class="section-header"><h2><span class="material-symbols-outlined">add_circle</span> Dodaj Nowy Termin Regulacji</h2></div>
+                            <div class="section-content">
+                                <form id="adjustmentForm">
+                                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.25rem;">
+                                        <div class="form-group"><label>Miejscowość *</label><input type="text" name="adj_city" required placeholder="np. Gdańsk"></div>
+                                        <div class="form-group"><label>Ulica i nr</label><input type="text" name="adj_street" placeholder="np. Długa 5"></div>
+                                        <div class="form-group"><label>Obiekt / Klient</label><input type="text" name="adj_target" placeholder="np. Hotel Seaside"></div>
+                                    </div>
+                                    <div style="display: grid; grid-template-columns: 1fr auto; gap: 1rem; align-items: end; margin-top: 1.25rem;">
+                                        <div class="form-group"><label>Data Wyjazdu</label><input type="date" name="adj_date" required></div>
+                                        <div class="form-group"><button type="submit" class="btn-primary" style="width:100%; padding: 0 2rem;"><span class="material-symbols-outlined">save</span> Zaplanuj Wyjazd</button></div>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="tab-history" class="tab-content">
+                        <div class="section">
+                            <div class="section-header">
+                                <h2><span class="material-symbols-outlined">receipt_long</span> Rejestr Zmian i Operacji Magazynowych</h2>
+                                <button class="btn-secondary btn-small" onclick="window.print()" style="margin: 0; height:auto;"><span class="material-symbols-outlined">print</span> Drukuj Logi</button>
+                            </div>
+                            <div class="section-content" style="padding:0;">
+                                <div class="table-responsive" style="max-height: 75vh;">
+                                    <table>
+                                        <thead><tr><th>Data i Czas</th><th>Pracownik</th><th>Typ Operacji</th><th>Szczegóły</th></tr></thead>
+                                        <tbody id="history-table"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="tab-components" class="tab-content">
+                        <div class="stats-bar">
+                            <div class="stat-card pxf-card"><h3>Odbłyśniki PXF 22°</h3><div class="value text-pxf" id="stat-refl-22">0</div></div>
+                            <div class="stat-card pxf-card"><h3>Odbłyśniki PXF 37°</h3><div class="value text-pxf" id="stat-refl-37">0</div></div>
+                            <div class="stat-card pxf-card"><h3>Odbłyśniki PXF 58°</h3><div class="value text-pxf" id="stat-refl-58">0</div></div>
+                        </div>
+
+                        <div id="form-components-container" class="section">
+                            <div class="section-header"><h2><span class="material-symbols-outlined">inventory</span> Przyjęcie Komponentów</h2></div>
+                            <div class="section-content">
+                                <form id="componentsIncomingForm">
+                                    <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 1rem; align-items: end; margin-bottom: 1rem;">
+                                        <div class="form-group"><label>Dostawca</label><input type="text" name="supplier" required placeholder="Dostawca"></div>
+                                        <div class="form-group"><label>Zasilacze (szt)</label><input type="number" name="ps_raw" value="0" min="0"></div>
+                                        <div class="form-group"><label>Klapki Zwykłe</label><input type="number" name="clips_normal" value="0" min="0"></div>
+                                        <div class="form-group"><label>Klapki Przelot.</label><input type="number" name="clips_pass" value="0" min="0"></div>
+                                        <div class="form-group"><button type="submit" class="btn-primary" style="width:100%;"><span class="material-symbols-outlined">add_circle</span> Dodaj</button></div>
+                                    </div>
+                                    <h3 style="font-size: 0.85rem; margin-bottom: 0.5rem; text-transform:uppercase;" class="text-pxf">Dostawa luźnych odbłyśników PXF</h3>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 1rem; align-items: end;">
+                                        <div class="form-group"><label>Odbłyśniki 22°</label><input type="number" name="r22" value="0" min="0"></div>
+                                        <div class="form-group"><label>Odbłyśniki 37°</label><input type="number" name="r37" value="0" min="0"></div>
+                                        <div class="form-group"><label>Odbłyśniki 58°</label><input type="number" name="r58" value="0" min="0"></div>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
+                        <div class="section" style="max-width: 600px;">
+                            <div class="section-header"><h2><span class="material-symbols-outlined">memory</span> Aktualny Stan Zasilaczy i Klapek</h2></div>
+                            <div class="section-content" style="padding:0;">
+                                <div class="table-responsive">
+                                    <table style="min-width: 0;">
+                                        <thead><tr><th>Typ Komponentu</th><th>Ilość na stanie (szt)</th></tr></thead>
+                                        <tbody>
+                                            <tr><td data-label="Typ"><strong>Zasilacze LED</strong></td><td data-label="Ilość" onclick="editComponentCell(this, 'ps_raw')" class="editable" id="ps-raw-cell">0</td></tr>
+                                            <tr><td data-label="Typ"><strong>Klapki Montażowe Zwykłe</strong></td><td data-label="Ilość" onclick="editComponentCell(this, 'clips_normal')" class="editable" id="clips-normal-cell">0</td></tr>
+                                            <tr><td data-label="Typ"><strong>Klapki Montażowe Przelotowe</strong></td><td data-label="Ilość" onclick="editComponentCell(this, 'clips_pass')" class="editable" id="clips-pass-cell">0</td></tr>
+                                            <tr style="background:#F0F9FF;"><td data-label="Typ"><strong style="color:#1E3A8A;">Odbłyśnik PXF 22°</strong></td><td data-label="Ilość" onclick="editComponentCell(this, 'reflector_22')" class="editable" id="reflector-22-cell">0</td></tr>
+                                            <tr style="background:#F0F9FF;"><td data-label="Typ"><strong style="color:#1E3A8A;">Odbłyśnik PXF 37°</strong></td><td data-label="Ilość" onclick="editComponentCell(this, 'reflector_37')" class="editable" id="reflector-37-cell">0</td></tr>
+                                            <tr style="background:#F0F9FF;"><td data-label="Typ"><strong style="color:#1E3A8A;">Odbłyśnik PXF 58°</strong></td><td data-label="Ilość" onclick="editComponentCell(this, 'reflector_58')" class="editable" id="reflector-58-cell">0</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="tab-reports" class="tab-content">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 1.5rem;">
+                            <div id="form-production-container" class="section">
+                                <div class="section-header"><h2><span class="material-symbols-outlined">precision_manufacturing</span> Rejestracja Produkcji (IMPERIAL)</h2></div>
+                                <div class="section-content">
+                                    <form id="productionForm">
+                                        <div style="background-color: var(--background); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 1.5rem;">
+                                            <h3 style="font-size: 0.9rem; color: var(--text-light); text-transform:uppercase; letter-spacing:1px; margin-bottom: 1rem;">Zmontowane oprawy IMPERIAL</h3>
+                                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1.25rem;">
+                                                <div class="form-group"><label>22° - 15W</label><input type="number" name="p1" value="0" min="0"></div>
+                                                <div class="form-group"><label>37° - 15W</label><input type="number" name="p2" value="0" min="0"></div>
+                                                <div class="form-group"><label>58° - 15W</label><input type="number" name="p3" value="0" min="0"></div>
+                                                <div class="form-group"><label>37° - 20W</label><input type="number" name="p4" value="0" min="0"></div>
+                                                <div class="form-group"><label>58° - 20W</label><input type="number" name="p5" value="0" min="0"></div>
+                                            </div>
+                                        </div>
+                                        <div style="text-align: right;">
+                                            <button type="submit" class="btn-primary" style="padding: 0 2.5rem;"><span class="material-symbols-outlined">task_alt</span> Zarejestruj Produkcję</button>
+                                        </div>
+                                    </form>
+                                    <div style="margin-top: 1rem; background: var(--primary-light); padding: 1rem; border-radius: 12px; font-size: 0.8rem; color: var(--primary-dark);">
+                                        <p>System zdejmuje "Surowe" z danego kąta i zużywa po 1 szt. zasilacza i klapek.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="section section-pxf">
+                                <div class="section-header">
+                                    <h2><span class="material-symbols-outlined">swap_horiz</span> Przezbrojenie kątów (PXF)</h2>
+                                </div>
+                                <div class="section-content">
+                                    <form id="pxfSwapForm">
+                                        <div style="background-color: var(--pxf-light); border: 1px solid #D1D9E0; padding: 1.5rem; border-radius: 12px; margin-bottom: 1.5rem;">
+                                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem;">
+                                                <div class="form-group">
+                                                    <label>Z kąta (Zabieram z półki):</label>
+                                                    <select name="angleFrom">
+                                                        <option value="22">22°</option><option value="37">37°</option><option value="58">58°</option>
+                                                    </select>
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Na kąt (Wrzucam na półkę):</label>
+                                                    <select name="angleTo">
+                                                        <option value="37">37°</option><option value="22">22°</option><option value="58">58°</option>
+                                                    </select>
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Dla jakiej mocy?</label>
+                                                    <select name="swapPower">
+                                                        <option value="15">15W</option><option value="20">20W</option>
+                                                    </select>
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Liczba przerabianych lamp:</label>
+                                                    <input type="number" name="swapQty" value="1" min="1">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div style="text-align: right;">
+                                            <button type="submit" class="btn-primary btn-pxf" style="padding: 0 2.5rem;"><span class="material-symbols-outlined">sync</span> Wykonaj Konwersję</button>
+                                        </div>
+                                    </form>
+                                    <div style="margin-top: 1rem; background: #FFFBEB; padding: 1rem; border-radius: 12px; font-size: 0.8rem; color: #B45309;">
+                                        <p>System automatycznie zamieni odbłyśniki w lampach oraz zaksięguje zdemontowane odbłyśniki na magazynie komponentów.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <footer class="footer">
+                        <p>© 2026 Masterlight Sp. z o.o. - Wszelkie prawa zastrzeżone</p>
+                        <p style="font-size: 0.75rem; color: var(--text-light); margin-top: 5px;">Cloud WMS Engine v4.0 | Zalogowano jako: <span id="footer-user">...</span></p>
+                    </footer>
+                </div> <aside id="details-panel">
+                    <div class="panel-header">
+                        <h2 id="panel-title" style="margin: 0; color: var(--primary-dark); font-size: 1.2rem;">Szczegóły</h2>
+                        <button class="btn-secondary btn-small" onclick="closeSidePanel()" style="margin:0; padding: 4px; border:none; background:transparent;"><span class="material-symbols-outlined" style="margin:0; color: var(--text-light); font-size: 1.5rem;">close</span></button>
+                    </div>
+                    <div id="panel-content" class="panel-content">
+                        </div>
+                </aside>
+                </div> </div> </div> <div id="modal" class="modal">
         <div class="modal-dialog">
             <div class="modal-header">
-                <h2 id="modal-title">...</h2>
+                <h2 id="modal-title-old">...</h2>
                 <span class="close" onclick="closeModal()"><span class="material-symbols-outlined">close</span></span>
             </div>
-            <div id="modal-content" class="modal-body"></div>
+            <div id="modal-content-old" class="modal-body"></div>
         </div>
     </div>
 
