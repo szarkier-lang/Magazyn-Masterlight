@@ -303,13 +303,15 @@ div[style*="border-bottom: 2px solid #3B82F6"] {
 div[style*="background-color: #E0F2FE"] + .section-content th {
     background-color: #2563EB !important; /* Szlachetny odcień niebieskiego */
     border-bottom: 2px solid #1D4ED8 !important;
-}
 /* --- MASTER-DETAIL: WYSUWANY PANEL --- */
+    
 .main-wrapper {
     display: flex;
     width: 100%;
-    overflow: hidden;
+    overflow-x: hidden; /* Ukrywamy TYLKO w poziomie, żeby zamknięty panel nie wystawał */
+    /* Usunięto całkowite overflow: hidden, które psuło scrollowanie! */
     position: relative;
+    flex: 1;
 }
 
 #details-panel {
