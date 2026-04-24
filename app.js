@@ -23,7 +23,7 @@ let isUpdatingMap = false;
 let inactivityTimer;
 const INACTIVITY_TIME_MS = 5 * 60 * 1000;
 
-// --- MATRYCE KĄTÓW IMPERIAL (Zapobiega błędom w bazie) ---
+// --- MATRYCE KĄTÓW IMPERIAL ---
 const imperialAngleMaster = { '1': '1', '2': '2', '4': '2', '3': '3', '5': '3' };
 const imperialAngleSync = { '1': ['1'], '2': ['2','4'], '3': ['3','5'] };
 
@@ -38,23 +38,16 @@ function showToast(message, type = 'success') {
     let icon = type === 'error' ? 'error' : (type === 'warning' ? 'warning' : 'check_circle');
     toast.innerHTML = `<span class="material-symbols-outlined">${icon}</span> <span>${message}</span>`;
     container.appendChild(toast);
-    setTimeout(() => { 
-        toast.classList.add('toast-fadeOut'); 
-        toast.addEventListener('animationend', () => toast.remove()); 
-    }, 3500);
+    setTimeout(() => { toast.classList.add('toast-fadeOut'); toast.addEventListener('animationend', () => toast.remove()); }, 3500);
 }
 
 function showModal(title, content) {
-    document.getElementById('modal-title').textContent = title;
-    document.getElementById('modal-content').innerHTML = content;
+    document.getElementById('modal-title-old').textContent = title;
+    document.getElementById('modal-content-old').innerHTML = content;
     document.getElementById('modal').style.display = 'block';
 }
 function closeModal() { document.getElementById('modal').style.display = 'none'; }
-
-function escapeHTML(str) {
-    if (str === null || str === undefined) return '';
-    return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
-}
+function escapeHTML(str) { return String(str || '').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;"); }
 
 function resetInactivityTimer() {
     clearTimeout(inactivityTimer);
@@ -66,30 +59,30 @@ function resetInactivityTimer() {
         }, INACTIVITY_TIME_MS);
     }
 }
-
-['click', 'mousemove', 'keypress', 'scroll', 'touchstart'].forEach(event => {
-    document.addEventListener(event, resetInactivityTimer, true);
-});
+['click', 'mousemove', 'keypress', 'scroll', 'touchstart'].forEach(event => { document.addEventListener(event, resetInactivityTimer, true); });
 
 function toggleSidebar() {
     document.querySelector('.sidebar').classList.toggle('open');
     document.getElementById('mobile-overlay').classList.toggle('active');
 }
 
+function closeSidePanel() {
+    document.getElementById('details-panel').classList.remove('open');
+}
+
 function switchTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
     document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
-    
     document.getElementById(tabId).classList.add('active');
-    
     const clickedNav = Array.from(document.querySelectorAll('.nav-item')).find(item => item.getAttribute('onclick').includes(tabId));
     if (clickedNav) clickedNav.classList.add('active');
+    
+    closeSidePanel(); // Zamykamy panel po zmianie zakładki
     
     if (window.innerWidth <= 768) {
         document.querySelector('.sidebar').classList.remove('open');
         document.getElementById('mobile-overlay').classList.remove('active');
     }
-
     if (tabId === 'tab-dashboard') {
         setTimeout(() => { 
             if (!map) initMap();
@@ -116,15 +109,8 @@ class CloudInventoryManager {
     }
     
     async init() { 
-        showLoading(); 
-        await this.fetchData(); 
-        this.setupRealtime(); 
-        this.bindForms();
-        hideLoading(); 
-        if (this.isFirstLoad && this.products.length > 0) { 
-            showToast(`Zalogowano pomyślnie.`, 'success'); 
-            this.isFirstLoad = false; 
-        } 
+        showLoading(); await this.fetchData(); this.setupRealtime(); this.bindForms(); hideLoading(); 
+        if (this.isFirstLoad && this.products.length > 0) { showToast(`Zalogowano pomyślnie.`, 'success'); this.isFirstLoad = false; } 
     }
     
     async fetchData() {
@@ -139,7 +125,6 @@ class CloudInventoryManager {
             ]);
 
             if (prodsRes.error) throw prodsRes.error;
-            
             this.products = prodsRes.data || [];
             this.components = compsRes.data || { ps_raw: 0, clips_normal: 0, clips_pass: 0, reflector_22:0, reflector_37:0, reflector_58:0 };
             this.shipments = shipsRes.data || [];
@@ -161,54 +146,28 @@ class CloudInventoryManager {
         } catch(e) { console.error("Błąd Bazy:", e); hideLoading(); }
     }
 
-    setupRealtime() { 
-        db.channel('public:all').on('postgres_changes', { event: '*', schema: 'public' }, () => { 
-            clearTimeout(this.realtimeTimeout); 
-            this.realtimeTimeout = setTimeout(() => this.fetchData(), 500); 
-        }).subscribe();
-    }
-
-    async addHistory(action, details) { 
-        const u = currentUserEmail.split('@')[0]; const d = `${details} (przez: ${u})`; 
-        this.history.unshift({ timestamp: new Date().toLocaleString('pl-PL'), action, details: d }); 
-        await db.from('history').insert([{ action, details: d }]);
-    }
-
-    async addServiceCase(actionType, productName, qty, desc) {
-        await db.from('service_history').insert([{ action_type: actionType, product_name: productName, quantity: qty, description: desc }]);
-    }
-
-    getStatus(id) { 
-        const p = this.products.find(x => String(x.id) === String(id));
-        if (!p) return 'unknown'; 
-        const t = (parseInt(p.ready)||0) + (parseInt(p.assembly)||0) + (parseInt(p.service)||0); 
-        return t === 0 ? 'error' : (t >= 50 ? 'ok' : 'warning'); 
-    }
+    setupRealtime() { db.channel('public:all').on('postgres_changes', { event: '*', schema: 'public' }, () => { clearTimeout(this.realtimeTimeout); this.realtimeTimeout = setTimeout(() => this.fetchData(), 500); }).subscribe(); }
+    async addHistory(action, details) { const u = currentUserEmail.split('@')[0]; const d = `${details} (przez: ${u})`; this.history.unshift({ timestamp: new Date().toLocaleString('pl-PL'), action, details: d }); await db.from('history').insert([{ action, details: d }]); }
+    async addServiceCase(actionType, productName, qty, desc) { await db.from('service_history').insert([{ action_type: actionType, product_name: productName, quantity: qty, description: desc }]); }
+    
+    getStatus(id) { const p = this.products.find(x => String(x.id) === String(id)); if (!p) return 'unknown'; const t = (parseInt(p.ready)||0) + (parseInt(p.assembly)||0) + (parseInt(p.service)||0); return t === 0 ? 'error' : (t >= 50 ? 'ok' : 'warning'); }
     
     async updateProduct(id, updates) {
         if (currentRole === 'viewer') return;
         const p = this.products.find(x => String(x.id) === String(id));
         if (p) { 
-            Object.assign(p, updates);
-            this.updateDashboard(); 
-            await db.from('products').update(updates).eq('id', id); 
-            
+            Object.assign(p, updates); this.updateDashboard(); await db.from('products').update(updates).eq('id', id); 
             if (updates.assembly !== undefined && parseInt(id) <= 5) {
                 const targets = imperialAngleSync[id] || [];
                 for(let t of targets) {
-                    if(t !== String(id)) {
-                        await db.from('products').update({ assembly: updates.assembly }).eq('id', t);
-                        const tp = this.products.find(x => String(x.id) === t);
-                        if(tp) tp.assembly = updates.assembly;
-                    }
+                    if(t !== String(id)) { await db.from('products').update({ assembly: updates.assembly }).eq('id', t); const tp = this.products.find(x => String(x.id) === t); if(tp) tp.assembly = updates.assembly; }
                 }
             }
-            await this.addHistory('Edycja stanu ręczna', p.name);
-            await this.fetchData(); 
+            await this.addHistory('Edycja stanu ręczna', p.name); await this.fetchData(); 
         }
     }
 
-    // --- 1. PRZYJĘCIA I PRODUKCJA (IMPERIAL) ---
+    // --- IMPERIAL ---
     async addIncomingImperial(supplier, newProducts) {
         if (currentRole === 'viewer') return;
         let totalAdded = 0; const dbUpdates = [];
@@ -217,24 +176,14 @@ class CloudInventoryManager {
             if (qty > 0) {
                 const masterProduct = this.products.find(p => String(p.id) === String(masterId));
                 if (masterProduct) {
-                    const newAssembly = (parseInt(masterProduct.assembly) || 0) + qty;
-                    const idsToUpdate = imperialAngleSync[masterId] || [masterId];
-                    idsToUpdate.forEach(targetId => {
-                        dbUpdates.push(db.from('products').update({ assembly: newAssembly }).eq('id', targetId));
-                        const targetProduct = this.products.find(p => String(p.id) === String(targetId));
-                        if(targetProduct) targetProduct.assembly = newAssembly;
-                    });
+                    const newAssembly = (parseInt(masterProduct.assembly) || 0) + qty; const idsToUpdate = imperialAngleSync[masterId] || [masterId];
+                    idsToUpdate.forEach(targetId => { dbUpdates.push(db.from('products').update({ assembly: newAssembly }).eq('id', targetId)); const targetProduct = this.products.find(p => String(p.id) === String(targetId)); if(targetProduct) targetProduct.assembly = newAssembly; });
                     totalAdded += qty;
                 }
             }
         }
-        this.updateDashboard();
         if (dbUpdates.length > 0) await Promise.all(dbUpdates);
-        if (totalAdded > 0) {
-            const p1 = newProducts[1] || 0, p2 = newProducts[2] || 0, p3 = newProducts[3] || 0;
-            await this.addHistory('Dostawa z Huty (IMPERIAL)', `${supplier} | 22°:${p1} | 37°:${p2} | 58°:${p3}`); 
-            await this.fetchData();
-        }
+        if (totalAdded > 0) { await this.addHistory('Dostawa z Huty (IMPERIAL)', `${supplier} | 22°:${newProducts[1]} | 37°:${newProducts[2]} | 58°:${newProducts[3]}`); await this.fetchData(); }
     }
 
     async registerProduction(prod) {
@@ -242,109 +191,72 @@ class CloudInventoryManager {
         const tp = Object.values(prod).reduce((a,b) => a + parseInt(b||0), 0); if (tp === 0) return;
         const minC = Math.min(parseInt(this.components.ps_raw)||0, parseInt(this.components.clips_normal)||0, parseInt(this.components.clips_pass)||0);
         if (tp > minC) { showToast('Brak zasilaczy lub klapek na magazynie!', 'error'); return; }
-        
-        const req = {};
-        for(const [id, q] of Object.entries(prod)) { let qq = parseInt(q); if(qq > 0) { let mId = imperialAngleMaster[id] || id; req[mId] = (req[mId] || 0) + qq; } }
-        for(const [mId, q] of Object.entries(req)) { 
-            const masterP = this.products.find(x => String(x.id) === String(mId)); let av = masterP ? (parseInt(masterP.assembly)||0) : 0;
-            if(q > av) { showToast('Brak surowych obudów IMPERIAL na ten kąt!', 'error'); return; } 
-        }
-        
+        const req = {}; for(const [id, q] of Object.entries(prod)) { let qq = parseInt(q); if(qq > 0) { let mId = imperialAngleMaster[id] || id; req[mId] = (req[mId] || 0) + qq; } }
+        for(const [mId, q] of Object.entries(req)) { const masterP = this.products.find(x => String(x.id) === String(mId)); let av = masterP ? (parseInt(masterP.assembly)||0) : 0; if(q > av) { showToast('Brak surowych obudów IMPERIAL na ten kąt!', 'error'); return; } }
         const upds = []; let tpReal = 0; const assemblyUpdates = {}; const readyUpdates = {};
         for (const [id, q] of Object.entries(prod)) {
             let qq = parseInt(q);
             if(qq > 0) { 
                 const p = this.products.find(x => String(x.id) === String(id));
-                if(p) { 
-                    p.ready = (parseInt(p.ready) || 0) + qq; readyUpdates[p.id] = p.ready;
-                    let mId = imperialAngleMaster[id] || id;
-                    if (assemblyUpdates[mId] === undefined) { const masterP = this.products.find(x => String(x.id) === String(mId)); assemblyUpdates[mId] = masterP ? (parseInt(masterP.assembly) || 0) : 0; }
-                    assemblyUpdates[mId] -= qq; tpReal += qq;
-                } 
+                if(p) { p.ready = (parseInt(p.ready) || 0) + qq; readyUpdates[p.id] = p.ready; let mId = imperialAngleMaster[id] || id; if (assemblyUpdates[mId] === undefined) { const masterP = this.products.find(x => String(x.id) === String(mId)); assemblyUpdates[mId] = masterP ? (parseInt(masterP.assembly) || 0) : 0; } assemblyUpdates[mId] -= qq; tpReal += qq; } 
             }
         }
-
         for (const [pid, newReady] of Object.entries(readyUpdates)) { upds.push(db.from('products').update({ ready: newReady }).eq('id', pid)); }
-        for (const [mId, newAssembly] of Object.entries(assemblyUpdates)) {
-            const targets = imperialAngleSync[mId] || [mId];
-            for (let targetId of targets) { upds.push(db.from('products').update({ assembly: newAssembly }).eq('id', targetId)); const p = this.products.find(x => String(x.id) === targetId); if (p) p.assembly = newAssembly; }
-        }
-        
+        for (const [mId, newAssembly] of Object.entries(assemblyUpdates)) { const targets = imperialAngleSync[mId] || [mId]; for (let targetId of targets) { upds.push(db.from('products').update({ assembly: newAssembly }).eq('id', targetId)); const p = this.products.find(x => String(x.id) === targetId); if (p) p.assembly = newAssembly; } }
         if(tpReal > 0) { 
             this.components.ps_raw -= tpReal; this.components.clips_normal -= tpReal; this.components.clips_pass -= tpReal; 
             upds.push(db.from('components').update({ ps_raw: this.components.ps_raw, clips_normal: this.components.clips_normal, clips_pass: this.components.clips_pass }).eq('id', 1)); 
-            await Promise.all(upds); await this.addHistory('Raport z produkcji (IMPERIAL)', `Zmontowano sztuk: ${tpReal}`); 
-            showToast('Zmontowano IMPERIAL', 'success'); await this.fetchData();
+            await Promise.all(upds); await this.addHistory('Raport z produkcji (IMPERIAL)', `Zmontowano sztuk: ${tpReal}`); showToast('Zmontowano IMPERIAL', 'success'); await this.fetchData();
         }
     }
 
-    // --- 2. PRZYJĘCIA I PRZEZBRAJANIE (PXF) ---
+    // --- PXF ---
     async addIncomingPxf(supplier, newProducts) {
         if (currentRole === 'viewer') return;
         let totalAdded = 0; const dbUpdates = [];
         for (const [id, qtyStr] of Object.entries(newProducts)) {
             let qty = parseInt(qtyStr);
-            if (qty > 0) {
-                const p = this.products.find(x => String(x.id) === String(id));
-                if (p) { p.ready = (parseInt(p.ready) || 0) + qty; dbUpdates.push(db.from('products').update({ ready: p.ready }).eq('id', id)); totalAdded += qty; }
-            }
+            if (qty > 0) { const p = this.products.find(x => String(x.id) === String(id)); if (p) { p.ready = (parseInt(p.ready) || 0) + qty; dbUpdates.push(db.from('products').update({ ready: p.ready }).eq('id', id)); totalAdded += qty; } }
         }
-        this.updateDashboard();
         if (dbUpdates.length > 0) await Promise.all(dbUpdates);
         if (totalAdded > 0) { await this.addHistory('Dostawa Gotowych (PXF)', `Dostawca: ${supplier} | Wgrano łącznie: ${totalAdded} szt.`); await this.fetchData(); }
     }
 
     async swapPxfAngle(fromAngle, toAngle, power, qty) {
         if (currentRole === 'viewer') return;
-        const getPxfId = (a, p) => {
-            if (a === '22' && p === '15') return 6; if (a === '37' && p === '15') return 7; if (a === '58' && p === '15') return 8;
-            if (a === '37' && p === '20') return 9; if (a === '58' && p === '20') return 10; return null;
-        };
+        const getPxfId = (a, p) => { if (a === '22' && p === '15') return 6; if (a === '37' && p === '15') return 7; if (a === '58' && p === '15') return 8; if (a === '37' && p === '20') return 9; if (a === '58' && p === '20') return 10; return null; };
         const sourceId = getPxfId(fromAngle, power); const targetId = getPxfId(toAngle, power);
         if (!sourceId || !targetId) { showToast('Nieprawidłowa kombinacja.', 'error'); return; }
         const sourceP = this.products.find(p => p.id === sourceId); const targetP = this.products.find(p => p.id === targetId);
-        
         if ((parseInt(sourceP.ready) || 0) < qty) { showToast(`Brak wystarczającej ilości lamp Gotowych PXF dla kąta ${fromAngle}°`, 'error'); return; }
         const targetReflectorField = `reflector_${toAngle}`; const sourceReflectorField = `reflector_${fromAngle}`;
         if ((parseInt(this.components[targetReflectorField]) || 0) < qty) { showToast(`Brakuje Ci odbłyśników ${toAngle}° w magazynie komponentów!`, 'error'); return; }
-
         sourceP.ready = (parseInt(sourceP.ready) || 0) - qty; targetP.ready = (parseInt(targetP.ready) || 0) + qty;
-        this.components[targetReflectorField] = (parseInt(this.components[targetReflectorField]) || 0) - qty;
-        this.components[sourceReflectorField] = (parseInt(this.components[sourceReflectorField]) || 0) + qty;
-
-        this.updateDashboard();
-
-        const upds = [
-            db.from('products').update({ ready: sourceP.ready }).eq('id', sourceId), db.from('products').update({ ready: targetP.ready }).eq('id', targetId),
-            db.from('components').update({ [targetReflectorField]: this.components[targetReflectorField], [sourceReflectorField]: this.components[sourceReflectorField] }).eq('id', 1)
-        ];
-        await Promise.all(upds); await this.addHistory('Przezbrojenie (PXF)', `Konwersja z ${fromAngle}° na ${toAngle}° (${power}W). Ilość: ${qty} szt.`);
-        showToast('Kąty zostały zamienione!', 'success'); await this.fetchData();
+        this.components[targetReflectorField] = (parseInt(this.components[targetReflectorField]) || 0) - qty; this.components[sourceReflectorField] = (parseInt(this.components[sourceReflectorField]) || 0) + qty;
+        const upds = [ db.from('products').update({ ready: sourceP.ready }).eq('id', sourceId), db.from('products').update({ ready: targetP.ready }).eq('id', targetId), db.from('components').update({ [targetReflectorField]: this.components[targetReflectorField], [sourceReflectorField]: this.components[sourceReflectorField] }).eq('id', 1) ];
+        await Promise.all(upds); await this.addHistory('Przezbrojenie (PXF)', `Konwersja z ${fromAngle}° na ${toAngle}° (${power}W). Ilość: ${qty} szt.`); showToast('Kąty zostały zamienione!', 'success'); await this.fetchData();
     }
 
-    // --- 3. WYSYŁKI ---
+    // --- WYSYŁKI ---
     async addShipment(s) { 
         if (currentRole === 'viewer') return;
         await db.from('shipments').insert([{ date: s.date, location: s.location, company: s.company, products: s.products, status: 'planned', is_confirmed: false, is_replacement: s.is_replacement, brand: s.brand }]); 
         await this.addHistory(s.is_replacement ? 'Utworzono Wysyłkę SERWISOWĄ' : 'Dodano zamówienie', `${s.location} [${s.brand.toUpperCase()}]`); await this.fetchData(); 
     }
-
     async confirmShipment(id) { 
         if (currentRole === 'viewer') return;
         const s = this.shipments.find(x => String(x.id) === String(id)); 
-        if (s) { s.is_confirmed = true; this.updateDashboard(); await db.from('shipments').update({ is_confirmed: true }).eq('id', id); await this.addHistory('Potwierdzenie daty wyjazdu', s.location); await this.fetchData(); } 
+        if (s) { s.is_confirmed = true; await db.from('shipments').update({ is_confirmed: true }).eq('id', id); await this.addHistory('Potwierdzenie daty wyjazdu', s.location); await this.fetchData(); } 
     }
-
     async deleteShipment(id) { 
         if (currentRole !== 'admin') return;
-        this.shipments = this.shipments.filter(s => String(s.id) !== String(id)); this.updateDashboard(); 
+        this.shipments = this.shipments.filter(s => String(s.id) !== String(id)); 
         await db.from('shipments').delete().eq('id', id); await this.addHistory('Anulowanie zamówienia w systemie', `Skasowano`); await this.fetchData();
     }
-
     async updateShipmentInDB(id, data) { 
         if (currentRole === 'viewer') return;
         const s = this.shipments.find(x => String(x.id) === String(id)); 
-        if (s) { Object.assign(s, data); this.updateDashboard(); await db.from('shipments').update(data).eq('id', id); await this.addHistory('Edycja szczegółów zamówienia', s.location); await this.fetchData(); } 
+        if (s) { Object.assign(s, data); await db.from('shipments').update(data).eq('id', id); await this.addHistory('Edycja szczegółów zamówienia', s.location); await this.fetchData(); } 
     }
     
     async completeShipment(id) {
@@ -353,15 +265,10 @@ class CloudInventoryManager {
         const mis = {}, upds = [];
         for (const [pId, qty] of Object.entries(s.products || {})) {
             let q = parseInt(qty);
-            if(q > 0) { 
-                const p = this.products.find(x => String(x.id) === String(pId));
-                if(p) { let ded = Math.min(q, parseInt(p.ready)||0); p.ready = (parseInt(p.ready)||0) - ded; if(q - ded > 0) mis[pId] = q - ded; if(ded > 0) upds.push(db.from('products').update({ ready: p.ready }).eq('id', p.id)); } 
-            }
+            if(q > 0) { const p = this.products.find(x => String(x.id) === String(pId)); if(p) { let ded = Math.min(q, parseInt(p.ready)||0); p.ready = (parseInt(p.ready)||0) - ded; if(q - ded > 0) mis[pId] = q - ded; if(ded > 0) upds.push(db.from('products').update({ ready: p.ready }).eq('id', p.id)); } }
         }
         s.status = Object.keys(mis).length > 0 ? 'partial' : 'completed'; s.partial_missing = Object.keys(mis).length > 0 ? mis : null; s.is_confirmed = true; 
-        this.updateDashboard();
-        if(upds.length > 0) await Promise.all(upds); 
-        await db.from('shipments').update({ status: s.status, partial_missing: s.partial_missing, is_confirmed: true }).eq('id', id);
+        if(upds.length > 0) await Promise.all(upds); await db.from('shipments').update({ status: s.status, partial_missing: s.partial_missing, is_confirmed: true }).eq('id', id);
         await this.addHistory(Object.keys(mis).length > 0 ? `Wydano (niepełna przesyłka)` : `Wydano pełny komplet`, s.location); await this.fetchData();
     }
 
@@ -374,48 +281,107 @@ class CloudInventoryManager {
             if(p) { let ded = Math.min(need, parseInt(p.ready)||0); p.ready = (parseInt(p.ready)||0) - ded; if(need - ded > 0) smis[pId] = need - ded; if(ded > 0) upds.push(db.from('products').update({ ready: p.ready }).eq('id', p.id)); }
         }
         s.status = Object.keys(smis).length > 0 ? 'partial' : 'completed'; s.partial_missing = Object.keys(smis).length > 0 ? smis : null; 
-        this.updateDashboard();
-        if(upds.length > 0) await Promise.all(upds);
-        await db.from('shipments').update({ status: s.status, partial_missing: s.partial_missing }).eq('id', id); 
+        if(upds.length > 0) await Promise.all(upds); await db.from('shipments').update({ status: s.status, partial_missing: s.partial_missing }).eq('id', id); 
         await this.addHistory(Object.keys(smis).length > 0 ? `Wydano część braków` : `Wydano zaległe braki (komplet)`, s.location); await this.fetchData();
     }
 
-    // --- 4. REGULACJE, SERWIS I KOMPONENTY ---
+    // --- REGULACJE, SERWIS I KOMPONENTY ---
     async addAdjustment(date, location) { if (currentRole === 'viewer') return; await db.from('adjustments').insert([{ date, location }]); await this.addHistory('Planowanie regulacji', `${location} - ${date}`); await this.fetchData(); }
-    async updateAdjustmentDate(id, newDate) { if (currentRole === 'viewer') return; const a = this.adjustments.find(x => String(x.id) === String(id)); if (a) { a.date = newDate; this.updateDashboard(); await db.from('adjustments').update({ date: newDate }).eq('id', id); await this.addHistory('Zmiana terminu serwisu (Przeciągnięcie)', `${a.location} na ${newDate}`); await this.fetchData(); } }
-    async deleteAdjustment(id) { if (currentRole !== 'admin') return; this.adjustments = this.adjustments.filter(a => String(a.id) !== String(id)); this.updateDashboard(); await db.from('adjustments').delete().eq('id', id); await this.addHistory('Usunięcie regulacji z kalendarza', `Rekord skasowany`); await this.fetchData(); }
+    async updateAdjustmentDate(id, newDate) { if (currentRole === 'viewer') return; const a = this.adjustments.find(x => String(x.id) === String(id)); if (a) { a.date = newDate; await db.from('adjustments').update({ date: newDate }).eq('id', id); await this.addHistory('Zmiana terminu serwisu', `${a.location} na ${newDate}`); await this.fetchData(); } }
+    async deleteAdjustment(id) { if (currentRole !== 'admin') return; this.adjustments = this.adjustments.filter(a => String(a.id) !== String(id)); await db.from('adjustments').delete().eq('id', id); await this.addHistory('Usunięcie regulacji z kalendarza', `Rekord skasowany`); await this.fetchData(); }
 
     async processDamagedReturn(productId, qty, salvagedPsQty, desc) {
-        const p = this.products.find(x => String(x.id) === String(productId)); if (!p) return;
-        p.damaged = (parseInt(p.damaged) || 0) + qty; const updates = [ db.from('products').update({ damaged: p.damaged }).eq('id', productId) ]; let histMsg = `Przyjęto uszkodzone szt: ${qty}.`;
+        const p = this.products.find(x => String(x.id) === String(productId)); if (!p) return; p.damaged = (parseInt(p.damaged) || 0) + qty;
+        const updates = [ db.from('products').update({ damaged: p.damaged }).eq('id', productId) ]; let histMsg = `Przyjęto uszkodzone szt: ${qty}.`;
         if(salvagedPsQty > 0) { this.components.ps_raw = (parseInt(this.components.ps_raw)||0) + salvagedPsQty; updates.push(db.from('components').update({ps_raw: this.components.ps_raw}).eq('id', 1)); histMsg += ` Odzyskano zasilaczy: ${salvagedPsQty}.`; }
-        this.updateDashboard(); await Promise.all(updates); await this.addHistory(`Zwrot z RMA [${p.name}]`, histMsg); await this.addServiceCase('Przyjęcie z RMA', p.name, qty, desc); await this.fetchData();
+        await Promise.all(updates); await this.addHistory(`Zwrot z RMA [${p.name}]`, histMsg); await this.addServiceCase('Przyjęcie z RMA', p.name, qty, desc); await this.fetchData();
     }
 
     async sendToService(productId, qty, desc) {
         const p = this.products.find(x => String(x.id) === String(productId)); if (!p || (parseInt(p.damaged)||0) < qty) return;
         p.damaged = parseInt(p.damaged) - qty; p.service = (parseInt(p.service)||0) + qty;
-        this.updateDashboard(); await db.from('products').update({ damaged: p.damaged, service: p.service }).eq('id', productId); await this.addHistory(`Wydano na Serwis`, `Model: ${p.name}, Ilość: ${qty}`); await this.addServiceCase('Wysłano do Serwisu', p.name, qty, desc); await this.fetchData();
+        await db.from('products').update({ damaged: p.damaged, service: p.service }).eq('id', productId); await this.addHistory(`Wydano na Serwis`, `Model: ${p.name}, Ilość: ${qty}`); await this.addServiceCase('Wysłano do Serwisu', p.name, qty, desc); await this.fetchData();
     }
 
     async receiveFromService(productId, qty, newPsUsed, desc) {
         const p = this.products.find(x => String(x.id) === String(productId)); if (!p || (parseInt(p.service)||0) < qty) return;
-        p.service = parseInt(p.service) - qty; p.ready = (parseInt(p.ready)||0) + qty; const updates = [ db.from('products').update({ service: p.service, ready: p.ready }).eq('id', productId) ]; let histMsg = `Naprawiono szt: ${qty}.`;
+        p.service = parseInt(p.service) - qty; p.ready = (parseInt(p.ready)||0) + qty;
+        const updates = [ db.from('products').update({ service: p.service, ready: p.ready }).eq('id', productId) ]; let histMsg = `Naprawiono szt: ${qty}.`;
         if(newPsUsed > 0) { this.components.ps_raw = (parseInt(this.components.ps_raw)||0) - newPsUsed; updates.push(db.from('components').update({ps_raw: this.components.ps_raw}).eq('id', 1)); histMsg += ` Zużyto NOWYCH zasilaczy: ${newPsUsed}.`; }
-        this.updateDashboard(); await Promise.all(updates); await this.addHistory(`Zakończono naprawę [${p.name}]`, histMsg); await this.addServiceCase('Odbiór z Serwisu', p.name, qty, desc); await this.fetchData();
+        await Promise.all(updates); await this.addHistory(`Zakończono naprawę [${p.name}]`, histMsg); await this.addServiceCase('Odbiór z Serwisu', p.name, qty, desc); await this.fetchData();
     }
 
     async addComponentsShipment(sup, nc) { 
         if (currentRole === 'viewer') return;
         const u = { ps_raw: (parseInt(this.components.ps_raw)||0) + (parseInt(nc.ps_raw)||0), clips_normal: (parseInt(this.components.clips_normal)||0) + (parseInt(nc.clips_normal)||0), clips_pass: (parseInt(this.components.clips_pass)||0) + (parseInt(nc.clips_pass)||0), reflector_22: (parseInt(this.components.reflector_22)||0) + (parseInt(nc.reflector_22)||0), reflector_37: (parseInt(this.components.reflector_37)||0) + (parseInt(nc.reflector_37)||0), reflector_58: (parseInt(this.components.reflector_58)||0) + (parseInt(nc.reflector_58)||0) };
-        this.components = u; this.updateDashboard(); await db.from('components').update(u).eq('id', 1); await this.addHistory('Dostawa komponentów', sup); await this.fetchData();
+        await db.from('components').update(u).eq('id', 1); await this.addHistory('Dostawa komponentów', sup); await this.fetchData();
     }
 
     async updateComponent(f, v) { 
-        if (currentRole === 'viewer') return; this.components[f] = v; this.updateDashboard(); await db.from('components').update({ [f]: v }).eq('id', 1); await this.addHistory('Korekta ręczna komponentów', `Zaktualizowano stan bazy.`); await this.fetchData();
+        if (currentRole === 'viewer') return; await db.from('components').update({ [f]: v }).eq('id', 1); await this.addHistory('Korekta ręczna komponentów', `Zaktualizowano stan bazy.`); await this.fetchData();
     }
 
-    // --- 5. RENDEROWANIE WIDOKÓW TABEL I INTERFEJSU ---
+    // --- PREDYKCJA (Burn-down) ---
+    renderPredictions() {
+        const container = document.getElementById('prediction-cards-container');
+        if (!container) return;
+
+        let imperialReady = 0;
+        const imperialIds = ['1', '2', '3', '4', '5'];
+        this.products.forEach(p => { if (imperialIds.includes(String(p.id))) imperialReady += (parseInt(p.ready) || 0); });
+
+        let ps = parseInt(this.components.ps_raw) || 0;
+        let clipsN = parseInt(this.components.clips_normal) || 0;
+        let clipsP = parseInt(this.components.clips_pass) || 0;
+
+        const upcoming = this.shipments.filter(s => s.status !== 'completed').sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+
+        let shortagePS = null, shortageCN = null, shortageCP = null;
+
+        for (let s of upcoming) {
+            let needed = 0;
+            if (s.brand === 'imperial' || (!s.brand && s.products && (s.products[1] || s.products[2] || s.products[3] || s.products[4] || s.products[5]))) {
+                for (let pid of imperialIds) { needed += parseInt((s.products||{})[pid] || 0); }
+            }
+
+            if (needed > 0) {
+                if (imperialReady >= needed) {
+                    imperialReady -= needed;
+                } else {
+                    let toProduce = needed - imperialReady;
+                    imperialReady = 0;
+                    ps -= toProduce; clipsN -= toProduce; clipsP -= toProduce;
+                    
+                    if (ps < 0 && !shortagePS) shortagePS = s.date;
+                    if (clipsN < 0 && !shortageCN) shortageCN = s.date;
+                    if (clipsP < 0 && !shortageCP) shortageCP = s.date;
+                }
+            }
+        }
+
+        const createCard = (title, currentVal, shortageDate) => {
+            const isCritical = shortageDate !== null;
+            const dateStr = shortageDate ? new Date(shortageDate).toLocaleDateString('pl-PL') : 'Zapas bezpieczny na cały plan';
+            const statusClass = isCritical ? 'predictive critical' : 'predictive';
+            const labelStr = isCritical ? `Zabraknie ok. ${dateStr}` : dateStr;
+            
+            return `
+                <div class="stat-card ${statusClass}">
+                    <h3>${title}</h3>
+                    <div class="value">${currentVal} <span style="font-size:1rem; color:var(--text-secondary);">szt</span></div>
+                    <span class="prediction-label"><span class="material-symbols-outlined" style="font-size:1.1em; margin-right:4px; vertical-align:-0.2em;">${isCritical ? 'warning' : 'check_circle'}</span>${labelStr}</span>
+                </div>
+            `;
+        };
+
+        container.innerHTML = `
+            ${createCard('Zasilacze LED', this.components.ps_raw || 0, shortagePS)}
+            ${createCard('Klapki Zwykłe', this.components.clips_normal || 0, shortageCN)}
+            ${createCard('Klapki Przelotowe', this.components.clips_pass || 0, shortageCP)}
+        `;
+    }
+
+    // --- RENDEROWANIE WIDOKÓW TABEL I INTERFEJSU ---
     getTotals() {
         const s = new Set(); let tA = 0; 
         this.products.forEach(p => { if(p.id <= 5) { let mId = imperialAngleMaster[p.id] || p.id; if (!s.has(mId)) { tA += parseInt(p.assembly)||0; s.add(mId); } }});
@@ -435,6 +401,9 @@ class CloudInventoryManager {
             const c = this.components; let lc = [];
             if(c) { if((parseInt(c.ps_raw)||0)<50) lc.push('Zasilacze'); if((parseInt(c.clips_normal)||0)<50) lc.push('Klapki Zwykłe'); if((parseInt(c.clips_pass)||0)<50) lc.push('Klapki Przelotowe'); }
             if(lc.length>0 && alertsContainer) { alertsContainer.innerHTML = `<div class="alert-banner critical"><span class="material-symbols-outlined">warning_amber</span><div><strong>Krytyczny stan!</strong> Pilnie domów: ${lc.join(', ')}.</div></div>`; }
+
+            // URUCHOMIENIE PREDYKCYJI
+            this.renderPredictions();
 
             const rMap = getShipmentsReadinessMap();
             renderCalendar(rMap);
@@ -604,7 +573,8 @@ function renderShipmentRow(s, readinessMap, showActions = true) {
 
     let actionButtons = '<div class="action-cell-flex">';
     if (currentRole !== 'viewer' && showActions) {
-        actionButtons += `<button class="btn-small btn-secondary" onclick="editShipment('${s.id}')" title="Edytuj dane"><span class="material-symbols-outlined" style="margin:0;">edit</span></button>`;
+        // ZMIANA MASTER-DETAIL: Edytuj otwiera panel z boku!
+        actionButtons += `<button class="btn-small btn-secondary" onclick="openShipmentDetails('${s.id}')" title="Edytuj dane"><span class="material-symbols-outlined" style="margin:0;">edit</span></button>`;
         if (currentRole === 'admin') actionButtons += `<button class="btn-small btn-secondary" onclick="deleteShipment('${s.id}')" title="Usuń trwale"><span class="material-symbols-outlined" style="color:var(--accent-red); margin:0;">delete</span></button>`;
         if (s.status === 'planned' && !s.is_confirmed) actionButtons = `<button class="btn-small btn-primary" onclick="confirmShipmentDateUI('${s.id}')">Zatwierdź</button>` + actionButtons;
         else if (s.status === 'planned' && s.is_confirmed) actionButtons = `<button class="btn-small btn-primary" onclick="completeShipmentUI('${s.id}')">Wydaj Kurierowi</button>` + actionButtons;
@@ -712,61 +682,72 @@ function editComponentCell(cell, field) {
     input.addEventListener('blur', save); input.addEventListener('keypress', (e) => { if (e.key === 'Enter') input.blur(); });
 }
 
-// --- FUNKCJE Z INTERFEJSU (Wysyłki / Serwis) ---
+// --- FUNKCJE WYWOŁANIA Z UI ---
 async function confirmShipmentDateUI(id) { if (confirm('Zatwierdzić termin wysyłki?')) { showLoading(); await window.inventory.confirmShipment(id); hideLoading(); showToast('Zatwierdzono', 'success'); } }
 async function completeShipmentUI(id) { if (confirm(`Wydano towar z magazynu?`)) { showLoading(); await window.inventory.completeShipment(id); hideLoading(); showToast('Wydano towar', 'success'); } }
 async function completeRemainingShipmentUI(id) { if (confirm('Wydano brakującą część towaru?')) { showLoading(); await window.inventory.completeRemainingShipment(id); hideLoading(); showToast('Zrealizowano', 'success'); } }
-async function deleteShipment(id) { if (currentRole === 'admin' && confirm('Usunąć zamówienie?')) { showLoading(); await window.inventory.deleteShipment(id); hideLoading(); showToast('Usunięto', 'success'); } }
+async function deleteShipment(id) { if (currentRole === 'admin' && confirm('Usunąć zamówienie?')) { showLoading(); await window.inventory.deleteShipment(id); closeSidePanel(); hideLoading(); showToast('Usunięto', 'success'); } }
 async function deleteAdjustment(id) { if (currentRole === 'admin' && confirm('Usunąć wpis z regulacji?')) { showLoading(); await window.inventory.deleteAdjustment(id); hideLoading(); showToast('Usunięto', 'success'); } }
 
-function openReceiveDamagedUI() {
-    let opts = window.inventory.products.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
-    let html = `<div class="form-group"><label>Model oprawy (zwrot)</label><select id="rma_prod_id" style="width:100%; padding:0.75rem; border-radius:10px; font-family:'Inter',sans-serif; border:1px solid #D1D5DB;">${opts}</select></div><div class="form-group"><label>Zwróconych (uszkodzonych) sztuk</label><input type="number" id="rma_qty" min="1" value="1"></div><div class="form-group" style="background:#ECFDF5; padding:1rem; border-radius:8px; border:1px solid #A7F3D0;"><label style="color:#065F46; font-size:0.8rem;">Odzyskanych zasilaczy?</label><input type="number" id="rma_salvaged" min="0" value="0"></div><div class="form-group"><label>Opis usterki</label><input type="text" id="rma_desc" placeholder="np. uszkodzony klosz..."></div><button class="btn-primary" onclick="submitDamagedReturn()" style="width:100%; margin-top:10px;"><span class="material-symbols-outlined">assignment_return</span> Przyjmij zwrot</button>`;
-    showModal('Przyjęcie zwrotu RMA', html);
-}
-async function submitDamagedReturn() { let id = document.getElementById('rma_prod_id').value; let qty = parseInt(document.getElementById('rma_qty').value)||0; let sal = parseInt(document.getElementById('rma_salvaged').value)||0; let desc = document.getElementById('rma_desc').value.trim(); if(qty>0) { closeModal(); showLoading(); await window.inventory.processDamagedReturn(id, qty, sal, desc); hideLoading(); } }
-
-function openSendToServiceUI(id, name, available) {
-    let html = `<p style="margin-bottom:1rem; font-size:0.95rem;">Wysyłasz oprawy <strong>${name}</strong> na naprawę. Dostępne (uszkodzone): <strong>${available}</strong> szt.</p><div class="form-group"><label>Ilość do wydania:</label><input type="number" id="rma_send_qty" min="1" max="${available}" value="1"></div><div class="form-group"><label>Opis / Notatka</label><input type="text" id="rma_send_desc" placeholder="np. wysłano DPD..."></div><button class="btn-primary" onclick="submitSendService('${id}')" style="width:100%;"><span class="material-symbols-outlined">handyman</span> Wydaj do Serwisu</button>`;
-    showModal('Wydanie na naprawę', html);
-}
-async function submitSendService(id) { let qty = parseInt(document.getElementById('rma_send_qty').value)||0; let desc = document.getElementById('rma_send_desc').value.trim(); if(qty>0) { closeModal(); showLoading(); await window.inventory.sendToService(id, qty, desc); hideLoading(); } }
-
-function openReceiveFromServiceUI(id, name, inService) {
-    let html = `<p style="margin-bottom:1rem; font-size:0.95rem;">Odbierasz oprawy <strong>${name}</strong> po naprawie. W serwisie: <strong>${inService}</strong> szt.</p><div class="form-group"><label>Odebranych sztuk:</label><input type="number" id="rma_rec_qty" min="1" max="${inService}" value="1"></div><div class="form-group" style="background:#FEF2F2; padding:1rem; border-radius:8px; border:1px solid #FECACA;"><label style="color:#991B1B; font-size:0.8rem;">Zużytych NOWYCH zasilaczy?</label><input type="number" id="rma_used_ps" min="0" value="0"></div><div class="form-group"><label>Notatka</label><input type="text" id="rma_rec_desc" placeholder="..."></div><button class="btn-primary" onclick="submitReceiveService('${id}')" style="width:100%; margin-top:10px;"><span class="material-symbols-outlined">task_alt</span> Zakończ Naprawę</button>`;
-    showModal('Odbiór z naprawy', html);
-}
-async function submitReceiveService(id) { let qty = parseInt(document.getElementById('rma_rec_qty').value)||0; let used = parseInt(document.getElementById('rma_used_ps').value)||0; let desc = document.getElementById('rma_rec_desc').value.trim(); if(qty>0) { closeModal(); showLoading(); await window.inventory.receiveFromService(id, qty, used, desc); hideLoading(); } }
-
-function showAnglesDemand(id) {
-    const shipment = window.inventory.shipments.find(s => String(s.id) === String(id)); if(!shipment) return;
-    const p = shipment.products || {}; const brand = shipment.brand;
-    const a22 = brand === 'pxf' ? (parseInt(p[6])||0) : (parseInt(p[1])||0);
-    const a37 = brand === 'pxf' ? (parseInt(p[7])||0) + (parseInt(p[9])||0) : (parseInt(p[2])||0) + (parseInt(p[4])||0);
-    const a58 = brand === 'pxf' ? (parseInt(p[8])||0) + (parseInt(p[10])||0) : (parseInt(p[3])||0) + (parseInt(p[5])||0);
-    const content = `<div style="text-align: center;"><p style="color: var(--text-light); margin-bottom: 1.5rem; font-size:0.95rem;">Zapotrzebowanie dla: <br><strong style="color:var(--text-dark); font-size:1.2rem;">${escapeHTML(shipment.location)}</strong></p><div style="display:flex; justify-content: space-around; background: var(--background); padding: 2rem 1rem; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: inset 0 2px 4px rgba(0,0,0,0.03);"><div><div style="font-size: 0.8rem; color: var(--text-light); text-transform:uppercase; letter-spacing:1px; margin-bottom:5px; font-weight:600;">Kąt 22°</div><div style="font-size: 2.5rem; font-weight: 700; color:var(--primary-dark);">${a22}</div></div><div><div style="font-size: 0.8rem; color: var(--text-light); text-transform:uppercase; letter-spacing:1px; margin-bottom:5px; font-weight:600;">Kąt 37°</div><div style="font-size: 2.5rem; font-weight: 700; color:var(--primary-dark);">${a37}</div></div><div><div style="font-size: 0.8rem; color: var(--text-light); text-transform:uppercase; letter-spacing:1px; margin-bottom:5px; font-weight:600;">Kąt 58°</div><div style="font-size: 2.5rem; font-weight: 700; color:var(--primary-dark);">${a58}</div></div></div></div>`;
-    showModal('Zestawienie Kątowe', content);
-}
-
-function editShipment(id) {
+// --- NOWY SYSTEM MASTER-DETAIL (EDYCJA Z BOKU) ---
+function openShipmentDetails(id) {
     if (currentRole === 'viewer') return;
     const shipment = window.inventory.shipments.find(s => String(s.id) === String(id)); if (!shipment) return;
     const p = shipment.products || {}; const isPartial = shipment.status === 'partial'; const disableProducts = isPartial ? 'disabled' : '';
-    const b = shipment.brand;
+    const b = shipment.brand || 'imperial';
     const p1 = b==='pxf'?(p[6]||0):(p[1]||0); const p2 = b==='pxf'?(p[7]||0):(p[2]||0); const p3 = b==='pxf'?(p[8]||0):(p[3]||0); const p4 = b==='pxf'?(p[9]||0):(p[4]||0); const p5 = b==='pxf'?(p[10]||0):(p[5]||0);
-    const formHTML = `<div style="display: grid; gap: 1.25rem;"><div class="form-group"><label>Data Wysyłki</label><input type="date" id="edit_shipment_date" value="${escapeHTML(shipment.date)}"></div><div class="form-group"><label>Pełny Cel / Adresat</label><input type="text" id="edit_shipment_location" value="${escapeHTML(shipment.location)}"></div><div class="form-group"><label>Spedytor / Firma Przewozowa</label><input type="text" id="edit_shipment_company" value="${escapeHTML(shipment.company || '')}"></div><div style="margin-top: 0.5rem; background-color: var(--background); padding: 1.25rem; border-radius: 12px; border: 1px solid var(--border-color);"><h3 style="margin-bottom: 1rem; font-size: 0.85rem; color: var(--text-light); text-transform:uppercase; letter-spacing:1px;">Ilości Opraw (szt.) - Pula ${b.toUpperCase()}</h3>${isPartial ? '<p style="color: var(--accent-red); font-size:0.8rem; margin-top:-10px; margin-bottom:10px; font-weight:500;">Edycja ilości zablokowana dla wysyłki częściowej.</p>' : ''}<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;"><div class="form-group" style="margin:0;"><label>22° - 15W</label><input type="number" id="edit_p1" value="${p1}" min="0" ${disableProducts}></div><div class="form-group" style="margin:0;"><label>37° - 15W</label><input type="number" id="edit_p2" value="${p2}" min="0" ${disableProducts}></div><div class="form-group" style="margin:0;"><label>58° - 15W</label><input type="number" id="edit_p3" value="${p3}" min="0" ${disableProducts}></div><div class="form-group" style="margin:0;"><label>37° - 20W</label><input type="number" id="edit_p4" value="${p4}" min="0" ${disableProducts}></div><div class="form-group" style="margin:0;"><label>58° - 20W</label><input type="number" id="edit_p5" value="${p5}" min="0" ${disableProducts}></div></div></div><div style="margin-top: 1rem;"><button class="btn-primary" onclick="saveShipment('${id}')" style="width:100%; padding: 1rem;"><span class="material-symbols-outlined">save</span> Zapisz Zmiany</button></div></div>`;
-    showModal('Edycja Zamówienia', formHTML);
+    
+    document.getElementById('panel-title').innerText = `Zamówienie: ${b.toUpperCase()}`;
+    
+    const panelContent = document.getElementById('panel-content');
+    panelContent.innerHTML = `
+        <div style="display: flex; flex-direction: column; gap: 1rem;">
+            <div class="form-group"><label>Data Wysyłki</label><input type="date" id="panel_shipment_date" value="${escapeHTML(shipment.date)}"></div>
+            <div class="form-group"><label>Pełny Cel / Adresat</label><input type="text" id="panel_shipment_location" value="${escapeHTML(shipment.location)}"></div>
+            <div class="form-group"><label>Spedytor / Firma</label><input type="text" id="panel_shipment_company" value="${escapeHTML(shipment.company || '')}"></div>
+            
+            <div style="margin-top: 1rem; background-color: var(--bg-page); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-color);">
+                <h3 style="margin-bottom: 0.5rem; font-size: 0.8rem; color: var(--text-secondary); text-transform:uppercase;">Ilości Opraw</h3>
+                ${isPartial ? '<p style="color: var(--error-text); font-size:0.75rem; margin-bottom:10px;">Edycja ilości zablokowana (wysyłka częściowa).</p>' : ''}
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                    <div class="form-group" style="margin:0;"><label>22° - 15W</label><input type="number" id="panel_p1" value="${p1}" min="0" ${disableProducts}></div>
+                    <div class="form-group" style="margin:0;"><label>37° - 15W</label><input type="number" id="panel_p2" value="${p2}" min="0" ${disableProducts}></div>
+                    <div class="form-group" style="margin:0;"><label>58° - 15W</label><input type="number" id="panel_p3" value="${p3}" min="0" ${disableProducts}></div>
+                    <div class="form-group" style="margin:0;"><label>37° - 20W</label><input type="number" id="panel_p4" value="${p4}" min="0" ${disableProducts}></div>
+                    <div class="form-group" style="margin:0;"><label>58° - 20W</label><input type="number" id="panel_p5" value="${p5}" min="0" ${disableProducts}></div>
+                </div>
+            </div>
+            
+            <button class="btn-primary" onclick="savePanelShipment('${id}')" style="width:100%; margin-top: 1rem;"><span class="material-symbols-outlined">save</span> Zapisz Zmiany</button>
+            <button class="btn-secondary" onclick="closeSidePanel()" style="width:100%;">Anuluj</button>
+        </div>
+    `;
+    
+    document.getElementById('details-panel').classList.add('open');
 }
 
-async function saveShipment(id) {
-    const newDate = document.getElementById('edit_shipment_date').value; const newLocation = document.getElementById('edit_shipment_location').value; const newCompany = document.getElementById('edit_shipment_company').value;
+async function savePanelShipment(id) {
+    const newDate = document.getElementById('panel_shipment_date').value; 
+    const newLocation = document.getElementById('panel_shipment_location').value; 
+    const newCompany = document.getElementById('panel_shipment_company').value;
     if (!newDate || !newLocation) { showToast('Data i cel są wymagane.', 'error'); return; }
-    const shipment = window.inventory.shipments.find(s => String(s.id) === String(id)); const data = { date: newDate, location: newLocation, company: newCompany };
+    
+    const shipment = window.inventory.shipments.find(s => String(s.id) === String(id)); 
+    const data = { date: newDate, location: newLocation, company: newCompany };
+    
     if (shipment.status !== 'partial') {
-        if(shipment.brand === 'imperial') { data.products = { 1: parseInt(document.getElementById('edit_p1').value) || 0, 2: parseInt(document.getElementById('edit_p2').value) || 0, 3: parseInt(document.getElementById('edit_p3').value) || 0, 4: parseInt(document.getElementById('edit_p4').value) || 0, 5: parseInt(document.getElementById('edit_p5').value) || 0 }; } 
-        else { data.products = { 6: parseInt(document.getElementById('edit_p1').value) || 0, 7: parseInt(document.getElementById('edit_p2').value) || 0, 8: parseInt(document.getElementById('edit_p3').value) || 0, 9: parseInt(document.getElementById('edit_p4').value) || 0, 10: parseInt(document.getElementById('edit_p5').value) || 0 }; }
+        if(shipment.brand === 'imperial') {
+            data.products = { 1: parseInt(document.getElementById('panel_p1').value) || 0, 2: parseInt(document.getElementById('panel_p2').value) || 0, 3: parseInt(document.getElementById('panel_p3').value) || 0, 4: parseInt(document.getElementById('panel_p4').value) || 0, 5: parseInt(document.getElementById('panel_p5').value) || 0 };
+        } else {
+            data.products = { 6: parseInt(document.getElementById('panel_p1').value) || 0, 7: parseInt(document.getElementById('panel_p2').value) || 0, 8: parseInt(document.getElementById('panel_p3').value) || 0, 9: parseInt(document.getElementById('panel_p4').value) || 0, 10: parseInt(document.getElementById('panel_p5').value) || 0 };
+        }
     }
-    closeModal(); showLoading(); await window.inventory.updateShipmentInDB(id, data); hideLoading(); showToast('Zmiany zostały zapisane.', 'success');
+    
+    closeSidePanel(); 
+    showLoading(); 
+    await window.inventory.updateShipmentInDB(id, data); 
+    hideLoading(); 
+    showToast('Zapisano z panelu.', 'success');
 }
 
 function showMissingItems(id) {
@@ -808,7 +789,58 @@ function printInventoryPdf() {
     const w = window.open('', '', 'width=800,height=600'); w.document.write(h); w.document.close(); setTimeout(() => { w.print(); w.close(); }, 300);
 }
 
-// --- MAPY I SKANER PDF ---
+// --- KALENDARZ I MAPA (LEAFLET) ---
+function changeMonth(dir) { currentCalendarDate.setMonth(currentCalendarDate.getMonth() + dir); if(window.inventory) window.inventory.updateDashboard(); }
+function handleDragStart(event, type, id) { event.dataTransfer.setData('application/json', JSON.stringify({ type, id })); event.dataTransfer.effectAllowed = 'move'; }
+async function handleCalendarDrop(event, targetDate) {
+    event.preventDefault(); if (currentRole === 'viewer') { showToast('Brak uprawnień.', 'warning'); return; }
+    try {
+        const dataStr = event.dataTransfer.getData('application/json'); if (!dataStr) return;
+        const data = JSON.parse(dataStr); if (!data.type || !data.id) return;
+        showLoading();
+        if (data.type === 'shipment') { await window.inventory.updateShipmentInDB(data.id, { date: targetDate }); showToast('Przesunięto wysyłkę.', 'success'); } 
+        else if (data.type === 'adjustment') { await window.inventory.updateAdjustmentDate(data.id, targetDate); showToast('Przesunięto serwis.', 'success'); }
+    } catch (e) { showToast('Błąd przenoszenia.', 'error'); } finally { hideLoading(); }
+}
+
+function renderCalendar(readinessMap) {
+    const container = document.getElementById('dashboard-calendar-container'); const monthLabel = document.getElementById('calendar-month-label'); if(!container) return;
+    const year = currentCalendarDate.getFullYear(); const month = currentCalendarDate.getMonth(); const monthNames = ["Styczeń","Luty","Marzec","Kwiecień","Maj","Czerwiec","Lipiec","Sierpień","Wrzesień","Październik","Listopad","Grudzień"];
+    monthLabel.textContent = `${monthNames[month]} ${year}`; container.innerHTML = '';
+    let firstDay = new Date(year, month, 1).getDay(); firstDay = firstDay === 0 ? 6 : firstDay - 1; const daysInMonth = new Date(year, month + 1, 0).getDate();
+    let dayCounter = 1, isMonthFinished = false;
+    while (!isMonthFinished) {
+        const row = document.createElement('div'); row.className = 'calendar-grid'; let weekTotal = 0;
+        for (let j = 0; j < 7; j++) {
+            const cell = document.createElement('div');
+            if (dayCounter === 1 && j < firstDay) { cell.className = 'calendar-cell empty'; } 
+            else if (dayCounter > daysInMonth) { cell.className = 'calendar-cell empty'; isMonthFinished = true; } 
+            else {
+                cell.className = 'calendar-cell'; const ds = `${year}-${String(month + 1).padStart(2,'0')}-${String(dayCounter).padStart(2,'0')}`;
+                cell.ondragover = (e) => e.preventDefault(); cell.ondrop = (e) => handleCalendarDrop(e, ds);
+                if (ds === new Date().toISOString().split('T')[0]) cell.classList.add('today');
+                let html = `<div class="calendar-date">${dayCounter}</div>`;
+                if(window.inventory && window.inventory.shipments) {
+                    window.inventory.shipments.filter(s => s.status !== 'completed' && s.date === ds).forEach(s => {
+                        const tot = s.products ? Object.values(s.products).reduce((a,b)=>parseInt(a||0)+parseInt(b||0),0) : 0; weekTotal += tot;
+                        let st = s.status === 'partial' ? '<span style="color:var(--warning-status);">Braki (Część.)</span>' : (readinessMap[s.id] ? '<span style="color:var(--success-status);">Komplet</span>' : '<span style="color:var(--accent-red);">Braki</span>');
+                        html += `<div class="cal-item shipment" draggable="true" ondragstart="handleDragStart(event, 'shipment', '${s.id}')" onclick="openShipmentDetails('${s.id}')"><strong>W: ${escapeHTML(s.location).split('(')[0]}</strong><br>${tot} szt<br>${st}</div>`;
+                    });
+                }
+                if(window.inventory && window.inventory.adjustments) {
+                    window.inventory.adjustments.filter(a => a.date === ds).forEach(a => { html += `<div class="cal-item adjustment" draggable="true" ondragstart="handleDragStart(event, 'adjustment', '${a.id}')"><strong>R: ${escapeHTML(a.location).split('(')[0]}</strong><br>Serwis</div>`; });
+                }
+                cell.innerHTML = html; dayCounter++;
+            }
+            row.appendChild(cell);
+        }
+        if (!isMonthFinished || row.childNodes[0].className !== 'calendar-cell empty') {
+            const sum = document.createElement('div'); sum.className = 'cal-summary'; sum.innerHTML = `<span style="font-size:0.7rem;color:var(--text-light);">POTRZEBA</span><span style="font-size:1.4rem;">${weekTotal}</span><span style="font-size:0.7rem;">szt</span>`;
+            row.appendChild(sum); container.appendChild(row);
+        }
+    }
+}
+
 const boundsPoland = L.latLngBounds(L.latLng(48.9, 14.1), L.latLng(54.9, 24.2));
 function initMap() { if (map) return; map = L.map('shipments-map', { zoomControl: false, scrollWheelZoom: false, dragging: false, touchZoom: false, doubleClickZoom: false, boxZoom: false, keyboard: false, maxBounds: boundsPoland, minZoom: 5, maxZoom: 9 }).setView([51.7592, 19.4560], 6); L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map); }
 function initAdjMap() { if (mapAdj) return; mapAdj = L.map('adjustments-map', { zoomControl: false, scrollWheelZoom: false, dragging: false, touchZoom: false, doubleClickZoom: false, boxZoom: false, keyboard: false, maxBounds: boundsPoland, minZoom: 5, maxZoom: 9 }).setView([51.7592, 19.4560], 6); L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(mapAdj); }
@@ -851,56 +883,6 @@ async function updateAdjMapMarkers(adjustments) {
         for (let i = 0; i < sortedAdjs.length; i++) { const coords = await geocodeLocation(sortedAdjs[i].location); if (coords) { const marker = L.marker(coords, { icon: L.divIcon({html: `<div class="custom-map-marker marker-adjustment" style="width:24px; height:24px; font-size:11px;">${i+1}</div>`, className: '', iconSize: [24,24], iconAnchor: [12,12]})}).addTo(mapAdj).bindPopup(`<b>${escapeHTML(sortedAdjs[i].location)}</b><br>Serwis: ${escapeHTML(sortedAdjs[i].date)}`); mapAdjMarkers.push(marker); allPoints.push(marker); } await new Promise(r => setTimeout(r, 100)); }
         if (allPoints.length > 1) mapAdj.fitBounds(new L.featureGroup(allPoints).getBounds(), { padding: [50, 50], maxZoom: 9 });
     } catch(e) {}
-}
-
-function handleDragStart(event, type, id) { event.dataTransfer.setData('application/json', JSON.stringify({ type, id })); event.dataTransfer.effectAllowed = 'move'; }
-async function handleCalendarDrop(event, targetDate) {
-    event.preventDefault(); if (currentRole === 'viewer') { showToast('Brak uprawnień.', 'warning'); return; }
-    try {
-        const dataStr = event.dataTransfer.getData('application/json'); if (!dataStr) return;
-        const data = JSON.parse(dataStr); if (!data.type || !data.id) return;
-        showLoading();
-        if (data.type === 'shipment') { await window.inventory.updateShipmentInDB(data.id, { date: targetDate }); showToast('Przesunięto wysyłkę.', 'success'); } 
-        else if (data.type === 'adjustment') { await window.inventory.updateAdjustmentDate(data.id, targetDate); showToast('Przesunięto serwis.', 'success'); }
-    } catch (e) { showToast('Błąd przenoszenia.', 'error'); } finally { hideLoading(); }
-}
-
-function renderCalendar(readinessMap) {
-    const container = document.getElementById('dashboard-calendar-container'); const monthLabel = document.getElementById('calendar-month-label'); if(!container) return;
-    const year = currentCalendarDate.getFullYear(); const month = currentCalendarDate.getMonth(); const monthNames = ["Styczeń","Luty","Marzec","Kwiecień","Maj","Czerwiec","Lipiec","Sierpień","Wrzesień","Październik","Listopad","Grudzień"];
-    monthLabel.textContent = `${monthNames[month]} ${year}`; container.innerHTML = '';
-    let firstDay = new Date(year, month, 1).getDay(); firstDay = firstDay === 0 ? 6 : firstDay - 1; const daysInMonth = new Date(year, month + 1, 0).getDate();
-    let dayCounter = 1, isMonthFinished = false;
-    while (!isMonthFinished) {
-        const row = document.createElement('div'); row.className = 'calendar-grid'; let weekTotal = 0;
-        for (let j = 0; j < 7; j++) {
-            const cell = document.createElement('div');
-            if (dayCounter === 1 && j < firstDay) { cell.className = 'calendar-cell empty'; } 
-            else if (dayCounter > daysInMonth) { cell.className = 'calendar-cell empty'; isMonthFinished = true; } 
-            else {
-                cell.className = 'calendar-cell'; const ds = `${year}-${String(month + 1).padStart(2,'0')}-${String(dayCounter).padStart(2,'0')}`;
-                cell.ondragover = (e) => e.preventDefault(); cell.ondrop = (e) => handleCalendarDrop(e, ds);
-                if (ds === new Date().toISOString().split('T')[0]) cell.classList.add('today');
-                let html = `<div class="calendar-date">${dayCounter}</div>`;
-                if(window.inventory && window.inventory.shipments) {
-                    window.inventory.shipments.filter(s => s.status !== 'completed' && s.date === ds).forEach(s => {
-                        const tot = s.products ? Object.values(s.products).reduce((a,b)=>parseInt(a||0)+parseInt(b||0),0) : 0; weekTotal += tot;
-                        let st = s.status === 'partial' ? '<span style="color:var(--warning-status);">Braki (Część.)</span>' : (readinessMap[s.id] ? '<span style="color:var(--success-status);">Komplet</span>' : '<span style="color:var(--accent-red);">Braki</span>');
-                        html += `<div class="cal-item shipment" draggable="true" ondragstart="handleDragStart(event, 'shipment', '${s.id}')" onclick="editShipment('${s.id}')"><strong>W: ${escapeHTML(s.location).split('(')[0]}</strong><br>${tot} szt<br>${st}</div>`;
-                    });
-                }
-                if(window.inventory && window.inventory.adjustments) {
-                    window.inventory.adjustments.filter(a => a.date === ds).forEach(a => { html += `<div class="cal-item adjustment" draggable="true" ondragstart="handleDragStart(event, 'adjustment', '${a.id}')"><strong>R: ${escapeHTML(a.location).split('(')[0]}</strong><br>Serwis</div>`; });
-                }
-                cell.innerHTML = html; dayCounter++;
-            }
-            row.appendChild(cell);
-        }
-        if (!isMonthFinished || row.childNodes[0].className !== 'calendar-cell empty') {
-            const sum = document.createElement('div'); sum.className = 'cal-summary'; sum.innerHTML = `<span style="font-size:0.7rem;color:var(--text-light);">POTRZEBA</span><span style="font-size:1.4rem;">${weekTotal}</span><span style="font-size:0.7rem;">szt</span>`;
-            row.appendChild(sum); container.appendChild(row);
-        }
-    }
 }
 
 window.scanOfferFromPDF = async function(file) {
