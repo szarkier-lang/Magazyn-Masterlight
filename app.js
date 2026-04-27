@@ -326,9 +326,13 @@ class CloudInventoryManager {
         const container = document.getElementById('prediction-cards-container');
         if (!container) return;
 
-        let imperialReady = 0;
+        let readyMap = {};
         const imperialIds = ['1', '2', '3', '4', '5'];
-        this.products.forEach(p => { if (imperialIds.includes(String(p.id))) imperialReady += (parseInt(p.ready) || 0); });
+        this.products.forEach(p => { 
+            if (imperialIds.includes(String(p.id))) {
+                readyMap[p.id] = parseInt(p.ready) || 0;
+            }
+        });
 
         let ps = parseInt(this.components.ps_raw) || 0;
         let clipsN = parseInt(this.components.clips_normal) || 0;
@@ -339,22 +343,28 @@ class CloudInventoryManager {
         let shortagePS = null, shortageCN = null, shortageCP = null;
 
         for (let s of upcoming) {
-            let needed = 0;
-            if (s.brand === 'imperial' || (!s.brand && s.products && (s.products[1] || s.products[2] || s.products[3] || s.products[4] || s.products[5]))) {
-                for (let pid of imperialIds) { needed += parseInt((s.products||{})[pid] || 0); }
-            }
-
-            if (needed > 0) {
-                if (imperialReady >= needed) {
-                    imperialReady -= needed;
-                } else {
-                    let toProduce = needed - imperialReady;
-                    imperialReady = 0;
-                    ps -= toProduce; clipsN -= toProduce; clipsP -= toProduce;
+            if (s.brand === 'imperial' || (!s.brand && s.products)) {
+                for (let pid of imperialIds) {
+                    let needed = parseInt((s.products || {})[pid] || 0);
                     
-                    if (ps < 0 && !shortagePS) shortagePS = s.date;
-                    if (clipsN < 0 && !shortageCN) shortageCN = s.date;
-                    if (clipsP < 0 && !shortageCP) shortageCP = s.date;
+                    if (needed > 0) {
+                        let availableReady = readyMap[pid] || 0;
+
+                        if (availableReady >= needed) {
+                            readyMap[pid] -= needed;
+                        } else {
+                            let toProduce = needed - availableReady;
+                            readyMap[pid] = 0;
+
+                            ps -= toProduce; 
+                            clipsN -= toProduce; 
+                            clipsP -= toProduce;
+                            
+                            if (ps < 0 && !shortagePS) shortagePS = s.date;
+                            if (clipsN < 0 && !shortageCN) shortageCN = s.date;
+                            if (clipsP < 0 && !shortageCP) shortageCP = s.date;
+                        }
+                    }
                 }
             }
         }
@@ -402,7 +412,6 @@ class CloudInventoryManager {
             if(c) { if((parseInt(c.ps_raw)||0)<50) lc.push('Zasilacze'); if((parseInt(c.clips_normal)||0)<50) lc.push('Klapki Zwykłe'); if((parseInt(c.clips_pass)||0)<50) lc.push('Klapki Przelotowe'); }
             if(lc.length>0 && alertsContainer) { alertsContainer.innerHTML = `<div class="alert-banner critical"><span class="material-symbols-outlined">warning_amber</span><div><strong>Krytyczny stan!</strong> Pilnie domów: ${lc.join(', ')}.</div></div>`; }
 
-            // URUCHOMIENIE PREDYKCYJI
             this.renderPredictions();
 
             const rMap = getShipmentsReadinessMap();
@@ -573,7 +582,6 @@ function renderShipmentRow(s, readinessMap, showActions = true) {
 
     let actionButtons = '<div class="action-cell-flex">';
     if (currentRole !== 'viewer' && showActions) {
-        // ZMIANA MASTER-DETAIL: Edytuj otwiera panel z boku!
         actionButtons += `<button class="btn-small btn-secondary" onclick="openShipmentDetails('${s.id}')" title="Edytuj dane"><span class="material-symbols-outlined" style="margin:0;">edit</span></button>`;
         if (currentRole === 'admin') actionButtons += `<button class="btn-small btn-secondary" onclick="deleteShipment('${s.id}')" title="Usuń trwale"><span class="material-symbols-outlined" style="color:var(--accent-red); margin:0;">delete</span></button>`;
         if (s.status === 'planned' && !s.is_confirmed) actionButtons = `<button class="btn-small btn-primary" onclick="confirmShipmentDateUI('${s.id}')">Zatwierdź</button>` + actionButtons;
@@ -749,6 +757,36 @@ async function savePanelShipment(id) {
     hideLoading(); 
     showToast('Zapisano z panelu.', 'success');
 }
+
+function showAnglesDemand(id) {
+    const shipment = window.inventory.shipments.find(s => String(s.id) === String(id)); if(!shipment) return;
+    const p = shipment.products || {}; const brand = shipment.brand;
+    const a22 = brand === 'pxf' ? (parseInt(p[6])||0) : (parseInt(p[1])||0);
+    const a37 = brand === 'pxf' ? (parseInt(p[7])||0) + (parseInt(p[9])||0) : (parseInt(p[2])||0) + (parseInt(p[4])||0);
+    const a58 = brand === 'pxf' ? (parseInt(p[8])||0) + (parseInt(p[10])||0) : (parseInt(p[3])||0) + (parseInt(p[5])||0);
+    const content = `<div style="text-align: center;"><p style="color: var(--text-light); margin-bottom: 1.5rem; font-size:0.95rem;">Zapotrzebowanie dla: <br><strong style="color:var(--text-dark); font-size:1.2rem;">${escapeHTML(shipment.location)}</strong></p><div style="display:flex; justify-content: space-around; background: var(--background); padding: 2rem 1rem; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: inset 0 2px 4px rgba(0,0,0,0.03);"><div><div style="font-size: 0.8rem; color: var(--text-light); text-transform:uppercase; letter-spacing:1px; margin-bottom:5px; font-weight:600;">Kąt 22°</div><div style="font-size: 2.5rem; font-weight: 700; color:var(--primary-dark);">${a22}</div></div><div><div style="font-size: 0.8rem; color: var(--text-light); text-transform:uppercase; letter-spacing:1px; margin-bottom:5px; font-weight:600;">Kąt 37°</div><div style="font-size: 2.5rem; font-weight: 700; color:var(--primary-dark);">${a37}</div></div><div><div style="font-size: 0.8rem; color: var(--text-light); text-transform:uppercase; letter-spacing:1px; margin-bottom:5px; font-weight:600;">Kąt 58°</div><div style="font-size: 2.5rem; font-weight: 700; color:var(--primary-dark);">${a58}</div></div></div></div>`;
+    showModal('Zestawienie Kątowe', content);
+}
+
+function openReceiveDamagedUI() {
+    let opts = window.inventory.products.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+    let html = `<div class="form-group"><label>Model oprawy (zwrot)</label><select id="rma_prod_id" style="width:100%; padding:0.75rem; border-radius:10px; font-family:'Inter',sans-serif; border:1px solid #D1D5DB;">${opts}</select></div><div class="form-group"><label>Zwróconych (uszkodzonych) sztuk</label><input type="number" id="rma_qty" min="1" value="1"></div><div class="form-group" style="background:#ECFDF5; padding:1rem; border-radius:8px; border:1px solid #A7F3D0;"><label style="color:#065F46; font-size:0.8rem;">Odzyskanych zasilaczy?</label><input type="number" id="rma_salvaged" min="0" value="0"></div><div class="form-group"><label>Opis usterki</label><input type="text" id="rma_desc" placeholder="np. uszkodzony klosz..."></div><button class="btn-primary" onclick="submitDamagedReturn()" style="width:100%; margin-top:10px;"><span class="material-symbols-outlined">assignment_return</span> Przyjmij zwrot</button>`;
+    showModal('Przyjęcie zwrotu RMA', html);
+}
+async function submitDamagedReturn() { let id = document.getElementById('rma_prod_id').value; let qty = parseInt(document.getElementById('rma_qty').value)||0; let sal = parseInt(document.getElementById('rma_salvaged').value)||0; let desc = document.getElementById('rma_desc').value.trim(); if(qty>0) { closeModal(); showLoading(); await window.inventory.processDamagedReturn(id, qty, sal, desc); hideLoading(); } }
+
+function openSendToServiceUI(id, name, available) {
+    let html = `<p style="margin-bottom:1rem; font-size:0.95rem;">Wysyłasz oprawy <strong>${name}</strong> na naprawę. Dostępne (uszkodzone): <strong>${available}</strong> szt.</p><div class="form-group"><label>Ilość do wydania:</label><input type="number" id="rma_send_qty" min="1" max="${available}" value="1"></div><div class="form-group"><label>Opis / Notatka</label><input type="text" id="rma_send_desc" placeholder="np. wysłano DPD..."></div><button class="btn-primary" onclick="submitSendService('${id}')" style="width:100%;"><span class="material-symbols-outlined">handyman</span> Wydaj do Serwisu</button>`;
+    showModal('Wydanie na naprawę', html);
+}
+async function submitSendService(id) { let qty = parseInt(document.getElementById('rma_send_qty').value)||0; let desc = document.getElementById('rma_send_desc').value.trim(); if(qty>0) { closeModal(); showLoading(); await window.inventory.sendToService(id, qty, desc); hideLoading(); } }
+
+function openReceiveFromServiceUI(id, name, inService) {
+    let html = `<p style="margin-bottom:1rem; font-size:0.95rem;">Odbierasz oprawy <strong>${name}</strong> po naprawie. W serwisie: <strong>${inService}</strong> szt.</p><div class="form-group"><label>Odebranych sztuk:</label><input type="number" id="rma_rec_qty" min="1" max="${inService}" value="1"></div><div class="form-group" style="background:#FEF2F2; padding:1rem; border-radius:8px; border:1px solid #FECACA;"><label style="color:#991B1B; font-size:0.8rem;">Zużytych NOWYCH zasilaczy?</label><input type="number" id="rma_used_ps" min="0" value="0"></div><div class="form-group"><label>Notatka</label><input type="text" id="rma_rec_desc" placeholder="..."></div><button class="btn-primary" onclick="submitReceiveService('${id}')" style="width:100%; margin-top:10px;"><span class="material-symbols-outlined">task_alt</span> Zakończ Naprawę</button>`;
+    showModal('Odbiór z naprawy', html);
+}
+async function submitReceiveService(id) { let qty = parseInt(document.getElementById('rma_rec_qty').value)||0; let used = parseInt(document.getElementById('rma_used_ps').value)||0; let desc = document.getElementById('rma_rec_desc').value.trim(); if(qty>0) { closeModal(); showLoading(); await window.inventory.receiveFromService(id, qty, used, desc); hideLoading(); } }
+
 
 function showMissingItems(id) {
     if (!window.inventory) return; const s = window.inventory.shipments.find(x => String(x.id) === String(id)); if (!s || !s.partial_missing) return;
