@@ -321,74 +321,133 @@ class CloudInventoryManager {
         if (currentRole === 'viewer') return; await db.from('components').update({ [f]: v }).eq('id', 1); await this.addHistory('Korekta ręczna komponentów', `Zaktualizowano stan bazy.`); await this.fetchData();
     }
 
-    // --- PREDYKCJA (Burn-down) ---
+    // --- PREDYKCJA (Burn-down V2.0 - z naprawioną analizą opraw) ---
     renderPredictions() {
         const container = document.getElementById('prediction-cards-container');
         if (!container) return;
 
+        // 1. Zbuduj mapy aktualnych stanów (Kąt po Kącie)
         let readyMap = {};
-        const imperialIds = ['1', '2', '3', '4', '5'];
-        this.products.forEach(p => { 
-            if (imperialIds.includes(String(p.id))) {
-                readyMap[p.id] = parseInt(p.ready) || 0;
-            }
+        let assemblyMap = { '1': 0, '2': 0, '3': 0 };
+
+        this.products.forEach(p => {
+            readyMap[p.id] = parseInt(p.ready) || 0;
+            if (p.id == 1) assemblyMap['1'] = parseInt(p.assembly) || 0;
+            if (p.id == 2) assemblyMap['2'] = parseInt(p.assembly) || 0;
+            if (p.id == 3) assemblyMap['3'] = parseInt(p.assembly) || 0;
         });
 
         let ps = parseInt(this.components.ps_raw) || 0;
         let clipsN = parseInt(this.components.clips_normal) || 0;
         let clipsP = parseInt(this.components.clips_pass) || 0;
 
-        const upcoming = this.shipments.filter(s => s.status !== 'completed').sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+        // 2. Pobierz wysyłki i sortuj bezpiecznie po dacie (rozwiązuje problem z dziwnymi dniami)
+        const upcoming = this.shipments
+            .filter(s => s.status !== 'completed')
+            .sort((a, b) => {
+                let da = new Date(a.date).getTime() || 0;
+                let db = new Date(b.date).getTime() || 0;
+                return da - db;
+            });
 
-        let shortagePS = null, shortageCN = null, shortageCP = null;
+        let shortages = { 'ps': null, 'cn': null, 'cp': null };
+        let fixtureShortages = {}; // Rejestruje dokładną nazwę brakującej oprawy i datę
 
+        const imperialMasterName = { '1': 'Surowe 22°', '2': 'Surowe 37°', '3': 'Surowe 58°' };
+
+        // 3. Główna pętla spalania (burn-down)
         for (let s of upcoming) {
-            if (s.brand === 'imperial' || (!s.brand && s.products)) {
-                for (let pid of imperialIds) {
-                    let needed = parseInt((s.products || {})[pid] || 0);
-                    
-                    if (needed > 0) {
-                        let availableReady = readyMap[pid] || 0;
+            // Ważne: wysyłki 'partial' używają s.partial_missing!
+            let req = s.status === 'partial' ? s.partial_missing : s.products;
+            if (!req) continue;
 
-                        if (availableReady >= needed) {
-                            readyMap[pid] -= needed;
-                        } else {
-                            let toProduce = needed - availableReady;
-                            readyMap[pid] = 0;
+            for (const [pidStr, qtyStr] of Object.entries(req)) {
+                let pid = String(pidStr);
+                let needed = parseInt(qtyStr) || 0;
+                if (needed <= 0) continue;
 
-                            ps -= toProduce; 
-                            clipsN -= toProduce; 
-                            clipsP -= toProduce;
-                            
-                            if (ps < 0 && !shortagePS) shortagePS = s.date;
-                            if (clipsN < 0 && !shortageCN) shortageCN = s.date;
-                            if (clipsP < 0 && !shortageCP) shortageCP = s.date;
+                let availableReady = readyMap[pid] || 0;
+
+                if (availableReady >= needed) {
+                    // Mamy wystarczająco dużo gotowych tego konkretnego typu
+                    readyMap[pid] -= needed;
+                } else {
+                    // Brakuje gotowych, sprawdzamy resztę
+                    let missingReady = needed - availableReady;
+                    readyMap[pid] = 0;
+
+                    if (['1','2','3','4','5'].includes(pid)) {
+                        // IMPERIAL: potrzebuje Surowych obudów + Zasilaczy/Klapek
+                        let masterId = imperialAngleMaster[pid];
+                        
+                        ps -= missingReady;
+                        clipsN -= missingReady;
+                        clipsP -= missingReady;
+
+                        if (ps < 0 && !shortages['ps']) shortages['ps'] = s.date;
+                        if (clipsN < 0 && !shortages['cn']) shortages['cn'] = s.date;
+                        if (clipsP < 0 && !shortages['cp']) shortages['cp'] = s.date;
+
+                        assemblyMap[masterId] -= missingReady;
+                        if (assemblyMap[masterId] < 0) {
+                            let name = imperialMasterName[masterId];
+                            if (!fixtureShortages[name]) fixtureShortages[name] = s.date;
                         }
+                    } else {
+                        // PXF: brakuje od razu na pierwszej linii (Gotowe)
+                        let pObj = this.products.find(x => String(x.id) === pid);
+                        let name = pObj ? pObj.name.replace('PXF ', 'PXF ') : `PXF ID:${pid}`;
+                        if (!fixtureShortages[name]) fixtureShortages[name] = s.date;
                     }
                 }
             }
         }
 
-        const createCard = (title, currentVal, shortageDate) => {
+        // 4. Renderowanie dynamicznych kart HTML
+        const createCard = (title, currentVal, shortageDate, isWarningCard = false) => {
             const isCritical = shortageDate !== null;
-            const dateStr = shortageDate ? new Date(shortageDate).toLocaleDateString('pl-PL') : 'Zapas bezpieczny na cały plan';
-            const statusClass = isCritical ? 'predictive critical' : 'predictive';
-            const labelStr = isCritical ? `Zabraknie ok. ${dateStr}` : dateStr;
+            let dateStr = 'Zapas OK';
             
+            if (isCritical) {
+                let d = new Date(shortageDate);
+                dateStr = isNaN(d.getTime()) ? shortageDate : d.toLocaleDateString('pl-PL');
+            }
+
+            const statusClass = isCritical ? 'predictive critical' : 'predictive';
+            const labelStr = isCritical ? `Brak na: ${dateStr}` : dateStr;
+            const icon = isCritical ? 'warning' : 'check_circle';
+            
+            let valHtml = currentVal;
+            if (typeof currentVal === 'number') {
+                valHtml = `${currentVal} <span style="font-size:1rem; color:var(--text-secondary);">szt</span>`;
+            }
+
             return `
-                <div class="stat-card ${statusClass}">
-                    <h3>${title}</h3>
-                    <div class="value">${currentVal} <span style="font-size:1rem; color:var(--text-secondary);">szt</span></div>
-                    <span class="prediction-label"><span class="material-symbols-outlined" style="font-size:1.1em; margin-right:4px; vertical-align:-0.2em;">${isCritical ? 'warning' : 'check_circle'}</span>${labelStr}</span>
+                <div class="stat-card ${statusClass}" style="${isWarningCard ? 'background-color: #FEF2F2; border-color: #FECACA;' : ''}">
+                    <h3 style="${isWarningCard ? 'color: #991B1B;' : ''}">${title}</h3>
+                    <div class="value" style="font-size: 1.8rem; ${isWarningCard ? 'color: #991B1B;' : ''}">${valHtml}</div>
+                    <span class="prediction-label"><span class="material-symbols-outlined" style="font-size:1.1em; margin-right:4px; vertical-align:-0.2em;">${icon}</span>${labelStr}</span>
                 </div>
             `;
         };
 
-        container.innerHTML = `
-            ${createCard('Zasilacze LED', this.components.ps_raw || 0, shortagePS)}
-            ${createCard('Klapki Zwykłe', this.components.clips_normal || 0, shortageCN)}
-            ${createCard('Klapki Przelotowe', this.components.clips_pass || 0, shortageCP)}
-        `;
+        let html = '';
+        
+        // Zawsze pokazuj zasilacze i klapki
+        html += createCard('Zasilacze LED', this.components.ps_raw || 0, shortages['ps']);
+        html += createCard('Klapki Zwykłe', this.components.clips_normal || 0, shortages['cn']);
+
+        // Jeśli brakuje fizycznych opraw (Imperial lub PXF), wyrzuć czerwoną kartę!
+        if (Object.keys(fixtureShortages).length > 0) {
+            for (const [name, date] of Object.entries(fixtureShortages)) {
+                html += createCard(`BRAKUJE OPRAW`, name, date, true);
+            }
+        } else {
+            // Jeśli wszystko z oprawami OK, pokazujemy potwierdzenie
+            html += createCard('Zapas Opraw', 'Dostępne', null);
+        }
+
+        container.innerHTML = html;
     }
 
     // --- RENDEROWANIE WIDOKÓW TABEL I INTERFEJSU ---
