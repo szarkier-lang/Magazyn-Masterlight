@@ -67,7 +67,8 @@ function toggleSidebar() {
 }
 
 function closeSidePanel() {
-    document.getElementById('details-panel').classList.remove('open');
+    const panel = document.getElementById('details-panel');
+    if(panel) panel.classList.remove('open');
 }
 
 function switchTab(tabId) {
@@ -77,7 +78,7 @@ function switchTab(tabId) {
     const clickedNav = Array.from(document.querySelectorAll('.nav-item')).find(item => item.getAttribute('onclick').includes(tabId));
     if (clickedNav) clickedNav.classList.add('active');
     
-    closeSidePanel(); // Zamykamy panel po zmianie zakładki
+    closeSidePanel(); // Zamykamy ewentualny panel po zmianie zakładki
     
     if (window.innerWidth <= 768) {
         document.querySelector('.sidebar').classList.remove('open');
@@ -255,7 +256,7 @@ class CloudInventoryManager {
         
         if (error) {
             console.error("Błąd Supabase:", error);
-            showToast('Błąd bazy (sprawdź konsolę F12)', 'error');
+            showToast('Błąd bazy danych (sprawdź konsolę F12). Pula dodana w Supabase?', 'error');
             return; 
         }
 
@@ -282,7 +283,7 @@ class CloudInventoryManager {
             const { error } = await db.from('shipments').update(data).eq('id', id); 
             if (error) {
                 console.error("Błąd edycji Supabase:", error);
-                showToast('Błąd edycji! Sprawdź konsolę (F12).', 'error');
+                showToast('Błąd zapisu! Sprawdź konsolę (F12).', 'error');
                 return;
             }
             
@@ -359,6 +360,7 @@ class CloudInventoryManager {
         const container = document.getElementById('prediction-cards-container');
         if (!container) return;
 
+        // 1. Zbuduj mapy aktualnych stanów (Kąt po Kącie)
         let readyMap = {};
         let assemblyMap = { '1': 0, '2': 0, '3': 0 };
 
@@ -373,6 +375,7 @@ class CloudInventoryManager {
         let clipsN = parseInt(this.components.clips_normal) || 0;
         let clipsP = parseInt(this.components.clips_pass) || 0;
 
+        // 2. Pobierz wysyłki i sortuj bezpiecznie po dacie
         const upcoming = this.shipments
             .filter(s => s.status !== 'completed')
             .sort((a, b) => {
@@ -776,7 +779,7 @@ async function completeRemainingShipmentUI(id) { if (confirm('Wydano brakującą
 async function deleteShipment(id) { if (currentRole === 'admin' && confirm('Usunąć zamówienie?')) { showLoading(); await window.inventory.deleteShipment(id); closeSidePanel(); hideLoading(); showToast('Usunięto', 'success'); } }
 async function deleteAdjustment(id) { if (currentRole === 'admin' && confirm('Usunąć wpis z regulacji?')) { showLoading(); await window.inventory.deleteAdjustment(id); hideLoading(); showToast('Usunięto', 'success'); } }
 
-// --- NOWY SYSTEM MASTER-DETAIL (EDYCJA Z BOKU) ---
+// --- EDYCJA ZAMÓWIENIA W OKIENKU (MODAL) ---
 function openShipmentDetails(id) {
     if (currentRole === 'viewer') return;
     const shipment = window.inventory.shipments.find(s => String(s.id) === String(id)); if (!shipment) return;
@@ -784,39 +787,37 @@ function openShipmentDetails(id) {
     const b = shipment.brand || 'imperial';
     const p1 = b==='pxf'?(p[6]||0):(p[1]||0); const p2 = b==='pxf'?(p[7]||0):(p[2]||0); const p3 = b==='pxf'?(p[8]||0):(p[3]||0); const p4 = b==='pxf'?(p[9]||0):(p[4]||0); const p5 = b==='pxf'?(p[10]||0):(p[5]||0);
     
-    document.getElementById('panel-title').innerText = `Zamówienie: ${b.toUpperCase()}`;
-    
-    const panelContent = document.getElementById('panel-content');
-    panelContent.innerHTML = `
-        <div style="display: flex; flex-direction: column; gap: 1rem;">
-            <div class="form-group"><label>Data Wysyłki</label><input type="date" id="panel_shipment_date" value="${escapeHTML(shipment.date)}"></div>
-            <div class="form-group"><label>Pełny Cel / Adresat</label><input type="text" id="panel_shipment_location" value="${escapeHTML(shipment.location)}"></div>
-            <div class="form-group"><label>Spedytor / Firma</label><input type="text" id="panel_shipment_company" value="${escapeHTML(shipment.company || '')}"></div>
+    closeSidePanel(); // na wszelki wypadek
+
+    const content = `
+        <div style="display: flex; flex-direction: column; gap: 1rem; text-align: left;">
+            <div class="form-group"><label>Data Wysyłki</label><input type="date" id="edit_shipment_date" value="${escapeHTML(shipment.date)}"></div>
+            <div class="form-group"><label>Pełny Cel / Adresat</label><input type="text" id="edit_shipment_location" value="${escapeHTML(shipment.location)}"></div>
+            <div class="form-group"><label>Spedytor / Firma</label><input type="text" id="edit_shipment_company" value="${escapeHTML(shipment.company || '')}"></div>
             
             <div style="margin-top: 1rem; background-color: var(--bg-page); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-color);">
                 <h3 style="margin-bottom: 0.5rem; font-size: 0.8rem; color: var(--text-secondary); text-transform:uppercase;">Ilości Opraw</h3>
                 ${isPartial ? '<p style="color: var(--error-text); font-size:0.75rem; margin-bottom:10px;">Edycja ilości zablokowana (wysyłka częściowa).</p>' : ''}
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
-                    <div class="form-group" style="margin:0;"><label>22° - 15W</label><input type="number" id="panel_p1" value="${p1}" min="0" ${disableProducts}></div>
-                    <div class="form-group" style="margin:0;"><label>37° - 15W</label><input type="number" id="panel_p2" value="${p2}" min="0" ${disableProducts}></div>
-                    <div class="form-group" style="margin:0;"><label>58° - 15W</label><input type="number" id="panel_p3" value="${p3}" min="0" ${disableProducts}></div>
-                    <div class="form-group" style="margin:0;"><label>37° - 20W</label><input type="number" id="panel_p4" value="${p4}" min="0" ${disableProducts}></div>
-                    <div class="form-group" style="margin:0;"><label>58° - 20W</label><input type="number" id="panel_p5" value="${p5}" min="0" ${disableProducts}></div>
+                    <div class="form-group" style="margin:0;"><label>22° - 15W</label><input type="number" id="edit_p1" value="${p1}" min="0" ${disableProducts}></div>
+                    <div class="form-group" style="margin:0;"><label>37° - 15W</label><input type="number" id="edit_p2" value="${p2}" min="0" ${disableProducts}></div>
+                    <div class="form-group" style="margin:0;"><label>58° - 15W</label><input type="number" id="edit_p3" value="${p3}" min="0" ${disableProducts}></div>
+                    <div class="form-group" style="margin:0;"><label>37° - 20W</label><input type="number" id="edit_p4" value="${p4}" min="0" ${disableProducts}></div>
+                    <div class="form-group" style="margin:0;"><label>58° - 20W</label><input type="number" id="edit_p5" value="${p5}" min="0" ${disableProducts}></div>
                 </div>
             </div>
             
-            <button class="btn-primary" onclick="savePanelShipment('${id}')" style="width:100%; margin-top: 1rem;"><span class="material-symbols-outlined">save</span> Zapisz Zmiany</button>
-            <button class="btn-secondary" onclick="closeSidePanel()" style="width:100%;">Anuluj</button>
+            <button class="btn-primary" onclick="saveEditedShipment('${id}')" style="width:100%; margin-top: 1rem;"><span class="material-symbols-outlined">save</span> Zapisz Zmiany</button>
         </div>
     `;
     
-    document.getElementById('details-panel').classList.add('open');
+    showModal(`Edycja: ${b.toUpperCase()}`, content);
 }
 
-async function savePanelShipment(id) {
-    const newDate = document.getElementById('panel_shipment_date').value; 
-    const newLocation = document.getElementById('panel_shipment_location').value; 
-    const newCompany = document.getElementById('panel_shipment_company').value;
+async function saveEditedShipment(id) {
+    const newDate = document.getElementById('edit_shipment_date').value; 
+    const newLocation = document.getElementById('edit_shipment_location').value; 
+    const newCompany = document.getElementById('edit_shipment_company').value;
     if (!newDate || !newLocation) { showToast('Data i cel są wymagane.', 'error'); return; }
     
     const shipment = window.inventory.shipments.find(s => String(s.id) === String(id)); 
@@ -825,17 +826,17 @@ async function savePanelShipment(id) {
     if (shipment.status !== 'partial') {
         const brand = shipment.brand || 'imperial'; 
         if(brand === 'imperial') {
-            data.products = { 1: parseInt(document.getElementById('panel_p1').value) || 0, 2: parseInt(document.getElementById('panel_p2').value) || 0, 3: parseInt(document.getElementById('panel_p3').value) || 0, 4: parseInt(document.getElementById('panel_p4').value) || 0, 5: parseInt(document.getElementById('panel_p5').value) || 0 };
+            data.products = { 1: parseInt(document.getElementById('edit_p1').value) || 0, 2: parseInt(document.getElementById('edit_p2').value) || 0, 3: parseInt(document.getElementById('edit_p3').value) || 0, 4: parseInt(document.getElementById('edit_p4').value) || 0, 5: parseInt(document.getElementById('edit_p5').value) || 0 };
         } else {
-            data.products = { 6: parseInt(document.getElementById('panel_p1').value) || 0, 7: parseInt(document.getElementById('panel_p2').value) || 0, 8: parseInt(document.getElementById('panel_p3').value) || 0, 9: parseInt(document.getElementById('panel_p4').value) || 0, 10: parseInt(document.getElementById('panel_p5').value) || 0 };
+            data.products = { 6: parseInt(document.getElementById('edit_p1').value) || 0, 7: parseInt(document.getElementById('edit_p2').value) || 0, 8: parseInt(document.getElementById('edit_p3').value) || 0, 9: parseInt(document.getElementById('edit_p4').value) || 0, 10: parseInt(document.getElementById('edit_p5').value) || 0 };
         }
     }
     
-    closeSidePanel(); 
+    closeModal(); 
     showLoading(); 
     await window.inventory.updateShipmentInDB(id, data); 
     hideLoading(); 
-    showToast('Zapisano z panelu.', 'success');
+    showToast('Zapisano zmiany.', 'success');
 }
 
 function showAnglesDemand(id) {
