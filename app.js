@@ -240,23 +240,56 @@ class CloudInventoryManager {
     // --- WYSYŁKI ---
     async addShipment(s) { 
         if (currentRole === 'viewer') return;
-        await db.from('shipments').insert([{ date: s.date, location: s.location, company: s.company, products: s.products, status: 'planned', is_confirmed: false, is_replacement: s.is_replacement, brand: s.brand }]); 
-        await this.addHistory(s.is_replacement ? 'Utworzono Wysyłkę SERWISOWĄ' : 'Dodano zamówienie', `${s.location} [${s.brand.toUpperCase()}]`); await this.fetchData(); 
+        
+        // Zapis z przechwyceniem błędu
+        const { error } = await db.from('shipments').insert([{ 
+            date: s.date, 
+            location: s.location, 
+            company: s.company, 
+            products: s.products, 
+            status: 'planned', 
+            is_confirmed: false, 
+            is_replacement: s.is_replacement, 
+            brand: s.brand 
+        }]); 
+        
+        if (error) {
+            console.error("Błąd Supabase:", error);
+            showToast('Błąd bazy (sprawdź konsolę F12)', 'error');
+            return; 
+        }
+
+        await this.addHistory(s.is_replacement ? 'Utworzono Wysyłkę SERWISOWĄ' : 'Dodano zamówienie', `${s.location} [${s.brand.toUpperCase()}]`); 
+        await this.fetchData(); 
     }
+
     async confirmShipment(id) { 
         if (currentRole === 'viewer') return;
         const s = this.shipments.find(x => String(x.id) === String(id)); 
         if (s) { s.is_confirmed = true; await db.from('shipments').update({ is_confirmed: true }).eq('id', id); await this.addHistory('Potwierdzenie daty wyjazdu', s.location); await this.fetchData(); } 
     }
+
     async deleteShipment(id) { 
         if (currentRole !== 'admin') return;
         this.shipments = this.shipments.filter(s => String(s.id) !== String(id)); 
         await db.from('shipments').delete().eq('id', id); await this.addHistory('Anulowanie zamówienia w systemie', `Skasowano`); await this.fetchData();
     }
+
     async updateShipmentInDB(id, data) { 
         if (currentRole === 'viewer') return;
         const s = this.shipments.find(x => String(x.id) === String(id)); 
-        if (s) { Object.assign(s, data); await db.from('shipments').update(data).eq('id', id); await this.addHistory('Edycja szczegółów zamówienia', s.location); await this.fetchData(); } 
+        if (s) { 
+            const { error } = await db.from('shipments').update(data).eq('id', id); 
+            if (error) {
+                console.error("Błąd edycji Supabase:", error);
+                showToast('Błąd edycji! Sprawdź konsolę (F12).', 'error');
+                return;
+            }
+            
+            Object.assign(s, data); 
+            await this.addHistory('Edycja szczegółów zamówienia', s.location); 
+            await this.fetchData(); 
+        } 
     }
     
     async completeShipment(id) {
@@ -321,12 +354,11 @@ class CloudInventoryManager {
         if (currentRole === 'viewer') return; await db.from('components').update({ [f]: v }).eq('id', 1); await this.addHistory('Korekta ręczna komponentów', `Zaktualizowano stan bazy.`); await this.fetchData();
     }
 
-    // --- PREDYKCJA (Burn-down V2.0 - z naprawioną analizą opraw) ---
+    // --- PREDYKCJA (Burn-down V2.0 - Kąt po Kącie) ---
     renderPredictions() {
         const container = document.getElementById('prediction-cards-container');
         if (!container) return;
 
-        // 1. Zbuduj mapy aktualnych stanów (Kąt po Kącie)
         let readyMap = {};
         let assemblyMap = { '1': 0, '2': 0, '3': 0 };
 
@@ -341,7 +373,6 @@ class CloudInventoryManager {
         let clipsN = parseInt(this.components.clips_normal) || 0;
         let clipsP = parseInt(this.components.clips_pass) || 0;
 
-        // 2. Pobierz wysyłki i sortuj bezpiecznie po dacie (rozwiązuje problem z dziwnymi dniami)
         const upcoming = this.shipments
             .filter(s => s.status !== 'completed')
             .sort((a, b) => {
@@ -351,13 +382,11 @@ class CloudInventoryManager {
             });
 
         let shortages = { 'ps': null, 'cn': null, 'cp': null };
-        let fixtureShortages = {}; // Rejestruje dokładną nazwę brakującej oprawy i datę
+        let fixtureShortages = {}; 
 
         const imperialMasterName = { '1': 'Surowe 22°', '2': 'Surowe 37°', '3': 'Surowe 58°' };
 
-        // 3. Główna pętla spalania (burn-down)
         for (let s of upcoming) {
-            // Ważne: wysyłki 'partial' używają s.partial_missing!
             let req = s.status === 'partial' ? s.partial_missing : s.products;
             if (!req) continue;
 
@@ -369,15 +398,12 @@ class CloudInventoryManager {
                 let availableReady = readyMap[pid] || 0;
 
                 if (availableReady >= needed) {
-                    // Mamy wystarczająco dużo gotowych tego konkretnego typu
                     readyMap[pid] -= needed;
                 } else {
-                    // Brakuje gotowych, sprawdzamy resztę
                     let missingReady = needed - availableReady;
                     readyMap[pid] = 0;
 
                     if (['1','2','3','4','5'].includes(pid)) {
-                        // IMPERIAL: potrzebuje Surowych obudów + Zasilaczy/Klapek
                         let masterId = imperialAngleMaster[pid];
                         
                         ps -= missingReady;
@@ -394,7 +420,6 @@ class CloudInventoryManager {
                             if (!fixtureShortages[name]) fixtureShortages[name] = s.date;
                         }
                     } else {
-                        // PXF: brakuje od razu na pierwszej linii (Gotowe)
                         let pObj = this.products.find(x => String(x.id) === pid);
                         let name = pObj ? pObj.name.replace('PXF ', 'PXF ') : `PXF ID:${pid}`;
                         if (!fixtureShortages[name]) fixtureShortages[name] = s.date;
@@ -403,7 +428,6 @@ class CloudInventoryManager {
             }
         }
 
-        // 4. Renderowanie dynamicznych kart HTML
         const createCard = (title, currentVal, shortageDate, isWarningCard = false) => {
             const isCritical = shortageDate !== null;
             let dateStr = 'Zapas OK';
@@ -432,18 +456,14 @@ class CloudInventoryManager {
         };
 
         let html = '';
-        
-        // Zawsze pokazuj zasilacze i klapki
         html += createCard('Zasilacze LED', this.components.ps_raw || 0, shortages['ps']);
         html += createCard('Klapki Zwykłe', this.components.clips_normal || 0, shortages['cn']);
 
-        // Jeśli brakuje fizycznych opraw (Imperial lub PXF), wyrzuć czerwoną kartę!
         if (Object.keys(fixtureShortages).length > 0) {
             for (const [name, date] of Object.entries(fixtureShortages)) {
                 html += createCard(`BRAKUJE OPRAW`, name, date, true);
             }
         } else {
-            // Jeśli wszystko z oprawami OK, pokazujemy potwierdzenie
             html += createCard('Zapas Opraw', 'Dostępne', null);
         }
 
@@ -803,7 +823,8 @@ async function savePanelShipment(id) {
     const data = { date: newDate, location: newLocation, company: newCompany };
     
     if (shipment.status !== 'partial') {
-        if(shipment.brand === 'imperial') {
+        const brand = shipment.brand || 'imperial'; 
+        if(brand === 'imperial') {
             data.products = { 1: parseInt(document.getElementById('panel_p1').value) || 0, 2: parseInt(document.getElementById('panel_p2').value) || 0, 3: parseInt(document.getElementById('panel_p3').value) || 0, 4: parseInt(document.getElementById('panel_p4').value) || 0, 5: parseInt(document.getElementById('panel_p5').value) || 0 };
         } else {
             data.products = { 6: parseInt(document.getElementById('panel_p1').value) || 0, 7: parseInt(document.getElementById('panel_p2').value) || 0, 8: parseInt(document.getElementById('panel_p3').value) || 0, 9: parseInt(document.getElementById('panel_p4').value) || 0, 10: parseInt(document.getElementById('panel_p5').value) || 0 };
@@ -819,7 +840,7 @@ async function savePanelShipment(id) {
 
 function showAnglesDemand(id) {
     const shipment = window.inventory.shipments.find(s => String(s.id) === String(id)); if(!shipment) return;
-    const p = shipment.products || {}; const brand = shipment.brand;
+    const p = shipment.products || {}; const brand = shipment.brand || 'imperial';
     const a22 = brand === 'pxf' ? (parseInt(p[6])||0) : (parseInt(p[1])||0);
     const a37 = brand === 'pxf' ? (parseInt(p[7])||0) + (parseInt(p[9])||0) : (parseInt(p[2])||0) + (parseInt(p[4])||0);
     const a58 = brand === 'pxf' ? (parseInt(p[8])||0) + (parseInt(p[10])||0) : (parseInt(p[3])||0) + (parseInt(p[5])||0);
@@ -845,7 +866,6 @@ function openReceiveFromServiceUI(id, name, inService) {
     showModal('Odbiór z naprawy', html);
 }
 async function submitReceiveService(id) { let qty = parseInt(document.getElementById('rma_rec_qty').value)||0; let used = parseInt(document.getElementById('rma_used_ps').value)||0; let desc = document.getElementById('rma_rec_desc').value.trim(); if(qty>0) { closeModal(); showLoading(); await window.inventory.receiveFromService(id, qty, used, desc); hideLoading(); } }
-
 
 function showMissingItems(id) {
     if (!window.inventory) return; const s = window.inventory.shipments.find(x => String(x.id) === String(id)); if (!s || !s.partial_missing) return;
