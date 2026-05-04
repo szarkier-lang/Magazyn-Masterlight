@@ -2,13 +2,13 @@
 window.addEventListener('error', function(event) {
     const errorMsg = `KRYTYCZNY BŁĄD JS: ${event.message} w pliku ${event.filename} (Linia: ${event.lineno})`;
     console.error(errorMsg);
-    document.body.innerHTML += `<div style="position:fixed; top:20px; left:50%; transform:translateX(-50%); z-index:99999; background:#B91C1C; color:white; padding:20px 40px; border-radius:12px; font-weight:bold; box-shadow: 0 10px 25px rgba(0,0,0,0.5); text-align:center;">${errorMsg}<br><span style="font-size:0.8em; font-weight:normal; margin-top:10px; display:block;">Przekaż ten błąd programiście!</span></div>`;
+    // Tylko wypisujemy w konsoli, żeby nie blokować aplikacji czerwonym oknem, jeśli to drobnostka
+    const alertsContainer = document.getElementById('dashboard-alerts');
+    if(alertsContainer) alertsContainer.innerHTML += `<div style="background:#B91C1C; color:white; padding:10px; border-radius:5px; margin-bottom:10px; font-size:12px;">${errorMsg}</div>`;
 });
 
 window.addEventListener('unhandledrejection', function(event) {
-    const errorMsg = `KRYTYCZNY BŁĄD BAZY/PROMISE: ${event.reason}`;
-    console.error(errorMsg);
-    document.body.innerHTML += `<div style="position:fixed; top:100px; left:50%; transform:translateX(-50%); z-index:99999; background:#991B1B; color:white; padding:20px 40px; border-radius:12px; font-weight:bold; box-shadow: 0 10px 25px rgba(0,0,0,0.5); text-align:center;">${errorMsg}</div>`;
+    console.error(`KRYTYCZNY BŁĄD BAZY/PROMISE: ${event.reason}`);
 });
 
 // --- KONFIGURACJA SUPABASE ---
@@ -42,6 +42,24 @@ const imperialAngleSync = { '1': ['1'], '2': ['2','4'], '3': ['3','5'] };
 
 const pxfAngleMaster = { '6': '6', '7': '7', '9': '7', '8': '8', '10': '8' };
 const pxfAngleSync = { '6': ['6'], '7': ['7','9'], '8': ['8','10'] };
+
+// --- MAPY (DEFINICJE PRZENIESIONE WYŻEJ ABY UNIKNĄĆ BŁĘDU INITMAP) ---
+const boundsPoland = L.latLngBounds(L.latLng(48.9, 14.1), L.latLng(54.9, 24.2));
+window.initMap = function() { 
+    if (map) return; 
+    const mapEl = document.getElementById('shipments-map');
+    if (!mapEl) return;
+    map = L.map('shipments-map', { zoomControl: false, scrollWheelZoom: false, dragging: false, touchZoom: false, doubleClickZoom: false, boxZoom: false, keyboard: false, maxBounds: boundsPoland, minZoom: 5, maxZoom: 9 }).setView([51.7592, 19.4560], 6); 
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map); 
+}
+
+window.initAdjMap = function() { 
+    if (mapAdj) return; 
+    const mapAdjEl = document.getElementById('adjustments-map');
+    if (!mapAdjEl) return;
+    mapAdj = L.map('adjustments-map', { zoomControl: false, scrollWheelZoom: false, dragging: false, touchZoom: false, doubleClickZoom: false, boxZoom: false, keyboard: false, maxBounds: boundsPoland, minZoom: 5, maxZoom: 9 }).setView([51.7592, 19.4560], 6); 
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(mapAdj); 
+}
 
 // --- FUNKCJE POMOCNICZE UI ---
 function showLoading() { document.getElementById('loading-screen').classList.remove('hidden'); }
@@ -100,18 +118,24 @@ window.switchTab = function(tabId) {
         document.querySelector('.sidebar').classList.remove('open');
         document.getElementById('mobile-overlay').classList.remove('active');
     }
+    
+    // Bezpieczne ładowanie map
     if (tabId === 'tab-dashboard') {
         setTimeout(() => { 
-            if (!map) initMap();
-            if (map) map.invalidateSize(); 
-            if(window.inventory && !isUpdatingMap) updateMapMarkers(window.inventory.shipments, window.inventory.adjustments);
+            try {
+                if (typeof window.initMap === 'function') window.initMap();
+                if (map) map.invalidateSize(); 
+                if(window.inventory && !isUpdatingMap) updateMapMarkers(window.inventory.shipments, window.inventory.adjustments);
+            } catch(e) { console.error("Map Dashboard Error:", e); }
         }, 150);
     }
     if (tabId === 'tab-adjustments') {
         setTimeout(() => { 
-            if (!mapAdj) initAdjMap();
-            if (mapAdj) mapAdj.invalidateSize(); 
-            if(window.inventory) updateAdjMapMarkers(window.inventory.adjustments);
+            try {
+                if (typeof window.initAdjMap === 'function') window.initAdjMap();
+                if (mapAdj) mapAdj.invalidateSize(); 
+                if(window.inventory) updateAdjMapMarkers(window.inventory.adjustments);
+            } catch(e) { console.error("Map Adj Error:", e); }
         }, 150);
     }
 }
@@ -170,8 +194,6 @@ class CloudInventoryManager {
             console.error("KRYTYCZNY Błąd Bazy Danych:", e); 
             hideLoading();
             showToast(`Błąd Bazy: ${e.message || 'Nieznany błąd'}`, 'error');
-            const alerts = document.getElementById('dashboard-alerts');
-            if (alerts) alerts.innerHTML = `<div class="alert-banner critical"><span class="material-symbols-outlined">error</span><div><strong>Utracono połączenie z Supabase!</strong> ${e.message}. Sprawdź konsolę (F12).</div></div>`;
         }
     }
 
@@ -260,8 +282,13 @@ class CloudInventoryManager {
                     
                     for (let targetId of idsToUpdate) { 
                         const { error } = await db.from('products').update({ assembly: newAssembly }).eq('id', targetId);
-                        if (error) { console.error('Supabase Error PXF:', error); hasError = true; } 
-                        else { const targetProduct = this.products.find(p => String(p.id) === String(targetId)); if(targetProduct) targetProduct.assembly = newAssembly; }
+                        if (error) {
+                            console.error('Supabase Error PXF:', error);
+                            hasError = true;
+                        } else {
+                            const targetProduct = this.products.find(p => String(p.id) === String(targetId)); 
+                            if(targetProduct) targetProduct.assembly = newAssembly;
+                        }
                     }
                     totalAdded += qty;
                 }
@@ -610,7 +637,6 @@ class CloudInventoryManager {
                 }
             }
 
-            // Kuloodporne rysowanie tabel (nawet jeśli jedna padnie, reszta działa)
             try { updateInventoryTable(); } catch(e) { console.error("Inwentarz Błąd:", e); }
             try { updateShipmentsTables(rMap); } catch(e) { console.error("Wysyłki Błąd:", e); }
             try { updateAdjustmentsTable(); } catch(e) { console.error("Regulacje Błąd:", e); }
@@ -1064,10 +1090,3 @@ window.scanOfferFromPDF = async function(file) {
     } catch (error) { showModal('Błąd odczytu PDF', `<p style="color:var(--accent-red); font-weight:500;">Nie udało się przetworzyć pliku.</p>`); } 
     finally { btn.innerHTML = originalText; btn.disabled = false; document.getElementById('pdf-input').value = ''; }
 }
-
-// Inicjalizacja Leaflet Map fix dla starszych ekranów
-document.addEventListener("DOMContentLoaded", () => {
-    setTimeout(() => {
-        if(document.getElementById('map-section-container')) document.getElementById('map-section-container').style.display = 'block';
-    }, 1000);
-});
