@@ -1,3 +1,16 @@
+// --- TRYB DIAGNOSTYCZNY (Wykrywanie krytycznych błędów) ---
+window.addEventListener('error', function(event) {
+    const errorMsg = `KRYTYCZNY BŁĄD JS: ${event.message} w pliku ${event.filename} (Linia: ${event.lineno})`;
+    console.error(errorMsg);
+    document.body.innerHTML += `<div style="position:fixed; top:20px; left:50%; transform:translateX(-50%); z-index:99999; background:#B91C1C; color:white; padding:20px 40px; border-radius:12px; font-weight:bold; box-shadow: 0 10px 25px rgba(0,0,0,0.5); text-align:center;">${errorMsg}<br><span style="font-size:0.8em; font-weight:normal; margin-top:10px; display:block;">Przekaż ten błąd programiście!</span></div>`;
+});
+
+window.addEventListener('unhandledrejection', function(event) {
+    const errorMsg = `KRYTYCZNY BŁĄD BAZY/PROMISE: ${event.reason}`;
+    console.error(errorMsg);
+    document.body.innerHTML += `<div style="position:fixed; top:100px; left:50%; transform:translateX(-50%); z-index:99999; background:#991B1B; color:white; padding:20px 40px; border-radius:12px; font-weight:bold; box-shadow: 0 10px 25px rgba(0,0,0,0.5); text-align:center;">${errorMsg}</div>`;
+});
+
 // --- KONFIGURACJA SUPABASE ---
 const supabaseUrl = 'https://ghdswvjhqpxupzcrixlu.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdoZHN3dmpocXB4dXB6Y3JpeGx1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4NTEwMDAsImV4cCI6MjA4NzQyNzAwMH0._sk7mCv27tC153DTvqp_7O3CUyYsk3iuYuf0f93GCfo';
@@ -49,7 +62,7 @@ function showModal(title, content) {
     document.getElementById('modal-content-old').innerHTML = content;
     document.getElementById('modal').style.display = 'block';
 }
-function closeModal() { document.getElementById('modal').style.display = 'none'; }
+window.closeModal = function() { document.getElementById('modal').style.display = 'none'; }
 function escapeHTML(str) { return String(str || '').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;"); }
 
 function resetInactivityTimer() {
@@ -64,17 +77,17 @@ function resetInactivityTimer() {
 }
 ['click', 'mousemove', 'keypress', 'scroll', 'touchstart'].forEach(event => { document.addEventListener(event, resetInactivityTimer, true); });
 
-function toggleSidebar() {
+window.toggleSidebar = function() {
     document.querySelector('.sidebar').classList.toggle('open');
     document.getElementById('mobile-overlay').classList.toggle('active');
 }
 
-function closeSidePanel() {
+window.closeSidePanel = function() {
     const panel = document.getElementById('details-panel');
     if(panel) panel.classList.remove('open');
 }
 
-function switchTab(tabId) {
+window.switchTab = function(tabId) {
     document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
     document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
     document.getElementById(tabId).classList.add('active');
@@ -157,7 +170,8 @@ class CloudInventoryManager {
             console.error("KRYTYCZNY Błąd Bazy Danych:", e); 
             hideLoading();
             showToast(`Błąd Bazy: ${e.message || 'Nieznany błąd'}`, 'error');
-            document.getElementById('dashboard-alerts').innerHTML = `<div class="alert-banner critical"><span class="material-symbols-outlined">error</span><div><strong>Utracono połączenie z Supabase!</strong> ${e.message}. Sprawdź konsolę (F12).</div></div>`;
+            const alerts = document.getElementById('dashboard-alerts');
+            if (alerts) alerts.innerHTML = `<div class="alert-banner critical"><span class="material-symbols-outlined">error</span><div><strong>Utracono połączenie z Supabase!</strong> ${e.message}. Sprawdź konsolę (F12).</div></div>`;
         }
     }
 
@@ -246,13 +260,8 @@ class CloudInventoryManager {
                     
                     for (let targetId of idsToUpdate) { 
                         const { error } = await db.from('products').update({ assembly: newAssembly }).eq('id', targetId);
-                        if (error) {
-                            console.error('Supabase Error PXF:', error);
-                            hasError = true;
-                        } else {
-                            const targetProduct = this.products.find(p => String(p.id) === String(targetId)); 
-                            if(targetProduct) targetProduct.assembly = newAssembly;
-                        }
+                        if (error) { console.error('Supabase Error PXF:', error); hasError = true; } 
+                        else { const targetProduct = this.products.find(p => String(p.id) === String(targetId)); if(targetProduct) targetProduct.assembly = newAssembly; }
                     }
                     totalAdded += qty;
                 }
@@ -575,10 +584,10 @@ class CloudInventoryManager {
             if(c) { if((parseInt(c.ps_raw)||0)<50) lc.push('Zasilacze'); if((parseInt(c.clips_normal)||0)<50) lc.push('Klapki Zwykłe'); if((parseInt(c.clips_pass)||0)<50) lc.push('Klapki Przelotowe'); }
             if(lc.length>0 && alertsContainer) { alertsContainer.innerHTML = `<div class="alert-banner critical"><span class="material-symbols-outlined">warning_amber</span><div><strong>Krytyczny stan!</strong> Pilnie domów: ${lc.join(', ')}.</div></div>`; }
 
-            try { this.renderPredictions(); } catch(e) { console.error("Predykcja - Błąd:", e); }
+            try { this.renderPredictions(); } catch(e) { console.error("Predykcja błąd:", e); }
 
             const rMap = getShipmentsReadinessMap();
-            try { renderCalendar(rMap); } catch(e) { console.error("Kalendarz - Błąd:", e); }
+            try { renderCalendar(rMap); } catch(e) { console.error("Kalendarz błąd:", e); }
             if(document.getElementById('tab-dashboard').classList.contains('active')) { updateMapMarkers(this.shipments, this.adjustments); }
 
             const itb = document.getElementById('dashboard-recent-incoming');
@@ -601,14 +610,17 @@ class CloudInventoryManager {
                 }
             }
 
-            try { updateInventoryTable(); } catch(e) { console.error("Inwentarz - Błąd:", e); }
-            try { updateShipmentsTables(rMap); } catch(e) { console.error("Wysyłki - Błąd:", e); }
-            try { updateAdjustmentsTable(); } catch(e) { console.error("Regulacje - Błąd:", e); }
-            if(currentRole !== 'worker') { try { updateHistoryTable(); } catch(e) {} }
-            try { updateServiceCasesTable(); } catch(e) {}
-            try { updateComponentsDisplay(); } catch(e) {}
+            // Kuloodporne rysowanie tabel (nawet jeśli jedna padnie, reszta działa)
+            try { updateInventoryTable(); } catch(e) { console.error("Inwentarz Błąd:", e); }
+            try { updateShipmentsTables(rMap); } catch(e) { console.error("Wysyłki Błąd:", e); }
+            try { updateAdjustmentsTable(); } catch(e) { console.error("Regulacje Błąd:", e); }
+            if(currentRole !== 'worker') { try { updateHistoryTable(); } catch(e) { console.error("Historia Błąd:", e); } }
+            try { updateServiceCasesTable(); } catch(e) { console.error("RMA Błąd:", e); }
+            try { updateComponentsDisplay(); } catch(e) { console.error("Komponenty Błąd:", e); }
 
-        } catch (err) { console.error("Błąd rysowania całego interfejsu:", err); }
+        } catch (err) { 
+            console.error("Krytyczny Błąd Głównego Renderowania:", err); 
+        }
     }
 
     // --- BINDOWANIE FORMULARZY ---
@@ -720,7 +732,7 @@ function applyPermissions() {
     if (currentRole === 'worker') { ['nav-history'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; }); }
 }
 
-async function logoutUser() { clearTimeout(inactivityTimer); showLoading(); await db.auth.signOut(); window.location.reload(); }
+window.logoutUser = async function() { clearTimeout(inactivityTimer); showLoading(); await db.auth.signOut(); window.location.reload(); }
 checkSession();
 
 // --- ZEWNĘTRZNE FUNKCJE TABEL ---
@@ -826,7 +838,7 @@ function updateInventoryTable() {
         const totSer = s15 + s20; const total = r15 + r20 + assm + totSer;
         const c15 = isViewer ? `<strong>${r15}</strong>` : `<td data-label="Gotowe 15W" onclick="editCell(this, 'ready', '${a.id15}')" class="editable"><strong>${r15}</strong></td>`;
         const c20 = a.id20 ? (isViewer ? `<strong>${r20}</strong>` : `<td data-label="Gotowe 20W" onclick="editCell(this, 'ready', '${a.id20}')" class="editable"><strong>${r20}</strong></td>`) : `<td data-label="Gotowe 20W">-</td>`;
-        const cAssm = isViewer ? assm : `<td data-label="Surowe (W Montażu)" onclick="editCell(this, 'assembly', '${a.idAssm}')" class="editable">${assm}</td>`;
+        const cAssm = isViewer ? assm : `<td data-label="Surowe" onclick="editCell(this, 'assembly', '${a.idAssm}')" class="editable">${assm}</td>`;
         tbPxf.innerHTML += `<tr><td data-label="Kąt Oprawy"><strong style="color:#1E3A8A;">${a.name}</strong></td>${isViewer?`<td data-label="Gotowe 15W">${c15}</td>`:c15}${isViewer?(a.id20?`<td data-label="Gotowe 20W">${c20}</td>`:c20):c20}${isViewer?`<td data-label="Surowe">${cAssm}</td>`:cAssm}<td data-label="Serwis">${totSer}</td><td data-label="Łącznie"><strong>${total}</strong></td><td data-label="Dostępność"><span class="status-badge ${getStatusClass(a.id15)}">${getStatusText(a.id15)}</span></td></tr>`;
     });
 
@@ -874,7 +886,7 @@ function updateComponentsDisplay() {
 function getStatusClass(productId) { const status = window.inventory.getStatus(productId); return status === 'ok' ? 'status-ok' : status === 'warning' ? 'status-warning' : 'status-error'; }
 function getStatusText(productId) { const status = window.inventory.getStatus(productId); return status === 'ok' ? '<span class="material-symbols-outlined">check_circle</span> OK' : status === 'warning' ? '<span class="material-symbols-outlined">warning</span> Mało' : '<span class="material-symbols-outlined">error</span> Brak'; }
 
-function editCell(cell, field, productId) {
+window.editCell = function(cell, field, productId) {
     if (currentRole === 'viewer') return; if (cell.querySelector('input')) return;
     const product = window.inventory.products.find(p => String(p.id) === String(productId));
     const input = document.createElement('input'); input.type = 'number'; input.value = product[field] || 0; input.style.width = '100%'; input.style.textAlign = 'inherit';
@@ -883,7 +895,7 @@ function editCell(cell, field, productId) {
     input.addEventListener('blur', save); input.addEventListener('keypress', (e) => { if (e.key === 'Enter') input.blur(); });
 }
 
-function editComponentCell(cell, field) {
+window.editComponentCell = function(cell, field) {
     if (currentRole === 'viewer') return; if (cell.querySelector('input')) return;
     const currentVal = window.inventory.components[field] || 0;
     const input = document.createElement('input'); input.type = 'number'; input.value = currentVal; input.style.width = '100%'; input.style.textAlign = 'inherit';
@@ -893,11 +905,11 @@ function editComponentCell(cell, field) {
 }
 
 // --- FUNKCJE WYWOŁANIA Z UI ---
-async function confirmShipmentDateUI(id) { if (confirm('Zatwierdzić termin wysyłki?')) { showLoading(); await window.inventory.confirmShipment(id); hideLoading(); showToast('Zatwierdzono', 'success'); } }
-async function completeShipmentUI(id) { if (confirm(`Wydano towar z magazynu?`)) { showLoading(); await window.inventory.completeShipment(id); hideLoading(); showToast('Wydano towar', 'success'); } }
-async function completeRemainingShipmentUI(id) { if (confirm('Wydano brakującą część towaru?')) { showLoading(); await window.inventory.completeRemainingShipment(id); hideLoading(); showToast('Zrealizowano', 'success'); } }
-async function deleteShipment(id) { if (currentRole === 'admin' && confirm('Usunąć zamówienie?')) { showLoading(); await window.inventory.deleteShipment(id); hideLoading(); showToast('Usunięto', 'success'); } }
-async function deleteAdjustment(id) { if (currentRole === 'admin' && confirm('Usunąć wpis z regulacji?')) { showLoading(); await window.inventory.deleteAdjustment(id); hideLoading(); showToast('Usunięto', 'success'); } }
+window.confirmShipmentDateUI = async function(id) { if (confirm('Zatwierdzić termin wysyłki?')) { showLoading(); await window.inventory.confirmShipment(id); hideLoading(); showToast('Zatwierdzono', 'success'); } }
+window.completeShipmentUI = async function(id) { if (confirm(`Wydano towar z magazynu?`)) { showLoading(); await window.inventory.completeShipment(id); hideLoading(); showToast('Wydano towar', 'success'); } }
+window.completeRemainingShipmentUI = async function(id) { if (confirm('Wydano brakującą część towaru?')) { showLoading(); await window.inventory.completeRemainingShipment(id); hideLoading(); showToast('Zrealizowano', 'success'); } }
+window.deleteShipment = async function(id) { if (currentRole === 'admin' && confirm('Usunąć zamówienie?')) { showLoading(); await window.inventory.deleteShipment(id); hideLoading(); showToast('Usunięto', 'success'); } }
+window.deleteAdjustment = async function(id) { if (currentRole === 'admin' && confirm('Usunąć wpis z regulacji?')) { showLoading(); await window.inventory.deleteAdjustment(id); hideLoading(); showToast('Usunięto', 'success'); } }
 
 // --- EDYCJA ZAMÓWIENIA W OKIENKU (MODAL) ---
 window.openShipmentDetails = function(id) {
@@ -1052,3 +1064,10 @@ window.scanOfferFromPDF = async function(file) {
     } catch (error) { showModal('Błąd odczytu PDF', `<p style="color:var(--accent-red); font-weight:500;">Nie udało się przetworzyć pliku.</p>`); } 
     finally { btn.innerHTML = originalText; btn.disabled = false; document.getElementById('pdf-input').value = ''; }
 }
+
+// Inicjalizacja Leaflet Map fix dla starszych ekranów
+document.addEventListener("DOMContentLoaded", () => {
+    setTimeout(() => {
+        if(document.getElementById('map-section-container')) document.getElementById('map-section-container').style.display = 'block';
+    }, 1000);
+});
