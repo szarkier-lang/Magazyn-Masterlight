@@ -23,9 +23,12 @@ let isUpdatingMap = false;
 let inactivityTimer;
 const INACTIVITY_TIME_MS = 5 * 60 * 1000;
 
-// --- MATRYCE KĄTÓW IMPERIAL ---
+// --- MATRYCE KĄTÓW ---
 const imperialAngleMaster = { '1': '1', '2': '2', '4': '2', '3': '3', '5': '3' };
 const imperialAngleSync = { '1': ['1'], '2': ['2','4'], '3': ['3','5'] };
+
+const pxfAngleMaster = { '6': '6', '7': '7', '9': '7', '8': '8', '10': '8' };
+const pxfAngleSync = { '6': ['6'], '7': ['7','9'], '8': ['8','10'] };
 
 // --- FUNKCJE POMOCNICZE UI ---
 function showLoading() { document.getElementById('loading-screen').classList.remove('hidden'); }
@@ -78,7 +81,7 @@ function switchTab(tabId) {
     const clickedNav = Array.from(document.querySelectorAll('.nav-item')).find(item => item.getAttribute('onclick').includes(tabId));
     if (clickedNav) clickedNav.classList.add('active');
     
-    closeSidePanel(); // Zamykamy ewentualny panel po zmianie zakładki
+    closeSidePanel(); 
     
     if (window.innerWidth <= 768) {
         document.querySelector('.sidebar').classList.remove('open');
@@ -110,8 +113,65 @@ class CloudInventoryManager {
     }
     
     async init() { 
-        showLoading(); await this.fetchData(); this.setupRealtime(); this.bindForms(); hideLoading(); 
+        showLoading(); 
+        this.patchDOMForPXFRaw(); // Automatyczna przebudowa HTML dla surowych PXF
+        await this.fetchData(); 
+        this.setupRealtime(); 
+        this.bindForms(); 
+        hideLoading(); 
         if (this.isFirstLoad && this.products.length > 0) { showToast(`Zalogowano pomyślnie.`, 'success'); this.isFirstLoad = false; } 
+    }
+
+    // Funkcja dynamicznie przebudowująca formularze i tabele bez edycji pliku HTML
+    patchDOMForPXFRaw() {
+        const pxfTh = document.querySelector('#products-pxf-table')?.parentElement?.querySelector('thead tr');
+        if (pxfTh && !pxfTh.innerHTML.includes('Surowe')) {
+            pxfTh.innerHTML = '<th>Kąt Oprawy</th><th>Gotowe 15W</th><th>Gotowe 20W</th><th>Surowe (W Montażu)</th><th>Serwis (Suma)</th><th>Łącznie Suma</th><th>Dostępność</th>';
+        }
+
+        const pxfIncForm = document.getElementById('incomingPxfForm');
+        if (pxfIncForm && pxfIncForm.innerHTML.includes('p9')) {
+            pxfIncForm.innerHTML = `
+                <div class="form-group" style="margin-bottom: 1rem;"><label>Dostawca</label><input type="text" name="supplier" required placeholder="np. PXF Lighting"></div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                    <div class="form-group"><label>Surowe 22°</label><input type="number" name="p6" value="0" min="0"></div>
+                    <div class="form-group"><label>Surowe 37°</label><input type="number" name="p7" value="0" min="0"></div>
+                    <div class="form-group"><label>Surowe 58°</label><input type="number" name="p8" value="0" min="0"></div>
+                </div>
+                <button type="submit" class="btn-primary btn-pxf" style="width:100%;"><span class="material-symbols-outlined">add_circle</span> Przyjmij surowe oprawy PXF</button>
+            `;
+        }
+
+        const prodContainer = document.getElementById('form-production-container');
+        if (prodContainer && !document.getElementById('productionPxfForm')) {
+            const pxfProdDiv = document.createElement('div');
+            pxfProdDiv.className = 'section section-pxf';
+            pxfProdDiv.style.marginTop = '1.5rem';
+            pxfProdDiv.innerHTML = `
+                <div class="section-header"><h2><span class="material-symbols-outlined">precision_manufacturing</span> Ustawienie Mocy (PXF)</h2></div>
+                <div class="section-content">
+                    <form id="productionPxfForm">
+                        <div style="background-color: var(--pxf-light); border: 1px solid #D1D9E0; padding: 1.5rem; border-radius: 12px; margin-bottom: 1.5rem;">
+                            <h3 style="font-size: 0.9rem; color: #1E3A8A; text-transform:uppercase; letter-spacing:1px; margin-bottom: 1rem;">Skonfiguruj zasilacze w surowych oprawach PXF</h3>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1.25rem;">
+                                <div class="form-group"><label>22° -> 15W</label><input type="number" name="p6" value="0" min="0"></div>
+                                <div class="form-group"><label>37° -> 15W</label><input type="number" name="p7" value="0" min="0"></div>
+                                <div class="form-group"><label>58° -> 15W</label><input type="number" name="p8" value="0" min="0"></div>
+                                <div class="form-group"><label>37° -> 20W</label><input type="number" name="p9" value="0" min="0"></div>
+                                <div class="form-group"><label>58° -> 20W</label><input type="number" name="p10" value="0" min="0"></div>
+                            </div>
+                        </div>
+                        <div style="text-align: right;">
+                            <button type="submit" class="btn-primary btn-pxf" style="padding: 0 2.5rem;"><span class="material-symbols-outlined">task_alt</span> Ustaw Moce</button>
+                        </div>
+                    </form>
+                    <div style="margin-top: 1rem; background: #EFF6FF; padding: 1rem; border-radius: 12px; font-size: 0.8rem; color: #1E3A8A;">
+                        <p>System zdejmuje "Surowe" oprawy PXF. Proces NIE ZUŻYWA osobnych zasilaczy z magazynu komponentów (zasilacz jest już w lampie).</p>
+                    </div>
+                </div>
+            `;
+            prodContainer.parentNode.insertBefore(pxfProdDiv, prodContainer.nextSibling);
+        }
     }
     
     async fetchData() {
@@ -158,10 +218,15 @@ class CloudInventoryManager {
         const p = this.products.find(x => String(x.id) === String(id));
         if (p) { 
             Object.assign(p, updates); this.updateDashboard(); await db.from('products').update(updates).eq('id', id); 
-            if (updates.assembly !== undefined && parseInt(id) <= 5) {
-                const targets = imperialAngleSync[id] || [];
+            if (updates.assembly !== undefined) {
+                let syncMap = parseInt(id) <= 5 ? imperialAngleSync : pxfAngleSync;
+                const targets = syncMap[id] || [];
                 for(let t of targets) {
-                    if(t !== String(id)) { await db.from('products').update({ assembly: updates.assembly }).eq('id', t); const tp = this.products.find(x => String(x.id) === t); if(tp) tp.assembly = updates.assembly; }
+                    if(t !== String(id)) { 
+                        await db.from('products').update({ assembly: updates.assembly }).eq('id', t); 
+                        const tp = this.products.find(x => String(x.id) === t); 
+                        if(tp) tp.assembly = updates.assembly; 
+                    }
                 }
             }
             await this.addHistory('Edycja stanu ręczna', p.name); await this.fetchData(); 
@@ -215,12 +280,73 @@ class CloudInventoryManager {
     async addIncomingPxf(supplier, newProducts) {
         if (currentRole === 'viewer') return;
         let totalAdded = 0; const dbUpdates = [];
-        for (const [id, qtyStr] of Object.entries(newProducts)) {
+        for (const [masterId, qtyStr] of Object.entries(newProducts)) {
             let qty = parseInt(qtyStr);
-            if (qty > 0) { const p = this.products.find(x => String(x.id) === String(id)); if (p) { p.ready = (parseInt(p.ready) || 0) + qty; dbUpdates.push(db.from('products').update({ ready: p.ready }).eq('id', id)); totalAdded += qty; } }
+            if (qty > 0) { 
+                const masterProduct = this.products.find(p => String(p.id) === String(masterId));
+                if (masterProduct) {
+                    const newAssembly = (parseInt(masterProduct.assembly) || 0) + qty; 
+                    const idsToUpdate = pxfAngleSync[masterId] || [masterId];
+                    idsToUpdate.forEach(targetId => { 
+                        dbUpdates.push(db.from('products').update({ assembly: newAssembly }).eq('id', targetId)); 
+                        const targetProduct = this.products.find(p => String(p.id) === String(targetId)); 
+                        if(targetProduct) targetProduct.assembly = newAssembly; 
+                    });
+                    totalAdded += qty;
+                }
+            }
         }
         if (dbUpdates.length > 0) await Promise.all(dbUpdates);
-        if (totalAdded > 0) { await this.addHistory('Dostawa Gotowych (PXF)', `Dostawca: ${supplier} | Wgrano łącznie: ${totalAdded} szt.`); await this.fetchData(); }
+        if (totalAdded > 0) { await this.addHistory('Dostawa Surowych (PXF)', `Dostawca: ${supplier} | Wgrano łącznie: ${totalAdded} szt.`); await this.fetchData(); }
+    }
+
+    async registerProductionPxf(prod) {
+        if (currentRole === 'viewer') return;
+        const tp = Object.values(prod).reduce((a,b) => a + parseInt(b||0), 0); if (tp === 0) return;
+        
+        const req = {}; 
+        for(const [id, q] of Object.entries(prod)) { let qq = parseInt(q); if(qq > 0) { let mId = pxfAngleMaster[id] || id; req[mId] = (req[mId] || 0) + qq; } }
+        
+        for(const [mId, q] of Object.entries(req)) { 
+            const masterP = this.products.find(x => String(x.id) === String(mId)); 
+            let av = masterP ? (parseInt(masterP.assembly)||0) : 0; 
+            if(q > av) { showToast('Brak surowych obudów PXF na ten kąt!', 'error'); return; } 
+        }
+        
+        const upds = []; let tpReal = 0; const assemblyUpdates = {}; const readyUpdates = {};
+        for (const [id, q] of Object.entries(prod)) {
+            let qq = parseInt(q);
+            if(qq > 0) { 
+                const p = this.products.find(x => String(x.id) === String(id));
+                if(p) { 
+                    p.ready = (parseInt(p.ready) || 0) + qq; 
+                    readyUpdates[p.id] = p.ready; 
+                    let mId = pxfAngleMaster[id] || id; 
+                    if (assemblyUpdates[mId] === undefined) { 
+                        const masterP = this.products.find(x => String(x.id) === String(mId)); 
+                        assemblyUpdates[mId] = masterP ? (parseInt(masterP.assembly) || 0) : 0; 
+                    } 
+                    assemblyUpdates[mId] -= qq; tpReal += qq; 
+                } 
+            }
+        }
+        
+        for (const [pid, newReady] of Object.entries(readyUpdates)) { upds.push(db.from('products').update({ ready: newReady }).eq('id', pid)); }
+        for (const [mId, newAssembly] of Object.entries(assemblyUpdates)) { 
+            const targets = pxfAngleSync[mId] || [mId]; 
+            for (let targetId of targets) { 
+                upds.push(db.from('products').update({ assembly: newAssembly }).eq('id', targetId)); 
+                const p = this.products.find(x => String(x.id) === targetId); 
+                if (p) p.assembly = newAssembly; 
+            } 
+        }
+        
+        if(tpReal > 0) { 
+            await Promise.all(upds); 
+            await this.addHistory('Ustawienie Mocy (PXF)', `Skonfigurowano sztuk: ${tpReal}`); 
+            showToast('Skonfigurowano moce PXF', 'success'); 
+            await this.fetchData();
+        }
     }
 
     async swapPxfAngle(fromAngle, toAngle, power, qty) {
@@ -241,25 +367,8 @@ class CloudInventoryManager {
     // --- WYSYŁKI ---
     async addShipment(s) { 
         if (currentRole === 'viewer') return;
-        
-        // Zapis z przechwyceniem błędu
-        const { error } = await db.from('shipments').insert([{ 
-            date: s.date, 
-            location: s.location, 
-            company: s.company, 
-            products: s.products, 
-            status: 'planned', 
-            is_confirmed: false, 
-            is_replacement: s.is_replacement, 
-            brand: s.brand 
-        }]); 
-        
-        if (error) {
-            console.error("Błąd Supabase:", error);
-            showToast('Błąd bazy danych (sprawdź konsolę F12). Pula dodana w Supabase?', 'error');
-            return; 
-        }
-
+        const { error } = await db.from('shipments').insert([{ date: s.date, location: s.location, company: s.company, products: s.products, status: 'planned', is_confirmed: false, is_replacement: s.is_replacement, brand: s.brand }]); 
+        if (error) { console.error("Błąd Supabase:", error); showToast('Błąd bazy danych (sprawdź konsolę F12).', 'error'); return; }
         await this.addHistory(s.is_replacement ? 'Utworzono Wysyłkę SERWISOWĄ' : 'Dodano zamówienie', `${s.location} [${s.brand.toUpperCase()}]`); 
         await this.fetchData(); 
     }
@@ -281,12 +390,7 @@ class CloudInventoryManager {
         const s = this.shipments.find(x => String(x.id) === String(id)); 
         if (s) { 
             const { error } = await db.from('shipments').update(data).eq('id', id); 
-            if (error) {
-                console.error("Błąd edycji Supabase:", error);
-                showToast('Błąd zapisu! Sprawdź konsolę (F12).', 'error');
-                return;
-            }
-            
+            if (error) { console.error("Błąd edycji Supabase:", error); showToast('Błąd zapisu! Sprawdź konsolę (F12).', 'error'); return; }
             Object.assign(s, data); 
             await this.addHistory('Edycja szczegółów zamówienia', s.location); 
             await this.fetchData(); 
@@ -355,27 +459,28 @@ class CloudInventoryManager {
         if (currentRole === 'viewer') return; await db.from('components').update({ [f]: v }).eq('id', 1); await this.addHistory('Korekta ręczna komponentów', `Zaktualizowano stan bazy.`); await this.fetchData();
     }
 
-    // --- PREDYKCJA (Burn-down V2.0 - Kąt po Kącie) ---
+    // --- PREDYKCJA (Burn-down V2.1 - Imperial i PXF) ---
     renderPredictions() {
         const container = document.getElementById('prediction-cards-container');
         if (!container) return;
 
-        // 1. Zbuduj mapy aktualnych stanów (Kąt po Kącie)
         let readyMap = {};
-        let assemblyMap = { '1': 0, '2': 0, '3': 0 };
+        let assemblyMap = { '1': 0, '2': 0, '3': 0, '6': 0, '7': 0, '8': 0 };
 
         this.products.forEach(p => {
             readyMap[p.id] = parseInt(p.ready) || 0;
             if (p.id == 1) assemblyMap['1'] = parseInt(p.assembly) || 0;
             if (p.id == 2) assemblyMap['2'] = parseInt(p.assembly) || 0;
             if (p.id == 3) assemblyMap['3'] = parseInt(p.assembly) || 0;
+            if (p.id == 6) assemblyMap['6'] = parseInt(p.assembly) || 0;
+            if (p.id == 7) assemblyMap['7'] = parseInt(p.assembly) || 0;
+            if (p.id == 8) assemblyMap['8'] = parseInt(p.assembly) || 0;
         });
 
         let ps = parseInt(this.components.ps_raw) || 0;
         let clipsN = parseInt(this.components.clips_normal) || 0;
         let clipsP = parseInt(this.components.clips_pass) || 0;
 
-        // 2. Pobierz wysyłki i sortuj bezpiecznie po dacie
         const upcoming = this.shipments
             .filter(s => s.status !== 'completed')
             .sort((a, b) => {
@@ -387,7 +492,7 @@ class CloudInventoryManager {
         let shortages = { 'ps': null, 'cn': null, 'cp': null };
         let fixtureShortages = {}; 
 
-        const imperialMasterName = { '1': 'Surowe 22°', '2': 'Surowe 37°', '3': 'Surowe 58°' };
+        const imperialMasterName = { '1': 'Surowe Imperial 22°', '2': 'Surowe Imperial 37°', '3': 'Surowe Imperial 58°' };
 
         for (let s of upcoming) {
             let req = s.status === 'partial' ? s.partial_missing : s.products;
@@ -422,10 +527,14 @@ class CloudInventoryManager {
                             let name = imperialMasterName[masterId];
                             if (!fixtureShortages[name]) fixtureShortages[name] = s.date;
                         }
-                    } else {
-                        let pObj = this.products.find(x => String(x.id) === pid);
-                        let name = pObj ? pObj.name.replace('PXF ', 'PXF ') : `PXF ID:${pid}`;
-                        if (!fixtureShortages[name]) fixtureShortages[name] = s.date;
+                    } else if (['6','7','8','9','10'].includes(pid)) {
+                        let masterId = pxfAngleMaster[pid];
+                        assemblyMap[masterId] -= missingReady;
+                        if (assemblyMap[masterId] < 0) {
+                            let pObj = this.products.find(x => String(x.id) === masterId);
+                            let name = pObj ? `Surowe PXF ${pObj.name.split(' ')[1]}` : `PXF ID:${pid}`;
+                            if (!fixtureShortages[name]) fixtureShortages[name] = s.date;
+                        }
                     }
                 }
             }
@@ -434,20 +543,13 @@ class CloudInventoryManager {
         const createCard = (title, currentVal, shortageDate, isWarningCard = false) => {
             const isCritical = shortageDate !== null;
             let dateStr = 'Zapas OK';
-            
-            if (isCritical) {
-                let d = new Date(shortageDate);
-                dateStr = isNaN(d.getTime()) ? shortageDate : d.toLocaleDateString('pl-PL');
-            }
-
+            if (isCritical) { let d = new Date(shortageDate); dateStr = isNaN(d.getTime()) ? shortageDate : d.toLocaleDateString('pl-PL'); }
             const statusClass = isCritical ? 'predictive critical' : 'predictive';
             const labelStr = isCritical ? `Brak na: ${dateStr}` : dateStr;
             const icon = isCritical ? 'warning' : 'check_circle';
             
             let valHtml = currentVal;
-            if (typeof currentVal === 'number') {
-                valHtml = `${currentVal} <span style="font-size:1rem; color:var(--text-secondary);">szt</span>`;
-            }
+            if (typeof currentVal === 'number') { valHtml = `${currentVal} <span style="font-size:1rem; color:var(--text-secondary);">szt</span>`; }
 
             return `
                 <div class="stat-card ${statusClass}" style="${isWarningCard ? 'background-color: #FEF2F2; border-color: #FECACA;' : ''}">
@@ -463,9 +565,7 @@ class CloudInventoryManager {
         html += createCard('Klapki Zwykłe', this.components.clips_normal || 0, shortages['cn']);
 
         if (Object.keys(fixtureShortages).length > 0) {
-            for (const [name, date] of Object.entries(fixtureShortages)) {
-                html += createCard(`BRAKUJE OPRAW`, name, date, true);
-            }
+            for (const [name, date] of Object.entries(fixtureShortages)) { html += createCard(`BRAKUJE OPRAW`, name, date, true); }
         } else {
             html += createCard('Zapas Opraw', 'Dostępne', null);
         }
@@ -475,9 +575,19 @@ class CloudInventoryManager {
 
     // --- RENDEROWANIE WIDOKÓW TABEL I INTERFEJSU ---
     getTotals() {
-        const s = new Set(); let tA = 0; 
-        this.products.forEach(p => { if(p.id <= 5) { let mId = imperialAngleMaster[p.id] || p.id; if (!s.has(mId)) { tA += parseInt(p.assembly)||0; s.add(mId); } }});
-        return { totalReady: this.products.reduce((sum, p) => sum + (parseInt(p.ready)||0), 0), totalAssembly: tA, totalService: this.products.reduce((sum, p) => sum + (parseInt(p.service)||0) + (parseInt(p.damaged)||0), 0), totalAll: this.products.reduce((sum, p) => sum + (parseInt(p.ready)||0), 0) + tA + this.products.reduce((sum, p) => sum + (parseInt(p.service)||0) + (parseInt(p.damaged)||0), 0) };
+        const sImp = new Set(); let tAImp = 0; 
+        const sPxf = new Set(); let tAPxf = 0;
+        this.products.forEach(p => { 
+            if(p.id <= 5) { let mId = imperialAngleMaster[p.id] || p.id; if (!sImp.has(mId)) { tAImp += parseInt(p.assembly)||0; sImp.add(mId); } }
+            if(p.id >= 6 && p.id <= 10) { let mId = pxfAngleMaster[p.id] || p.id; if (!sPxf.has(mId)) { tAPxf += parseInt(p.assembly)||0; sPxf.add(mId); } }
+        });
+        const totalAssemblyAll = tAImp + tAPxf;
+        return { 
+            totalReady: this.products.reduce((sum, p) => sum + (parseInt(p.ready)||0), 0), 
+            totalAssembly: totalAssemblyAll, 
+            totalService: this.products.reduce((sum, p) => sum + (parseInt(p.service)||0) + (parseInt(p.damaged)||0), 0), 
+            totalAll: this.products.reduce((sum, p) => sum + (parseInt(p.ready)||0), 0) + totalAssemblyAll + this.products.reduce((sum, p) => sum + (parseInt(p.service)||0) + (parseInt(p.damaged)||0), 0) 
+        };
     }
 
     updateDashboard() {
@@ -503,7 +613,7 @@ class CloudInventoryManager {
             const itb = document.getElementById('dashboard-recent-incoming');
             if (itb && this.history) {
                 itb.innerHTML = '';
-                const rI = this.history.filter(h => h && h.action && (h.action.includes('Dostawa opraw') || h.action.includes('Dostawa obudów') || h.action.includes('Dostawa z Huty') || h.action.includes('Dostawa Gotowych'))).slice(0, 2);
+                const rI = this.history.filter(h => h && h.action && (h.action.includes('Dostawa opraw') || h.action.includes('Dostawa obudów') || h.action.includes('Dostawa z Huty') || h.action.includes('Dostawa Gotowych') || h.action.includes('Dostawa Surowych'))).slice(0, 2);
                 if(rI.length === 0) { itb.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 2rem !important; border:none; color: gray;">Brak historii dostaw.</td></tr>'; } 
                 else {
                     rI.forEach(e => { 
@@ -541,17 +651,26 @@ class CloudInventoryManager {
             e.target.reset(); btn.innerHTML = txt; btn.disabled = false; showToast('Przyjęto obudowy Imperial', 'success'); 
         });
 
+        // Formularz PXF teraz przyjmuje surowe!
         bind('incomingPxfForm', async (e) => { 
             e.preventDefault(); if (currentRole === 'viewer') return;
             const btn = e.target.querySelector('button[type="submit"]'); const txt = btn.innerHTML; btn.innerHTML = 'Zapisywanie...'; btn.disabled = true;
-            const fd = new FormData(e.target); await this.addIncomingPxf(fd.get('supplier'), { 6:parseInt(fd.get('p6'))||0, 7:parseInt(fd.get('p7'))||0, 8:parseInt(fd.get('p8'))||0, 9:parseInt(fd.get('p9'))||0, 10:parseInt(fd.get('p10'))||0 }); 
-            e.target.reset(); btn.innerHTML = txt; btn.disabled = false; showToast('Przyjęto lampy PXF na Gotowe', 'success'); 
+            const fd = new FormData(e.target); await this.addIncomingPxf(fd.get('supplier'), { 6:parseInt(fd.get('p6'))||0, 7:parseInt(fd.get('p7'))||0, 8:parseInt(fd.get('p8'))||0 }); 
+            e.target.reset(); btn.innerHTML = txt; btn.disabled = false; showToast('Przyjęto surowe lampy PXF', 'success'); 
         });
 
         bind('productionForm', async (e) => { 
             e.preventDefault(); if (currentRole === 'viewer') return;
             const btn = e.target.querySelector('button[type="submit"]'); const txt = btn.innerHTML; btn.innerHTML = 'Przetwarzanie...'; btn.disabled = true;
             const fd = new FormData(e.target); await this.registerProduction({ 1:parseInt(fd.get('p1'))||0, 2:parseInt(fd.get('p2'))||0, 3:parseInt(fd.get('p3'))||0, 4:parseInt(fd.get('p4'))||0, 5:parseInt(fd.get('p5'))||0 }); 
+            e.target.reset(); btn.innerHTML = txt; btn.disabled = false; 
+        });
+
+        // Nowy formularz produkcji PXF
+        bind('productionPxfForm', async (e) => { 
+            e.preventDefault(); if (currentRole === 'viewer') return;
+            const btn = e.target.querySelector('button[type="submit"]'); const txt = btn.innerHTML; btn.innerHTML = 'Przetwarzanie...'; btn.disabled = true;
+            const fd = new FormData(e.target); await this.registerProductionPxf({ 6:parseInt(fd.get('p6'))||0, 7:parseInt(fd.get('p7'))||0, 8:parseInt(fd.get('p8'))||0, 9:parseInt(fd.get('p9'))||0, 10:parseInt(fd.get('p10'))||0 }); 
             e.target.reset(); btn.innerHTML = txt; btn.disabled = false; 
         });
 
@@ -633,11 +752,36 @@ checkSession();
 function getShipmentsReadinessMap() {
     const m = {}; if (!window.inventory || !window.inventory.products) return m;
     let vR = {}, vA = {}; 
-    window.inventory.products.forEach(p => { vR[String(p.id)] = parseInt(p.ready)||0; if (p.id <= 5) { let mId = imperialAngleMaster[p.id] || p.id; if(vA[mId] === undefined) { const mP = window.inventory.products.find(x=>String(x.id)===String(mId)); vA[mId] = mP ? (parseInt(mP.assembly)||0) : 0; } } });
+    window.inventory.products.forEach(p => { 
+        vR[String(p.id)] = parseInt(p.ready)||0; 
+        if (p.id <= 5) { 
+            let mId = imperialAngleMaster[p.id] || p.id; 
+            if(vA[mId] === undefined) { const mP = window.inventory.products.find(x=>String(x.id)===String(mId)); vA[mId] = mP ? (parseInt(mP.assembly)||0) : 0; } 
+        } else {
+            let mId = pxfAngleMaster[p.id] || p.id; 
+            if(vA[mId] === undefined) { const mP = window.inventory.products.find(x=>String(x.id)===String(mId)); vA[mId] = mP ? (parseInt(mP.assembly)||0) : 0; }
+        }
+    });
     let pend = (window.inventory.shipments || []).filter(s => s.status !== 'completed').sort((a,b)=>{ const ac=a.is_confirmed===true||a.is_confirmed==='true', bc=b.is_confirmed===true||b.is_confirmed==='true'; if(ac&&!bc) return -1; if(!ac&&bc) return 1; return(a.date||'').localeCompare(b.date||''); });
     pend.forEach(s => {
         let ok = true; let rq = s.status === 'partial' ? s.partial_missing : s.products;
-        if(rq) { for(const [pid, q] of Object.entries(rq)) { let n = parseInt(q)||0; if(n>0) { const p = window.inventory.products.find(x=>String(x.id)===String(pid)); if(!p) { ok=false; continue; } if(vR[pid]>=n) { vR[pid]-=n; n=0; } else { n-=vR[pid]; vR[pid]=0; } if(n>0 && p.id <= 5) { let mId = imperialAngleMaster[pid] || pid; if(vA[mId]>=n) { vA[mId]-=n; } else { vA[mId]-=n; ok=false; } } else if (n>0 && p.id > 5) { ok = false; } } } } 
+        if(rq) { 
+            for(const [pid, q] of Object.entries(rq)) { 
+                let n = parseInt(q)||0; 
+                if(n>0) { 
+                    const p = window.inventory.products.find(x=>String(x.id)===String(pid)); 
+                    if(!p) { ok=false; continue; } 
+                    if(vR[pid]>=n) { vR[pid]-=n; n=0; } else { n-=vR[pid]; vR[pid]=0; } 
+                    if(n>0 && p.id <= 5) { 
+                        let mId = imperialAngleMaster[pid] || pid; 
+                        if(vA[mId]>=n) { vA[mId]-=n; } else { vA[mId]-=n; ok=false; } 
+                    } else if (n>0 && p.id > 5) { 
+                        let mId = pxfAngleMaster[pid] || pid;
+                        if(vA[mId]>=n) { vA[mId]-=n; } else { vA[mId]-=n; ok=false; } 
+                    } 
+                } 
+            } 
+        } 
         m[s.id] = ok;
     }); return m;
 }
@@ -700,14 +844,15 @@ function updateInventoryTable() {
         tbImp.innerHTML += `<tr><td data-label="Kąt Oprawy"><strong>${a.name}</strong></td>${isViewer?`<td data-label="Gotowe 15W">${c15}</td>`:c15}${isViewer?(a.id20?`<td data-label="Gotowe 20W">${c20}</td>`:c20):c20}${isViewer?`<td data-label="Surowe">${cAssm}</td>`:cAssm}<td data-label="Serwis">${totSer}</td><td data-label="Łącznie"><strong>${total}</strong></td><td data-label="Dostępność"><span class="status-badge ${getStatusClass(a.id15)}">${getStatusText(a.id15)}</span></td></tr>`;
     });
 
-    [{ name: 'PXF 22°', id15: 6, id20: null }, { name: 'PXF 37°', id15: 7, id20: 9 }, { name: 'PXF 58°', id15: 8, id20: 10 }].forEach(a => {
-        const p15 = getP(a.id15); const p20 = a.id20 ? getP(a.id20) : null;
-        const r15 = parseInt(p15.ready) || 0; const r20 = p20 ? (parseInt(p20.ready) || 0) : 0;
+    [{ name: 'PXF 22°', id15: 6, id20: null, idAssm: 6 }, { name: 'PXF 37°', id15: 7, id20: 9, idAssm: 7 }, { name: 'PXF 58°', id15: 8, id20: 10, idAssm: 8 }].forEach(a => {
+        const p15 = getP(a.id15); const p20 = a.id20 ? getP(a.id20) : null; const pAssm = getP(a.idAssm);
+        const r15 = parseInt(p15.ready) || 0; const r20 = p20 ? (parseInt(p20.ready) || 0) : 0; const assm = parseInt(pAssm.assembly) || 0;
         const s15 = (parseInt(p15.service)||0) + (parseInt(p15.damaged)||0); const s20 = p20 ? ((parseInt(p20.service)||0) + (parseInt(p20.damaged)||0)) : 0;
-        const totSer = s15 + s20; const total = r15 + r20 + totSer;
+        const totSer = s15 + s20; const total = r15 + r20 + assm + totSer;
         const c15 = isViewer ? `<strong>${r15}</strong>` : `<td data-label="Gotowe 15W" onclick="editCell(this, 'ready', '${a.id15}')" class="editable"><strong>${r15}</strong></td>`;
         const c20 = a.id20 ? (isViewer ? `<strong>${r20}</strong>` : `<td data-label="Gotowe 20W" onclick="editCell(this, 'ready', '${a.id20}')" class="editable"><strong>${r20}</strong></td>`) : `<td data-label="Gotowe 20W">-</td>`;
-        tbPxf.innerHTML += `<tr><td data-label="Kąt Oprawy"><strong style="color:#1E3A8A;">${a.name}</strong></td>${isViewer?`<td data-label="Gotowe 15W">${c15}</td>`:c15}${isViewer?(a.id20?`<td data-label="Gotowe 20W">${c20}</td>`:c20):c20}<td data-label="Serwis">${totSer}</td><td data-label="Łącznie"><strong>${total}</strong></td><td data-label="Dostępność"><span class="status-badge ${getStatusClass(a.id15)}">${getStatusText(a.id15)}</span></td></tr>`;
+        const cAssm = isViewer ? assm : `<td data-label="Surowe (W Montażu)" onclick="editCell(this, 'assembly', '${a.idAssm}')" class="editable">${assm}</td>`;
+        tbPxf.innerHTML += `<tr><td data-label="Kąt Oprawy"><strong style="color:#1E3A8A;">${a.name}</strong></td>${isViewer?`<td data-label="Gotowe 15W">${c15}</td>`:c15}${isViewer?(a.id20?`<td data-label="Gotowe 20W">${c20}</td>`:c20):c20}${isViewer?`<td data-label="Surowe">${cAssm}</td>`:cAssm}<td data-label="Serwis">${totSer}</td><td data-label="Łącznie"><strong>${total}</strong></td><td data-label="Dostępność"><span class="status-badge ${getStatusClass(a.id15)}">${getStatusText(a.id15)}</span></td></tr>`;
     });
 
     window.inventory.products.forEach(p => {
@@ -776,7 +921,7 @@ function editComponentCell(cell, field) {
 async function confirmShipmentDateUI(id) { if (confirm('Zatwierdzić termin wysyłki?')) { showLoading(); await window.inventory.confirmShipment(id); hideLoading(); showToast('Zatwierdzono', 'success'); } }
 async function completeShipmentUI(id) { if (confirm(`Wydano towar z magazynu?`)) { showLoading(); await window.inventory.completeShipment(id); hideLoading(); showToast('Wydano towar', 'success'); } }
 async function completeRemainingShipmentUI(id) { if (confirm('Wydano brakującą część towaru?')) { showLoading(); await window.inventory.completeRemainingShipment(id); hideLoading(); showToast('Zrealizowano', 'success'); } }
-async function deleteShipment(id) { if (currentRole === 'admin' && confirm('Usunąć zamówienie?')) { showLoading(); await window.inventory.deleteShipment(id); closeSidePanel(); hideLoading(); showToast('Usunięto', 'success'); } }
+async function deleteShipment(id) { if (currentRole === 'admin' && confirm('Usunąć zamówienie?')) { showLoading(); await window.inventory.deleteShipment(id); hideLoading(); showToast('Usunięto', 'success'); } }
 async function deleteAdjustment(id) { if (currentRole === 'admin' && confirm('Usunąć wpis z regulacji?')) { showLoading(); await window.inventory.deleteAdjustment(id); hideLoading(); showToast('Usunięto', 'success'); } }
 
 // --- EDYCJA ZAMÓWIENIA W OKIENKU (MODAL) ---
@@ -787,7 +932,7 @@ function openShipmentDetails(id) {
     const b = shipment.brand || 'imperial';
     const p1 = b==='pxf'?(p[6]||0):(p[1]||0); const p2 = b==='pxf'?(p[7]||0):(p[2]||0); const p3 = b==='pxf'?(p[8]||0):(p[3]||0); const p4 = b==='pxf'?(p[9]||0):(p[4]||0); const p5 = b==='pxf'?(p[10]||0):(p[5]||0);
     
-    closeSidePanel(); // na wszelki wypadek
+    closeSidePanel(); 
 
     const content = `
         <div style="display: flex; flex-direction: column; gap: 1rem; text-align: left;">
@@ -814,7 +959,7 @@ function openShipmentDetails(id) {
     showModal(`Edycja: ${b.toUpperCase()}`, content);
 }
 
-async function saveEditedShipment(id) {
+window.saveEditedShipment = async function(id) {
     const newDate = document.getElementById('edit_shipment_date').value; 
     const newLocation = document.getElementById('edit_shipment_location').value; 
     const newCompany = document.getElementById('edit_shipment_company').value;
@@ -854,19 +999,19 @@ function openReceiveDamagedUI() {
     let html = `<div class="form-group"><label>Model oprawy (zwrot)</label><select id="rma_prod_id" style="width:100%; padding:0.75rem; border-radius:10px; font-family:'Inter',sans-serif; border:1px solid #D1D5DB;">${opts}</select></div><div class="form-group"><label>Zwróconych (uszkodzonych) sztuk</label><input type="number" id="rma_qty" min="1" value="1"></div><div class="form-group" style="background:#ECFDF5; padding:1rem; border-radius:8px; border:1px solid #A7F3D0;"><label style="color:#065F46; font-size:0.8rem;">Odzyskanych zasilaczy?</label><input type="number" id="rma_salvaged" min="0" value="0"></div><div class="form-group"><label>Opis usterki</label><input type="text" id="rma_desc" placeholder="np. uszkodzony klosz..."></div><button class="btn-primary" onclick="submitDamagedReturn()" style="width:100%; margin-top:10px;"><span class="material-symbols-outlined">assignment_return</span> Przyjmij zwrot</button>`;
     showModal('Przyjęcie zwrotu RMA', html);
 }
-async function submitDamagedReturn() { let id = document.getElementById('rma_prod_id').value; let qty = parseInt(document.getElementById('rma_qty').value)||0; let sal = parseInt(document.getElementById('rma_salvaged').value)||0; let desc = document.getElementById('rma_desc').value.trim(); if(qty>0) { closeModal(); showLoading(); await window.inventory.processDamagedReturn(id, qty, sal, desc); hideLoading(); } }
+window.submitDamagedReturn = async function() { let id = document.getElementById('rma_prod_id').value; let qty = parseInt(document.getElementById('rma_qty').value)||0; let sal = parseInt(document.getElementById('rma_salvaged').value)||0; let desc = document.getElementById('rma_desc').value.trim(); if(qty>0) { closeModal(); showLoading(); await window.inventory.processDamagedReturn(id, qty, sal, desc); hideLoading(); } }
 
 function openSendToServiceUI(id, name, available) {
     let html = `<p style="margin-bottom:1rem; font-size:0.95rem;">Wysyłasz oprawy <strong>${name}</strong> na naprawę. Dostępne (uszkodzone): <strong>${available}</strong> szt.</p><div class="form-group"><label>Ilość do wydania:</label><input type="number" id="rma_send_qty" min="1" max="${available}" value="1"></div><div class="form-group"><label>Opis / Notatka</label><input type="text" id="rma_send_desc" placeholder="np. wysłano DPD..."></div><button class="btn-primary" onclick="submitSendService('${id}')" style="width:100%;"><span class="material-symbols-outlined">handyman</span> Wydaj do Serwisu</button>`;
     showModal('Wydanie na naprawę', html);
 }
-async function submitSendService(id) { let qty = parseInt(document.getElementById('rma_send_qty').value)||0; let desc = document.getElementById('rma_send_desc').value.trim(); if(qty>0) { closeModal(); showLoading(); await window.inventory.sendToService(id, qty, desc); hideLoading(); } }
+window.submitSendService = async function(id) { let qty = parseInt(document.getElementById('rma_send_qty').value)||0; let desc = document.getElementById('rma_send_desc').value.trim(); if(qty>0) { closeModal(); showLoading(); await window.inventory.sendToService(id, qty, desc); hideLoading(); } }
 
 function openReceiveFromServiceUI(id, name, inService) {
     let html = `<p style="margin-bottom:1rem; font-size:0.95rem;">Odbierasz oprawy <strong>${name}</strong> po naprawie. W serwisie: <strong>${inService}</strong> szt.</p><div class="form-group"><label>Odebranych sztuk:</label><input type="number" id="rma_rec_qty" min="1" max="${inService}" value="1"></div><div class="form-group" style="background:#FEF2F2; padding:1rem; border-radius:8px; border:1px solid #FECACA;"><label style="color:#991B1B; font-size:0.8rem;">Zużytych NOWYCH zasilaczy?</label><input type="number" id="rma_used_ps" min="0" value="0"></div><div class="form-group"><label>Notatka</label><input type="text" id="rma_rec_desc" placeholder="..."></div><button class="btn-primary" onclick="submitReceiveService('${id}')" style="width:100%; margin-top:10px;"><span class="material-symbols-outlined">task_alt</span> Zakończ Naprawę</button>`;
     showModal('Odbiór z naprawy', html);
 }
-async function submitReceiveService(id) { let qty = parseInt(document.getElementById('rma_rec_qty').value)||0; let used = parseInt(document.getElementById('rma_used_ps').value)||0; let desc = document.getElementById('rma_rec_desc').value.trim(); if(qty>0) { closeModal(); showLoading(); await window.inventory.receiveFromService(id, qty, used, desc); hideLoading(); } }
+window.submitReceiveService = async function(id) { let qty = parseInt(document.getElementById('rma_rec_qty').value)||0; let used = parseInt(document.getElementById('rma_used_ps').value)||0; let desc = document.getElementById('rma_rec_desc').value.trim(); if(qty>0) { closeModal(); showLoading(); await window.inventory.receiveFromService(id, qty, used, desc); hideLoading(); } }
 
 function showMissingItems(id) {
     if (!window.inventory) return; const s = window.inventory.shipments.find(x => String(x.id) === String(id)); if (!s || !s.partial_missing) return;
@@ -896,11 +1041,11 @@ function printInventoryPdf() {
         const s15 = parseInt(p15.service)||0 + parseInt(p15.damaged)||0; const s20 = p20 ? (parseInt(p20.service)||0 + parseInt(p20.damaged)||0) : 0; const totSer = s15 + s20; const total = r15 + r20 + assm + totSer;
         h += `<tr><td>${a.name}</td><td>${r15}</td><td>${a.id20 ? r20 : '-'}</td><td>${assm}</td><td>${totSer}</td><td><b>${total}</b></td></tr>`; 
     });
-    [{ name: 'PXF 22°', id15: 6, id20: null }, { name: 'PXF 37°', id15: 7, id20: 9 }, { name: 'PXF 58°', id15: 8, id20: 10 }].forEach(a => { 
-        const p15 = getP(a.id15); const p20 = a.id20 ? getP(a.id20) : null;
-        const r15 = parseInt(p15.ready)||0; const r20 = p20 ? (parseInt(p20.ready)||0) : 0;
-        const s15 = parseInt(p15.service)||0 + parseInt(p15.damaged)||0; const s20 = p20 ? (parseInt(p20.service)||0 + parseInt(p20.damaged)||0) : 0; const totSer = s15 + s20; const total = r15 + r20 + totSer;
-        h += `<tr><td style="color:#1E3A8A;">${a.name}</td><td>${r15}</td><td>${a.id20 ? r20 : '-'}</td><td>-</td><td>${totSer}</td><td><b>${total}</b></td></tr>`; 
+    [{ name: 'PXF 22°', id15: 6, id20: null, idAssm: 6 }, { name: 'PXF 37°', id15: 7, id20: 9, idAssm: 7 }, { name: 'PXF 58°', id15: 8, id20: 10, idAssm: 8 }].forEach(a => { 
+        const p15 = getP(a.id15); const p20 = a.id20 ? getP(a.id20) : null; const pAssm = getP(a.idAssm);
+        const r15 = parseInt(p15.ready)||0; const r20 = p20 ? (parseInt(p20.ready)||0) : 0; const assm = parseInt(pAssm.assembly)||0;
+        const s15 = parseInt(p15.service)||0 + parseInt(p15.damaged)||0; const s20 = p20 ? (parseInt(p20.service)||0 + parseInt(p20.damaged)||0) : 0; const totSer = s15 + s20; const total = r15 + r20 + assm + totSer;
+        h += `<tr><td style="color:#1E3A8A;">${a.name}</td><td>${r15}</td><td>${a.id20 ? r20 : '-'}</td><td>${assm}</td><td>${totSer}</td><td><b>${total}</b></td></tr>`; 
     });
     h += `<tr><td colspan="5" align="right"><b>ŁĄCZNIE MODUŁÓW (SUROWE+GOTOWE+SERWIS):</b></td><td><b>${t.totalAll}</b></td></tr></table><br><br>Podpis magazyniera: .........................</body></html>`;
 
