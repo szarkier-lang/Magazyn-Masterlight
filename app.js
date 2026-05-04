@@ -1,18 +1,9 @@
-// --- SYSTEM DETEKCJI KRYTYCZNEJ ---
-function displayFatalError(context, err) {
-    console.error(`BŁĄD: ${context}`, err);
-    const errDiv = document.createElement('div');
-    errDiv.style = "position:fixed; top:10%; left:50%; transform:translateX(-50%); z-index:99999; background:#991B1B; color:white; padding:25px 40px; font-size:16px; border-radius:12px; max-width:85%; max-height:80%; overflow:auto; box-shadow: 0 10px 25px rgba(0,0,0,0.5);";
-    errDiv.innerHTML = `<h2 style="margin:0 0 10px 0; font-size: 20px; color:#FECACA;">Wykryto Błąd Rysowania!</h2>
-    <strong>Kontekst:</strong> ${context}<br><br>
-    <strong>Treść błędu:</strong> ${err.message || err}<br>
-    <pre style="font-size:12px; margin-top:15px; color:#FCA5A5; white-space:pre-wrap;">${err.stack || ''}</pre>
-    <p style="margin-top:15px; font-size: 14px;">Skopiuj powyższy tekst i przekaż go programiście!</p>`;
-    document.body.appendChild(errDiv);
-}
-
-window.addEventListener('error', function(event) { displayFatalError('Globalny błąd JS', event.error || event); });
-window.addEventListener('unhandledrejection', function(event) { displayFatalError('Błąd połączenia/Bazy danych', event.reason); });
+// --- TRYB DIAGNOSTYCZNY (Nigdy więcej cichych błędów) ---
+window.addEventListener('error', function(event) {
+    console.error(`BŁĄD JS: ${event.message} (Linia: ${event.lineno})`);
+    const alertsContainer = document.getElementById('dashboard-alerts');
+    if(alertsContainer) alertsContainer.innerHTML += `<div style="background:#FEF2F2; border:1px solid #FECACA; color:#991B1B; padding:10px; border-radius:8px; margin-bottom:10px; font-size:12px;"><strong>Zignorowany błąd:</strong> ${event.message} w linii ${event.lineno}</div>`;
+});
 
 // --- KONFIGURACJA SUPABASE ---
 const supabaseUrl = 'https://ghdswvjhqpxupzcrixlu.supabase.co';
@@ -42,10 +33,11 @@ const INACTIVITY_TIME_MS = 5 * 60 * 1000;
 // --- MATRYCE KĄTÓW ---
 const imperialAngleMaster = { '1': '1', '2': '2', '4': '2', '3': '3', '5': '3' };
 const imperialAngleSync = { '1': ['1'], '2': ['2','4'], '3': ['3','5'] };
+
 const pxfAngleMaster = { '6': '6', '7': '7', '9': '7', '8': '8', '10': '8' };
 const pxfAngleSync = { '6': ['6'], '7': ['7','9'], '8': ['8','10'] };
 
-// --- BEZPIECZNE INICJOWANIE MAP ---
+// --- BEZPIECZNE INICJOWANIE MAP I LOKALIZACJI ---
 const boundsPoland = L.latLngBounds(L.latLng(48.9, 14.1), L.latLng(54.9, 24.2));
 window.initMap = function() { 
     if (map) return; 
@@ -63,9 +55,51 @@ window.initAdjMap = function() {
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(mapAdj); 
 }
 
+window.geocodeLocation = async function(locationStr) {
+    let searchStr = locationStr.split('(')[0].trim(); if (geocodeCache[searchStr]) return geocodeCache[searchStr];
+    try { let res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchStr)}&countrycodes=pl&limit=1`); let data = await res.json(); if (data && data.length > 0) { geocodeCache[searchStr] = [data[0].lat, data[0].lon]; return geocodeCache[searchStr]; } } catch (e) { } geocodeCache[searchStr] = null; return null;
+}
+
+window.updateMapMarkers = async function(shipments, adjustments) {
+    if (isUpdatingMap || !window.inventory) return; isUpdatingMap = true;
+    try {
+        if (!map) window.initMap(); const statusEl = document.getElementById('map-status'); if(statusEl) statusEl.innerHTML = '<span class="material-symbols-outlined" style="font-size:1em; animation: spin 1s linear infinite;">autorenew</span> Rysowanie tras...';
+        mapMarkers.forEach(m => map.removeLayer(m)); mapMarkers = [];
+        const homeMarker = L.marker([51.7592, 19.4560], {icon: L.divIcon({html: `<div class="custom-map-marker marker-home" style="width:28px; height:28px;"><span class="material-symbols-outlined" style="font-size:16px;">home</span></div>`, className: '', iconSize: [28,28], iconAnchor: [14,14]})}).addTo(map).bindPopup('<b>Baza Masterlight</b>');
+        const allPoints = [homeMarker]; let tasks = [];
+        (shipments || []).filter(s => s.status !== 'completed').forEach(s => { tasks.push({ ...s, type: 'Wysyłka' }); });
+        (adjustments || []).forEach(a => { tasks.push({ ...a, type: 'Regulacja' }); });
+        tasks.sort((a, b) => (a.date || '').localeCompare(b.date || '')); let shipCounter = 1; let adjCounter = 1;
+        for (let i = 0; i < tasks.length; i++) {
+            const t = tasks[i]; if(!t.location) continue; const coords = await window.geocodeLocation(t.location);
+            if (coords) {
+                let mClass = '', title = '', details = '', displayNum = 0;
+                if (t.type === 'Wysyłka') { displayNum = shipCounter++; const total = t.products ? Object.values(t.products).reduce((a, b) => parseInt(a) + parseInt(b), 0) : 0; mClass = t.is_confirmed ? 'marker-confirmed' : 'marker-planned'; title = 'Wysyłka'; details = `Sztuk: <strong>${total}</strong><br>Spedytor: ${escapeHTML(t.company)}`; } 
+                else { displayNum = adjCounter++; mClass = 'marker-adjustment'; title = 'Regulacja'; details = 'Wyjazd Serwisowy'; }
+                const popupText = `<b>${escapeHTML(t.location)}</b><br><span style="font-size:0.85rem;color:gray;">[#${displayNum}] ${title}</span><br>Termin: ${escapeHTML(t.date)}<br>${details}`;
+                const marker = L.marker(coords, { icon: L.divIcon({html: `<div class="custom-map-marker ${mClass}" style="width:24px; height:24px; font-size:11px;">${displayNum}</div>`, className: '', iconSize: [24,24], iconAnchor: [12,12]})}).addTo(map).bindPopup(popupText);
+                mapMarkers.push(marker); allPoints.push(marker);
+            } await new Promise(r => setTimeout(r, 150));
+        }
+        if (allPoints.length > 1) { map.fitBounds(new L.featureGroup(allPoints).getBounds(), { padding: [50, 50], maxZoom: 9 }); } else { map.setView([51.7592, 19.4560], 6); }
+        if(statusEl) statusEl.innerHTML = '<span class="material-symbols-outlined" style="color: var(--success-status);">check_circle</span> Gotowa';
+    } catch(e) { console.error(e); } finally { isUpdatingMap = false; }
+}
+
+window.updateAdjMapMarkers = async function(adjustments) {
+    try {
+        if (!mapAdj) window.initAdjMap(); mapAdjMarkers.forEach(m => mapAdj.removeLayer(m)); mapAdjMarkers = [];
+        const homeMarker = L.marker([51.7592, 19.4560], {icon: L.divIcon({html: `<div class="custom-map-marker marker-home" style="width:28px; height:28px;"><span class="material-symbols-outlined" style="font-size:16px;">home</span></div>`, className: '', iconSize: [28,28], iconAnchor: [14,14]})}).addTo(mapAdj).bindPopup('<b>Baza Masterlight</b>');
+        const allPoints = [homeMarker]; let sortedAdjs = [...(adjustments||[])].sort((a,b) => (a.date||'').localeCompare(b.date||''));
+        for (let i = 0; i < sortedAdjs.length; i++) { const coords = await window.geocodeLocation(sortedAdjs[i].location); if (coords) { const marker = L.marker(coords, { icon: L.divIcon({html: `<div class="custom-map-marker marker-adjustment" style="width:24px; height:24px; font-size:11px;">${i+1}</div>`, className: '', iconSize: [24,24], iconAnchor: [12,12]})}).addTo(mapAdj).bindPopup(`<b>${escapeHTML(sortedAdjs[i].location)}</b><br>Serwis: ${escapeHTML(sortedAdjs[i].date)}`); mapAdjMarkers.push(marker); allPoints.push(marker); } await new Promise(r => setTimeout(r, 100)); }
+        if (allPoints.length > 1) mapAdj.fitBounds(new L.featureGroup(allPoints).getBounds(), { padding: [50, 50], maxZoom: 9 });
+    } catch(e) {}
+}
+
 // --- FUNKCJE POMOCNICZE UI ---
 function showLoading() { document.getElementById('loading-screen').classList.remove('hidden'); }
 function hideLoading() { document.getElementById('loading-screen').classList.add('hidden'); }
+
 function showToast(message, type = 'success') {
     const container = document.getElementById('toast-container');
     const toast = document.createElement('div');
@@ -75,6 +109,7 @@ function showToast(message, type = 'success') {
     container.appendChild(toast);
     setTimeout(() => { toast.classList.add('toast-fadeOut'); toast.addEventListener('animationend', () => toast.remove()); }, 3500);
 }
+
 function showModal(title, content) {
     document.getElementById('modal-title-old').textContent = title;
     document.getElementById('modal-content-old').innerHTML = content;
@@ -87,7 +122,7 @@ function resetInactivityTimer() {
     clearTimeout(inactivityTimer);
     if (currentUserEmail) { 
         inactivityTimer = setTimeout(async () => {
-            showToast('Sesja wygasła z powodu braku aktywności.', 'warning');
+            showToast('Sesja wygasła z powodu braku aktywności (5 min).', 'warning');
             await db.auth.signOut();
             window.location.reload();
         }, INACTIVITY_TIME_MS);
@@ -111,8 +146,13 @@ window.switchTab = function(tabId) {
     document.getElementById(tabId).classList.add('active');
     const clickedNav = Array.from(document.querySelectorAll('.nav-item')).find(item => item.getAttribute('onclick').includes(tabId));
     if (clickedNav) clickedNav.classList.add('active');
+    
     closeSidePanel(); 
-    if (window.innerWidth <= 768) { document.querySelector('.sidebar').classList.remove('open'); document.getElementById('mobile-overlay').classList.remove('active'); }
+    
+    if (window.innerWidth <= 768) {
+        document.querySelector('.sidebar').classList.remove('open');
+        document.getElementById('mobile-overlay').classList.remove('active');
+    }
     
     if (tabId === 'tab-dashboard') {
         setTimeout(() => { 
@@ -120,7 +160,7 @@ window.switchTab = function(tabId) {
                 if (typeof window.initMap === 'function') window.initMap();
                 if (map) map.invalidateSize(); 
                 if(window.inventory && !isUpdatingMap) window.updateMapMarkers(window.inventory.shipments, window.inventory.adjustments);
-            } catch(e) { displayFatalError('Zmiana Zakładki (Dashboard)', e); }
+            } catch(e) { console.error("Map Dashboard Error:", e); }
         }, 150);
     }
     if (tabId === 'tab-adjustments') {
@@ -129,7 +169,7 @@ window.switchTab = function(tabId) {
                 if (typeof window.initAdjMap === 'function') window.initAdjMap();
                 if (mapAdj) mapAdj.invalidateSize(); 
                 if(window.inventory) window.updateAdjMapMarkers(window.inventory.adjustments);
-            } catch(e) { displayFatalError('Zmiana Zakładki (Adjustments)', e); }
+            } catch(e) { console.error("Map Adj Error:", e); }
         }, 150);
     }
 }
@@ -185,8 +225,10 @@ class CloudInventoryManager {
             
             this.updateDashboard();
         } catch(e) { 
-            displayFatalError('fetchData (Pobieranie z bazy)', e);
+            console.error("Błąd Bazy Danych:", e); 
             hideLoading();
+            showToast(`Błąd Bazy: ${e.message || 'Nieznany błąd'}`, 'error');
+            this.updateDashboard(); 
         }
     }
 
@@ -261,6 +303,8 @@ class CloudInventoryManager {
     async addIncomingPxf(supplier, newProducts) {
         if (currentRole === 'viewer') return;
         let totalAdded = 0; 
+        let hasError = false;
+
         for (const [masterId, qtyStr] of Object.entries(newProducts)) {
             let qty = parseInt(qtyStr);
             if (qty > 0) { 
@@ -268,16 +312,19 @@ class CloudInventoryManager {
                 if (masterProduct) {
                     const newAssembly = (parseInt(masterProduct.assembly) || 0) + qty; 
                     const idsToUpdate = pxfAngleSync[masterId] || [masterId];
+                    
                     for (let targetId of idsToUpdate) { 
-                        await db.from('products').update({ assembly: newAssembly }).eq('id', targetId);
-                        const targetProduct = this.products.find(p => String(p.id) === String(targetId)); 
-                        if(targetProduct) targetProduct.assembly = newAssembly;
+                        const { error } = await db.from('products').update({ assembly: newAssembly }).eq('id', targetId);
+                        if (error) { console.error('Supabase Error PXF:', error); hasError = true; } 
+                        else { const targetProduct = this.products.find(p => String(p.id) === String(targetId)); if(targetProduct) targetProduct.assembly = newAssembly; }
                     }
                     totalAdded += qty;
                 }
             }
         }
-        if (totalAdded > 0) { 
+        
+        if (hasError) showToast('Wystąpił błąd zapisu do bazy!', 'error');
+        if (totalAdded > 0 && !hasError) { 
             await this.addHistory('Dostawa Surowych (PXF)', `Dostawca: ${supplier} | Wgrano łącznie: ${totalAdded} szt.`); 
             await this.fetchData(); 
             showToast('Przyjęto surowe lampy PXF', 'success');
@@ -287,20 +334,24 @@ class CloudInventoryManager {
     async registerProductionPxf(prod) {
         if (currentRole === 'viewer') return;
         const tp = Object.values(prod).reduce((a,b) => a + parseInt(b||0), 0); if (tp === 0) return;
+        
         const req = {}; 
         for(const [id, q] of Object.entries(prod)) { let qq = parseInt(q); if(qq > 0) { let mId = pxfAngleMaster[id] || id; req[mId] = (req[mId] || 0) + qq; } }
+        
         for(const [mId, q] of Object.entries(req)) { 
             const masterP = this.products.find(x => String(x.id) === String(mId)); 
             let av = masterP ? (parseInt(masterP.assembly)||0) : 0; 
             if(q > av) { showToast('Brak surowych obudów PXF na ten kąt!', 'error'); return; } 
         }
+        
         let tpReal = 0; const assemblyUpdates = {}; const readyUpdates = {};
         for (const [id, q] of Object.entries(prod)) {
             let qq = parseInt(q);
             if(qq > 0) { 
                 const p = this.products.find(x => String(x.id) === String(id));
                 if(p) { 
-                    p.ready = (parseInt(p.ready) || 0) + qq; readyUpdates[p.id] = p.ready; 
+                    p.ready = (parseInt(p.ready) || 0) + qq; 
+                    readyUpdates[p.id] = p.ready; 
                     let mId = pxfAngleMaster[id] || id; 
                     if (assemblyUpdates[mId] === undefined) { 
                         const masterP = this.products.find(x => String(x.id) === String(mId)); 
@@ -310,12 +361,23 @@ class CloudInventoryManager {
                 } 
             }
         }
-        for (const [pid, newReady] of Object.entries(readyUpdates)) { await db.from('products').update({ ready: newReady }).eq('id', pid); }
+        
+        let hasError = false;
+        for (const [pid, newReady] of Object.entries(readyUpdates)) { 
+            const { error } = await db.from('products').update({ ready: newReady }).eq('id', pid);
+            if (error) { console.error(error); hasError = true; }
+        }
         for (const [mId, newAssembly] of Object.entries(assemblyUpdates)) { 
             const targets = pxfAngleSync[mId] || [mId]; 
-            for (let targetId of targets) { await db.from('products').update({ assembly: newAssembly }).eq('id', targetId); } 
+            for (let targetId of targets) { 
+                const { error } = await db.from('products').update({ assembly: newAssembly }).eq('id', targetId);
+                if (error) { console.error(error); hasError = true; }
+            } 
         }
-        if(tpReal > 0) { 
+        
+        if (hasError) {
+            showToast('Błąd zapisu produkcji PXF!', 'error');
+        } else if(tpReal > 0) { 
             await this.addHistory('Ustawienie Mocy (PXF)', `Skonfigurowano sztuk: ${tpReal}`); 
             showToast('Skonfigurowano moce PXF', 'success'); 
             await this.fetchData();
@@ -572,15 +634,15 @@ class CloudInventoryManager {
             if(c) { if((parseInt(c.ps_raw)||0)<50) lc.push('Zasilacze'); if((parseInt(c.clips_normal)||0)<50) lc.push('Klapki Zwykłe'); if((parseInt(c.clips_pass)||0)<50) lc.push('Klapki Przelotowe'); }
             if(lc.length>0 && alertsContainer) { alertsContainer.innerHTML = `<div class="alert-banner critical"><span class="material-symbols-outlined">warning_amber</span><div><strong>Krytyczny stan!</strong> Pilnie domów: ${lc.join(', ')}.</div></div>`; }
 
-            try { this.renderPredictions(); } catch(e) { displayFatalError("Predykcja błąd", e); }
+            try { this.renderPredictions(); } catch(e) { console.error("Predykcja błąd:", e); }
 
             let rMap = {};
-            try { rMap = window.getShipmentsReadinessMap(); } catch(e) { displayFatalError("Gotowość błąd", e); }
+            try { rMap = window.getShipmentsReadinessMap(); } catch(e) { console.error("Gotowość błąd:", e); }
             
-            try { window.renderCalendar(rMap); } catch(e) { displayFatalError("Kalendarz błąd", e); }
+            try { window.renderCalendar(rMap); } catch(e) { console.error("Kalendarz błąd:", e); }
             
             if(document.getElementById('tab-dashboard').classList.contains('active')) { 
-                try { window.updateMapMarkers(this.shipments, this.adjustments); } catch(e) { displayFatalError("Mapa błąd", e); } 
+                try { window.updateMapMarkers(this.shipments, this.adjustments); } catch(e) { console.error("Mapa błąd:", e); } 
             }
 
             const itb = document.getElementById('dashboard-recent-incoming');
@@ -603,15 +665,15 @@ class CloudInventoryManager {
                 }
             }
 
-            try { window.updateInventoryTable(); } catch(e) { displayFatalError("Inwentarz Błąd", e); }
-            try { window.updateShipmentsTables(rMap); } catch(e) { displayFatalError("Wysyłki Błąd", e); }
-            try { window.updateAdjustmentsTable(); } catch(e) { displayFatalError("Regulacje Błąd", e); }
-            if(currentRole !== 'worker') { try { window.updateHistoryTable(); } catch(e) { displayFatalError("Historia Błąd", e); } }
-            try { window.updateServiceCasesTable(); } catch(e) { displayFatalError("RMA Błąd", e); }
-            try { window.updateComponentsDisplay(); } catch(e) { displayFatalError("Komponenty Błąd", e); }
+            try { window.updateInventoryTable(); } catch(e) { console.error("Inwentarz Błąd:", e); }
+            try { window.updateShipmentsTables(rMap); } catch(e) { console.error("Wysyłki Błąd:", e); }
+            try { window.updateAdjustmentsTable(); } catch(e) { console.error("Regulacje Błąd:", e); }
+            if(currentRole !== 'worker') { try { window.updateHistoryTable(); } catch(e) { console.error("Historia Błąd:", e); } }
+            try { window.updateServiceCasesTable(); } catch(e) { console.error("RMA Błąd:", e); }
+            try { window.updateComponentsDisplay(); } catch(e) { console.error("Komponenty Błąd:", e); }
 
         } catch (err) { 
-            displayFatalError('Główne Renderowanie Dashboardu', err);
+            console.error("Krytyczny Błąd Głównego Renderowania:", err); 
         }
     }
 
@@ -786,13 +848,13 @@ window.renderShipmentRow = function(s, readinessMap, showActions = true) {
 
     let actionButtons = '<div class="action-cell-flex">';
     if (currentRole !== 'viewer' && showActions) {
-        actionButtons += `<button class="btn-small btn-secondary" onclick="openShipmentDetails('${s.id}')" title="Edytuj dane"><span class="material-symbols-outlined" style="margin:0;">edit</span></button>`;
-        if (currentRole === 'admin') actionButtons += `<button class="btn-small btn-secondary" onclick="deleteShipment('${s.id}')" title="Usuń trwale"><span class="material-symbols-outlined" style="color:var(--accent-red); margin:0;">delete</span></button>`;
-        if (s.status === 'planned' && !s.is_confirmed) actionButtons = `<button class="btn-small btn-primary" onclick="confirmShipmentDateUI('${s.id}')">Zatwierdź</button>` + actionButtons;
-        else if (s.status === 'planned' && s.is_confirmed) actionButtons = `<button class="btn-small btn-primary" onclick="completeShipmentUI('${s.id}')">Wydaj Kurierowi</button>` + actionButtons;
-        else if (s.status === 'partial') actionButtons = `<button class="btn-small btn-primary" onclick="completeRemainingShipmentUI('${s.id}')">Wydaj braki</button>` + actionButtons;
+        actionButtons += `<button class="btn-small btn-secondary" onclick="window.openShipmentDetails('${s.id}')" title="Edytuj dane"><span class="material-symbols-outlined" style="margin:0;">edit</span></button>`;
+        if (currentRole === 'admin') actionButtons += `<button class="btn-small btn-secondary" onclick="window.deleteShipment('${s.id}')" title="Usuń trwale"><span class="material-symbols-outlined" style="color:var(--accent-red); margin:0;">delete</span></button>`;
+        if (s.status === 'planned' && !s.is_confirmed) actionButtons = `<button class="btn-small btn-primary" onclick="window.confirmShipmentDateUI('${s.id}')">Zatwierdź</button>` + actionButtons;
+        else if (s.status === 'planned' && s.is_confirmed) actionButtons = `<button class="btn-small btn-primary" onclick="window.completeShipmentUI('${s.id}')">Wydaj Kurierowi</button>` + actionButtons;
+        else if (s.status === 'partial') actionButtons = `<button class="btn-small btn-primary" onclick="window.completeRemainingShipmentUI('${s.id}')">Wydaj braki</button>` + actionButtons;
     }
-    if (s.status === 'partial' && showActions) actionButtons += `<button class="btn-small btn-secondary" onclick="showMissingItems('${s.id}')" title="Pokaż listę braków"><span class="material-symbols-outlined">list_alt</span> Braki</button>`;
+    if (s.status === 'partial' && showActions) actionButtons += `<button class="btn-small btn-secondary" onclick="window.showMissingItems('${s.id}')" title="Pokaż listę braków"><span class="material-symbols-outlined">list_alt</span> Braki</button>`;
     actionButtons += '</div>';
 
     let dateLabel = s.status === 'completed' ? 'Data Wysłania' : (s.is_confirmed ? 'Data Potw.' : 'Data Wstępna');
@@ -800,7 +862,7 @@ window.renderShipmentRow = function(s, readinessMap, showActions = true) {
     return `<tr class="${s.status === 'completed' ? 'row-completed' : ''}">
         <td data-label="${dateLabel}"><strong>${escapeHTML(s.date || '-')}</strong></td>
         <td data-label="Pula">${brandBadge}</td><td data-label="Cel">${escapeHTML(s.location)}</td><td data-label="Typ">${typeBadge}</td><td data-label="Sztuk"><strong>${total}</strong></td>
-        <td data-label="Kąty"><button class="btn-small btn-secondary" onclick="showAnglesDemand('${s.id}')" style="margin:0;">Zestawienie</button></td>${s.status !== 'completed' ? `<td data-label="Magazyn">${readinessBadge}</td>` : ''}<td data-label="Status">${statusBadge}</td>
+        <td data-label="Kąty"><button class="btn-small btn-secondary" onclick="window.showAnglesDemand('${s.id}')" style="margin:0;">Zestawienie</button></td>${s.status !== 'completed' ? `<td data-label="Magazyn">${readinessBadge}</td>` : ''}<td data-label="Status">${statusBadge}</td>
         ${showActions ? `<td data-label="Akcja" class="${currentRole === 'viewer' ? 'admin-only-col' : ''}">${actionButtons}</td>` : ''}
     </tr>`;
 }
@@ -816,10 +878,10 @@ window.updateInventoryTable = function() {
         const r15 = parseInt(p15.ready) || 0; const r20 = p20 ? (parseInt(p20.ready) || 0) : 0; const assm = parseInt(pAssm.assembly) || 0;
         const s15 = (parseInt(p15.service)||0) + (parseInt(p15.damaged)||0); const s20 = p20 ? ((parseInt(p20.service)||0) + (parseInt(p20.damaged)||0)) : 0;
         const totSer = s15 + s20; const total = r15 + r20 + assm + totSer;
-        const c15 = isViewer ? `<strong>${r15}</strong>` : `<td data-label="Gotowe 15W" onclick="editCell(this, 'ready', '${a.id15}')" class="editable"><strong>${r15}</strong></td>`;
-        const c20 = a.id20 ? (isViewer ? `<strong>${r20}</strong>` : `<td data-label="Gotowe 20W" onclick="editCell(this, 'ready', '${a.id20}')" class="editable"><strong>${r20}</strong></td>`) : `<td data-label="Gotowe 20W">-</td>`;
-        const cAssm = isViewer ? assm : `<td data-label="Surowe (W Montażu)" onclick="editCell(this, 'assembly', '${a.idAssm}')" class="editable">${assm}</td>`;
-        tbImp.innerHTML += `<tr><td data-label="Kąt Oprawy"><strong>${a.name}</strong></td>${isViewer?`<td data-label="Gotowe 15W">${c15}</td>`:c15}${isViewer?(a.id20?`<td data-label="Gotowe 20W">${c20}</td>`:c20):c20}${isViewer?`<td data-label="Surowe">${cAssm}</td>`:cAssm}<td data-label="Serwis">${totSer}</td><td data-label="Łącznie"><strong>${total}</strong></td><td data-label="Dostępność"><span class="status-badge ${getStatusClass(a.id15)}">${getStatusText(a.id15)}</span></td></tr>`;
+        const c15 = isViewer ? `<strong>${r15}</strong>` : `<td data-label="Gotowe 15W" onclick="window.editCell(this, 'ready', '${a.id15}')" class="editable"><strong>${r15}</strong></td>`;
+        const c20 = a.id20 ? (isViewer ? `<strong>${r20}</strong>` : `<td data-label="Gotowe 20W" onclick="window.editCell(this, 'ready', '${a.id20}')" class="editable"><strong>${r20}</strong></td>`) : `<td data-label="Gotowe 20W">-</td>`;
+        const cAssm = isViewer ? assm : `<td data-label="Surowe (W Montażu)" onclick="window.editCell(this, 'assembly', '${a.idAssm}')" class="editable">${assm}</td>`;
+        tbImp.innerHTML += `<tr><td data-label="Kąt Oprawy"><strong>${a.name}</strong></td>${isViewer?`<td data-label="Gotowe 15W">${c15}</td>`:c15}${isViewer?(a.id20?`<td data-label="Gotowe 20W">${c20}</td>`:c20):c20}${isViewer?`<td data-label="Surowe">${cAssm}</td>`:cAssm}<td data-label="Serwis">${totSer}</td><td data-label="Łącznie"><strong>${total}</strong></td><td data-label="Dostępność"><span class="status-badge ${window.getStatusClass(a.id15)}">${window.getStatusText(a.id15)}</span></td></tr>`;
     });
 
     [{ name: 'PXF 22°', id15: 6, id20: null, idAssm: 6 }, { name: 'PXF 37°', id15: 7, id20: 9, idAssm: 7 }, { name: 'PXF 58°', id15: 8, id20: 10, idAssm: 8 }].forEach(a => {
@@ -827,16 +889,16 @@ window.updateInventoryTable = function() {
         const r15 = parseInt(p15.ready) || 0; const r20 = p20 ? (parseInt(p20.ready) || 0) : 0; const assm = parseInt(pAssm.assembly) || 0;
         const s15 = (parseInt(p15.service)||0) + (parseInt(p15.damaged)||0); const s20 = p20 ? ((parseInt(p20.service)||0) + (parseInt(p20.damaged)||0)) : 0;
         const totSer = s15 + s20; const total = r15 + r20 + assm + totSer;
-        const c15 = isViewer ? `<strong>${r15}</strong>` : `<td data-label="Gotowe 15W" onclick="editCell(this, 'ready', '${a.id15}')" class="editable"><strong>${r15}</strong></td>`;
-        const c20 = a.id20 ? (isViewer ? `<strong>${r20}</strong>` : `<td data-label="Gotowe 20W" onclick="editCell(this, 'ready', '${a.id20}')" class="editable"><strong>${r20}</strong></td>`) : `<td data-label="Gotowe 20W">-</td>`;
-        const cAssm = isViewer ? assm : `<td data-label="Surowe" onclick="editCell(this, 'assembly', '${a.idAssm}')" class="editable">${assm}</td>`;
-        tbPxf.innerHTML += `<tr><td data-label="Kąt Oprawy"><strong style="color:#1E3A8A;">${a.name}</strong></td>${isViewer?`<td data-label="Gotowe 15W">${c15}</td>`:c15}${isViewer?(a.id20?`<td data-label="Gotowe 20W">${c20}</td>`:c20):c20}${isViewer?`<td data-label="Surowe">${cAssm}</td>`:cAssm}<td data-label="Serwis">${totSer}</td><td data-label="Łącznie"><strong>${total}</strong></td><td data-label="Dostępność"><span class="status-badge ${getStatusClass(a.id15)}">${getStatusText(a.id15)}</span></td></tr>`;
+        const c15 = isViewer ? `<strong>${r15}</strong>` : `<td data-label="Gotowe 15W" onclick="window.editCell(this, 'ready', '${a.id15}')" class="editable"><strong>${r15}</strong></td>`;
+        const c20 = a.id20 ? (isViewer ? `<strong>${r20}</strong>` : `<td data-label="Gotowe 20W" onclick="window.editCell(this, 'ready', '${a.id20}')" class="editable"><strong>${r20}</strong></td>`) : `<td data-label="Gotowe 20W">-</td>`;
+        const cAssm = isViewer ? assm : `<td data-label="Surowe" onclick="window.editCell(this, 'assembly', '${a.idAssm}')" class="editable">${assm}</td>`;
+        tbPxf.innerHTML += `<tr><td data-label="Kąt Oprawy"><strong style="color:#1E3A8A;">${a.name}</strong></td>${isViewer?`<td data-label="Gotowe 15W">${c15}</td>`:c15}${isViewer?(a.id20?`<td data-label="Gotowe 20W">${c20}</td>`:c20):c20}${isViewer?`<td data-label="Surowe">${cAssm}</td>`:cAssm}<td data-label="Serwis">${totSer}</td><td data-label="Łącznie"><strong>${total}</strong></td><td data-label="Dostępność"><span class="status-badge ${window.getStatusClass(a.id15)}">${window.getStatusText(a.id15)}</span></td></tr>`;
     });
 
     window.inventory.products.forEach(p => {
         const damaged = parseInt(p.damaged) || 0; const inService = parseInt(p.service) || 0;
         if(damaged === 0 && inService === 0) return; 
-        let actionButtons = !isViewer ? `<div class="action-cell-flex"><button class="btn-small btn-secondary" onclick="openSendToServiceUI('${p.id}', '${p.name}', ${damaged})">Na naprawę</button><button class="btn-small btn-secondary" onclick="openReceiveFromServiceUI('${p.id}', '${p.name}', ${inService})">Odbierz</button></div>` : '';
+        let actionButtons = !isViewer ? `<div class="action-cell-flex"><button class="btn-small btn-secondary" onclick="window.openSendToServiceUI('${p.id}', '${p.name}', ${damaged})">Na naprawę</button><button class="btn-small btn-secondary" onclick="window.openReceiveFromServiceUI('${p.id}', '${p.name}', ${inService})">Odbierz</button></div>` : '';
         tbSrv.innerHTML += `<tr><td data-label="Model Oprawy"><strong>${escapeHTML(p.name)}</strong></td><td data-label="Uszkodzone" style="color:var(--accent-red); font-weight:700;">${damaged}</td><td data-label="W Serwisie" style="color:var(--info-status); font-weight:700;">${inService}</td><td data-label="Akcja" class="${isViewer ? 'admin-only-col' : ''}">${actionButtons}</td></tr>`;
     });
 }
@@ -844,7 +906,7 @@ window.updateInventoryTable = function() {
 window.updateAdjustmentsTable = function() {
     const tbody = document.getElementById('adjustments-table'); if(!tbody) return; tbody.innerHTML = '';
     window.inventory.adjustments.forEach(a => {
-        let action = currentRole === 'admin' ? `<td data-label="Akcja"><button class="btn-small btn-secondary" onclick="deleteAdjustment('${a.id}')" style="margin:0;"><span class="material-symbols-outlined" style="color:var(--accent-red); margin:0;">delete</span></button></td>` : `<td class="admin-only-col"></td>`;
+        let action = currentRole === 'admin' ? `<td data-label="Akcja"><button class="btn-small btn-secondary" onclick="window.deleteAdjustment('${a.id}')" style="margin:0;"><span class="material-symbols-outlined" style="color:var(--accent-red); margin:0;">delete</span></button></td>` : `<td class="admin-only-col"></td>`;
         tbody.innerHTML += `<tr><td data-label="Data Wyjazdu"><strong>${escapeHTML(a.date || '-')}</strong></td><td data-label="Miejscowość">${escapeHTML(a.location)}</td>${action}</tr>`;
     });
 }
@@ -874,8 +936,8 @@ window.updateComponentsDisplay = function() {
     if (currentRole !== 'viewer') { document.querySelectorAll('#tab-components .table-responsive td:nth-child(2)').forEach(td => td.classList.add('editable')); }
 }
 
-function getStatusClass(productId) { const status = window.inventory.getStatus(productId); return status === 'ok' ? 'status-ok' : status === 'warning' ? 'status-warning' : 'status-error'; }
-function getStatusText(productId) { const status = window.inventory.getStatus(productId); return status === 'ok' ? '<span class="material-symbols-outlined">check_circle</span> OK' : status === 'warning' ? '<span class="material-symbols-outlined">warning</span> Mało' : '<span class="material-symbols-outlined">error</span> Brak'; }
+window.getStatusClass = function(productId) { const status = window.inventory.getStatus(productId); return status === 'ok' ? 'status-ok' : status === 'warning' ? 'status-warning' : 'status-error'; }
+window.getStatusText = function(productId) { const status = window.inventory.getStatus(productId); return status === 'ok' ? '<span class="material-symbols-outlined">check_circle</span> OK' : status === 'warning' ? '<span class="material-symbols-outlined">warning</span> Mało' : '<span class="material-symbols-outlined">error</span> Brak'; }
 
 window.editCell = function(cell, field, productId) {
     if (currentRole === 'viewer') return; if (cell.querySelector('input')) return;
@@ -902,6 +964,7 @@ window.completeRemainingShipmentUI = async function(id) { if (confirm('Wydano br
 window.deleteShipment = async function(id) { if (currentRole === 'admin' && confirm('Usunąć zamówienie?')) { showLoading(); await window.inventory.deleteShipment(id); hideLoading(); showToast('Usunięto', 'success'); } }
 window.deleteAdjustment = async function(id) { if (currentRole === 'admin' && confirm('Usunąć wpis z regulacji?')) { showLoading(); await window.inventory.deleteAdjustment(id); hideLoading(); showToast('Usunięto', 'success'); } }
 
+// --- EDYCJA ZAMÓWIENIA W OKIENKU (MODAL) ---
 window.openShipmentDetails = function(id) {
     if (currentRole === 'viewer') return;
     const shipment = window.inventory.shipments.find(s => String(s.id) === String(id)); if (!shipment) return;
