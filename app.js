@@ -1,8 +1,12 @@
-// --- TRYB DIAGNOSTYCZNY (Nigdy więcej cichych błędów) ---
+// --- TRYB DIAGNOSTYCZNY ---
 window.addEventListener('error', function(event) {
     console.error(`BŁĄD JS: ${event.message} (Linia: ${event.lineno})`);
     const alertsContainer = document.getElementById('dashboard-alerts');
     if(alertsContainer) alertsContainer.innerHTML += `<div style="background:#FEF2F2; border:1px solid #FECACA; color:#991B1B; padding:10px; border-radius:8px; margin-bottom:10px; font-size:12px;"><strong>Zignorowany błąd:</strong> ${event.message} w linii ${event.lineno}</div>`;
+});
+
+window.addEventListener('unhandledrejection', function(event) {
+    console.error(`BŁĄD BAZY/PROMISE: ${event.reason}`);
 });
 
 // --- KONFIGURACJA SUPABASE ---
@@ -94,6 +98,67 @@ window.updateAdjMapMarkers = async function(adjustments) {
         for (let i = 0; i < sortedAdjs.length; i++) { const coords = await window.geocodeLocation(sortedAdjs[i].location); if (coords) { const marker = L.marker(coords, { icon: L.divIcon({html: `<div class="custom-map-marker marker-adjustment" style="width:24px; height:24px; font-size:11px;">${i+1}</div>`, className: '', iconSize: [24,24], iconAnchor: [12,12]})}).addTo(mapAdj).bindPopup(`<b>${escapeHTML(sortedAdjs[i].location)}</b><br>Serwis: ${escapeHTML(sortedAdjs[i].date)}`); mapAdjMarkers.push(marker); allPoints.push(marker); } await new Promise(r => setTimeout(r, 100)); }
         if (allPoints.length > 1) mapAdj.fitBounds(new L.featureGroup(allPoints).getBounds(), { padding: [50, 50], maxZoom: 9 });
     } catch(e) {}
+}
+
+// --- KALENDARZ (PRZYWRÓCONY) ---
+window.changeMonth = function(dir) { 
+    currentCalendarDate.setMonth(currentCalendarDate.getMonth() + dir); 
+    if(window.inventory) window.inventory.updateDashboard(); 
+}
+
+window.handleDragStart = function(event, type, id) { 
+    event.dataTransfer.setData('application/json', JSON.stringify({ type, id })); 
+    event.dataTransfer.effectAllowed = 'move'; 
+}
+
+window.handleCalendarDrop = async function(event, targetDate) {
+    event.preventDefault(); 
+    if (currentRole === 'viewer') { showToast('Brak uprawnień.', 'warning'); return; }
+    try {
+        const dataStr = event.dataTransfer.getData('application/json'); if (!dataStr) return;
+        const data = JSON.parse(dataStr); if (!data.type || !data.id) return;
+        showLoading();
+        if (data.type === 'shipment') { await window.inventory.updateShipmentInDB(data.id, { date: targetDate }); showToast('Przesunięto wysyłkę.', 'success'); } 
+        else if (data.type === 'adjustment') { await window.inventory.updateAdjustmentDate(data.id, targetDate); showToast('Przesunięto serwis.', 'success'); }
+    } catch (e) { showToast('Błąd przenoszenia.', 'error'); } finally { hideLoading(); }
+}
+
+window.renderCalendar = function(readinessMap) {
+    const container = document.getElementById('dashboard-calendar-container'); const monthLabel = document.getElementById('calendar-month-label'); if(!container) return;
+    const year = currentCalendarDate.getFullYear(); const month = currentCalendarDate.getMonth(); const monthNames = ["Styczeń","Luty","Marzec","Kwiecień","Maj","Czerwiec","Lipiec","Sierpień","Wrzesień","Październik","Listopad","Grudzień"];
+    monthLabel.textContent = `${monthNames[month]} ${year}`; container.innerHTML = '';
+    let firstDay = new Date(year, month, 1).getDay(); firstDay = firstDay === 0 ? 6 : firstDay - 1; const daysInMonth = new Date(year, month + 1, 0).getDate();
+    let dayCounter = 1, isMonthFinished = false;
+    while (!isMonthFinished) {
+        const row = document.createElement('div'); row.className = 'calendar-grid'; let weekTotal = 0;
+        for (let j = 0; j < 7; j++) {
+            const cell = document.createElement('div');
+            if (dayCounter === 1 && j < firstDay) { cell.className = 'calendar-cell empty'; } 
+            else if (dayCounter > daysInMonth) { cell.className = 'calendar-cell empty'; isMonthFinished = true; } 
+            else {
+                cell.className = 'calendar-cell'; const ds = `${year}-${String(month + 1).padStart(2,'0')}-${String(dayCounter).padStart(2,'0')}`;
+                cell.ondragover = (e) => e.preventDefault(); cell.ondrop = (e) => window.handleCalendarDrop(e, ds);
+                if (ds === new Date().toISOString().split('T')[0]) cell.classList.add('today');
+                let html = `<div class="calendar-date">${dayCounter}</div>`;
+                if(window.inventory && window.inventory.shipments) {
+                    window.inventory.shipments.filter(s => s.status !== 'completed' && s.date === ds).forEach(s => {
+                        const tot = s.products ? Object.values(s.products).reduce((a,b)=>parseInt(a||0)+parseInt(b||0),0) : 0; weekTotal += tot;
+                        let st = s.status === 'partial' ? '<span style="color:var(--warning-status);">Braki (Część.)</span>' : (readinessMap[s.id] ? '<span style="color:var(--success-status);">Komplet</span>' : '<span style="color:var(--accent-red);">Braki</span>');
+                        html += `<div class="cal-item shipment" draggable="true" ondragstart="window.handleDragStart(event, 'shipment', '${s.id}')" onclick="window.openShipmentDetails('${s.id}')"><strong>W: ${escapeHTML(s.location).split('(')[0]}</strong><br>${tot} szt<br>${st}</div>`;
+                    });
+                }
+                if(window.inventory && window.inventory.adjustments) {
+                    window.inventory.adjustments.filter(a => a.date === ds).forEach(a => { html += `<div class="cal-item adjustment" draggable="true" ondragstart="window.handleDragStart(event, 'adjustment', '${a.id}')"><strong>R: ${escapeHTML(a.location).split('(')[0]}</strong><br>Serwis</div>`; });
+                }
+                cell.innerHTML = html; dayCounter++;
+            }
+            row.appendChild(cell);
+        }
+        if (!isMonthFinished || row.childNodes[0].className !== 'calendar-cell empty') {
+            const sum = document.createElement('div'); sum.className = 'cal-summary'; sum.innerHTML = `<span style="font-size:0.7rem;color:var(--text-light);">POTRZEBA</span><span style="font-size:1.4rem;">${weekTotal}</span><span style="font-size:0.7rem;">szt</span>`;
+            row.appendChild(sum); container.appendChild(row);
+        }
+    }
 }
 
 // --- FUNKCJE POMOCNICZE UI ---
@@ -225,9 +290,11 @@ class CloudInventoryManager {
             
             this.updateDashboard();
         } catch(e) { 
-            console.error("Błąd Bazy Danych:", e); 
+            console.error("KRYTYCZNY Błąd Bazy Danych:", e); 
             hideLoading();
             showToast(`Błąd Bazy: ${e.message || 'Nieznany błąd'}`, 'error');
+            const alerts = document.getElementById('dashboard-alerts');
+            if (alerts) alerts.innerHTML = `<div class="alert-banner critical"><span class="material-symbols-outlined">error</span><div><strong>Utracono połączenie z bazą!</strong> ${e.message}. System może działać nieprawidłowo.</div></div>`;
             this.updateDashboard(); 
         }
     }
@@ -760,24 +827,24 @@ if (loginForm) {
         
         const { data, error } = await db.auth.signInWithPassword({ email: document.getElementById('login-email').value, password: document.getElementById('login-password').value });
         if (error) { errorElement.textContent = 'Błąd autoryzacji. Sprawdź e-mail i hasło.'; errorElement.style.display = 'block'; submitBtn.disabled = false; submitBtn.innerHTML = '<span class="material-symbols-outlined">login</span> Zaloguj bezpiecznie'; } 
-        else { initApp(data.user); }
+        else { window.initApp(data.user); }
     });
 }
 
-async function checkSession() { const { data: { session } } = await db.auth.getSession(); if (session) initApp(session.user); }
+window.checkSession = async function() { const { data: { session } } = await db.auth.getSession(); if (session) window.initApp(session.user); }
 
-function initApp(user) { 
+window.initApp = function(user) { 
     currentUserEmail = user.email; currentRole = ROLES[user.email] || 'viewer'; 
     document.getElementById('logged-email').textContent = currentUserEmail; document.getElementById('footer-user').textContent = currentUserEmail;
     let roleText = currentRole === 'admin' ? 'Kierownik (Admin)' : (currentRole === 'worker' ? 'Pracownik (Worker)' : 'Obserwator (Viewer)');
     document.getElementById('logged-role').textContent = roleText;
     
     document.getElementById('auth-screen').classList.add('hidden'); document.getElementById('app-container').classList.remove('hidden'); document.getElementById('app-container').style.display = 'flex';
-    resetInactivityTimer(); applyPermissions();
+    resetInactivityTimer(); window.applyPermissions();
     window.inventory = new CloudInventoryManager(); window.inventory.init(); 
 }
 
-function applyPermissions() {
+window.applyPermissions = function() {
     if (currentRole === 'viewer') {
         ['form-shipment-container', 'form-incoming-imperial-container', 'form-incoming-pxf-container', 'form-components-container', 'form-production-container', 'form-adjustments-container', 'nav-history', 'nav-reports'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
         document.querySelectorAll('.editable').forEach(el => el.classList.remove('editable')); document.querySelectorAll('.admin-only-col').forEach(el => el.style.display = 'none');
@@ -786,7 +853,7 @@ function applyPermissions() {
 }
 
 window.logoutUser = async function() { clearTimeout(inactivityTimer); showLoading(); await db.auth.signOut(); window.location.reload(); }
-checkSession();
+window.checkSession();
 
 // --- ZEWNĘTRZNE FUNKCJE TABEL ---
 window.getShipmentsReadinessMap = function() {
@@ -964,7 +1031,6 @@ window.completeRemainingShipmentUI = async function(id) { if (confirm('Wydano br
 window.deleteShipment = async function(id) { if (currentRole === 'admin' && confirm('Usunąć zamówienie?')) { showLoading(); await window.inventory.deleteShipment(id); hideLoading(); showToast('Usunięto', 'success'); } }
 window.deleteAdjustment = async function(id) { if (currentRole === 'admin' && confirm('Usunąć wpis z regulacji?')) { showLoading(); await window.inventory.deleteAdjustment(id); hideLoading(); showToast('Usunięto', 'success'); } }
 
-// --- EDYCJA ZAMÓWIENIA W OKIENKU (MODAL) ---
 window.openShipmentDetails = function(id) {
     if (currentRole === 'viewer') return;
     const shipment = window.inventory.shipments.find(s => String(s.id) === String(id)); if (!shipment) return;
