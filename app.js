@@ -1,9 +1,18 @@
-// --- TRYB DIAGNOSTYCZNY (Nigdy więcej cichych błędów) ---
-window.addEventListener('error', function(event) {
-    console.error(`BŁĄD JS: ${event.message} (Linia: ${event.lineno})`);
-    const alertsContainer = document.getElementById('dashboard-alerts');
-    if(alertsContainer) alertsContainer.innerHTML += `<div style="background:#FEF2F2; border:1px solid #FECACA; color:#991B1B; padding:10px; border-radius:8px; margin-bottom:10px; font-size:12px;"><strong>Zignorowany błąd poboczny:</strong> ${event.message} w linii ${event.lineno}</div>`;
-});
+// --- SYSTEM DETEKCJI KRYTYCZNEJ ---
+function displayFatalError(context, err) {
+    console.error(`BŁĄD: ${context}`, err);
+    const errDiv = document.createElement('div');
+    errDiv.style = "position:fixed; top:10%; left:50%; transform:translateX(-50%); z-index:99999; background:#991B1B; color:white; padding:25px 40px; font-size:16px; border-radius:12px; max-width:85%; max-height:80%; overflow:auto; box-shadow: 0 10px 25px rgba(0,0,0,0.5);";
+    errDiv.innerHTML = `<h2 style="margin:0 0 10px 0; font-size: 20px; color:#FECACA;">Wykryto Błąd Rysowania!</h2>
+    <strong>Kontekst:</strong> ${context}<br><br>
+    <strong>Treść błędu:</strong> ${err.message || err}<br>
+    <pre style="font-size:12px; margin-top:15px; color:#FCA5A5; white-space:pre-wrap;">${err.stack || ''}</pre>
+    <p style="margin-top:15px; font-size: 14px;">Skopiuj powyższy tekst i przekaż go programiście!</p>`;
+    document.body.appendChild(errDiv);
+}
+
+window.addEventListener('error', function(event) { displayFatalError('Globalny błąd JS', event.error || event); });
+window.addEventListener('unhandledrejection', function(event) { displayFatalError('Błąd połączenia/Bazy danych', event.reason); });
 
 // --- KONFIGURACJA SUPABASE ---
 const supabaseUrl = 'https://ghdswvjhqpxupzcrixlu.supabase.co';
@@ -33,7 +42,6 @@ const INACTIVITY_TIME_MS = 5 * 60 * 1000;
 // --- MATRYCE KĄTÓW ---
 const imperialAngleMaster = { '1': '1', '2': '2', '4': '2', '3': '3', '5': '3' };
 const imperialAngleSync = { '1': ['1'], '2': ['2','4'], '3': ['3','5'] };
-
 const pxfAngleMaster = { '6': '6', '7': '7', '9': '7', '8': '8', '10': '8' };
 const pxfAngleSync = { '6': ['6'], '7': ['7','9'], '8': ['8','10'] };
 
@@ -58,7 +66,6 @@ window.initAdjMap = function() {
 // --- FUNKCJE POMOCNICZE UI ---
 function showLoading() { document.getElementById('loading-screen').classList.remove('hidden'); }
 function hideLoading() { document.getElementById('loading-screen').classList.add('hidden'); }
-
 function showToast(message, type = 'success') {
     const container = document.getElementById('toast-container');
     const toast = document.createElement('div');
@@ -68,7 +75,6 @@ function showToast(message, type = 'success') {
     container.appendChild(toast);
     setTimeout(() => { toast.classList.add('toast-fadeOut'); toast.addEventListener('animationend', () => toast.remove()); }, 3500);
 }
-
 function showModal(title, content) {
     document.getElementById('modal-title-old').textContent = title;
     document.getElementById('modal-content-old').innerHTML = content;
@@ -81,7 +87,7 @@ function resetInactivityTimer() {
     clearTimeout(inactivityTimer);
     if (currentUserEmail) { 
         inactivityTimer = setTimeout(async () => {
-            showToast('Sesja wygasła z powodu braku aktywności (5 min).', 'warning');
+            showToast('Sesja wygasła z powodu braku aktywności.', 'warning');
             await db.auth.signOut();
             window.location.reload();
         }, INACTIVITY_TIME_MS);
@@ -105,21 +111,16 @@ window.switchTab = function(tabId) {
     document.getElementById(tabId).classList.add('active');
     const clickedNav = Array.from(document.querySelectorAll('.nav-item')).find(item => item.getAttribute('onclick').includes(tabId));
     if (clickedNav) clickedNav.classList.add('active');
-    
     closeSidePanel(); 
-    
-    if (window.innerWidth <= 768) {
-        document.querySelector('.sidebar').classList.remove('open');
-        document.getElementById('mobile-overlay').classList.remove('active');
-    }
+    if (window.innerWidth <= 768) { document.querySelector('.sidebar').classList.remove('open'); document.getElementById('mobile-overlay').classList.remove('active'); }
     
     if (tabId === 'tab-dashboard') {
         setTimeout(() => { 
             try {
                 if (typeof window.initMap === 'function') window.initMap();
                 if (map) map.invalidateSize(); 
-                if(window.inventory && !isUpdatingMap) updateMapMarkers(window.inventory.shipments, window.inventory.adjustments);
-            } catch(e) { console.error("Map Dashboard Error:", e); }
+                if(window.inventory && !isUpdatingMap) window.updateMapMarkers(window.inventory.shipments, window.inventory.adjustments);
+            } catch(e) { displayFatalError('Zmiana Zakładki (Dashboard)', e); }
         }, 150);
     }
     if (tabId === 'tab-adjustments') {
@@ -127,8 +128,8 @@ window.switchTab = function(tabId) {
             try {
                 if (typeof window.initAdjMap === 'function') window.initAdjMap();
                 if (mapAdj) mapAdj.invalidateSize(); 
-                if(window.inventory) updateAdjMapMarkers(window.inventory.adjustments);
-            } catch(e) { console.error("Map Adj Error:", e); }
+                if(window.inventory) window.updateAdjMapMarkers(window.inventory.adjustments);
+            } catch(e) { displayFatalError('Zmiana Zakładki (Adjustments)', e); }
         }, 150);
     }
 }
@@ -184,12 +185,8 @@ class CloudInventoryManager {
             
             this.updateDashboard();
         } catch(e) { 
-            console.error("KRYTYCZNY Błąd Bazy Danych:", e); 
+            displayFatalError('fetchData (Pobieranie z bazy)', e);
             hideLoading();
-            showToast(`Błąd Bazy: ${e.message || 'Nieznany błąd'}`, 'error');
-            const alerts = document.getElementById('dashboard-alerts');
-            if (alerts) alerts.innerHTML = `<div class="alert-banner critical"><span class="material-symbols-outlined">error</span><div><strong>Utracono połączenie z bazą!</strong> ${e.message}. System może działać nieprawidłowo.</div></div>`;
-            this.updateDashboard(); // Wymuszamy rysowanie nawet z błędem, by nie blokować aplikacji
         }
     }
 
@@ -219,7 +216,6 @@ class CloudInventoryManager {
         }
     }
 
-    // --- IMPERIAL ---
     async addIncomingImperial(supplier, newProducts) {
         if (currentRole === 'viewer') return;
         let totalAdded = 0; const dbUpdates = [];
@@ -262,12 +258,9 @@ class CloudInventoryManager {
         }
     }
 
-    // --- PXF ---
     async addIncomingPxf(supplier, newProducts) {
         if (currentRole === 'viewer') return;
         let totalAdded = 0; 
-        let hasError = false;
-
         for (const [masterId, qtyStr] of Object.entries(newProducts)) {
             let qty = parseInt(qtyStr);
             if (qty > 0) { 
@@ -275,19 +268,16 @@ class CloudInventoryManager {
                 if (masterProduct) {
                     const newAssembly = (parseInt(masterProduct.assembly) || 0) + qty; 
                     const idsToUpdate = pxfAngleSync[masterId] || [masterId];
-                    
                     for (let targetId of idsToUpdate) { 
-                        const { error } = await db.from('products').update({ assembly: newAssembly }).eq('id', targetId);
-                        if (error) { console.error('Supabase Error PXF:', error); hasError = true; } 
-                        else { const targetProduct = this.products.find(p => String(p.id) === String(targetId)); if(targetProduct) targetProduct.assembly = newAssembly; }
+                        await db.from('products').update({ assembly: newAssembly }).eq('id', targetId);
+                        const targetProduct = this.products.find(p => String(p.id) === String(targetId)); 
+                        if(targetProduct) targetProduct.assembly = newAssembly;
                     }
                     totalAdded += qty;
                 }
             }
         }
-        
-        if (hasError) showToast('Wystąpił błąd zapisu do bazy!', 'error');
-        if (totalAdded > 0 && !hasError) { 
+        if (totalAdded > 0) { 
             await this.addHistory('Dostawa Surowych (PXF)', `Dostawca: ${supplier} | Wgrano łącznie: ${totalAdded} szt.`); 
             await this.fetchData(); 
             showToast('Przyjęto surowe lampy PXF', 'success');
@@ -297,24 +287,20 @@ class CloudInventoryManager {
     async registerProductionPxf(prod) {
         if (currentRole === 'viewer') return;
         const tp = Object.values(prod).reduce((a,b) => a + parseInt(b||0), 0); if (tp === 0) return;
-        
         const req = {}; 
         for(const [id, q] of Object.entries(prod)) { let qq = parseInt(q); if(qq > 0) { let mId = pxfAngleMaster[id] || id; req[mId] = (req[mId] || 0) + qq; } }
-        
         for(const [mId, q] of Object.entries(req)) { 
             const masterP = this.products.find(x => String(x.id) === String(mId)); 
             let av = masterP ? (parseInt(masterP.assembly)||0) : 0; 
             if(q > av) { showToast('Brak surowych obudów PXF na ten kąt!', 'error'); return; } 
         }
-        
         let tpReal = 0; const assemblyUpdates = {}; const readyUpdates = {};
         for (const [id, q] of Object.entries(prod)) {
             let qq = parseInt(q);
             if(qq > 0) { 
                 const p = this.products.find(x => String(x.id) === String(id));
                 if(p) { 
-                    p.ready = (parseInt(p.ready) || 0) + qq; 
-                    readyUpdates[p.id] = p.ready; 
+                    p.ready = (parseInt(p.ready) || 0) + qq; readyUpdates[p.id] = p.ready; 
                     let mId = pxfAngleMaster[id] || id; 
                     if (assemblyUpdates[mId] === undefined) { 
                         const masterP = this.products.find(x => String(x.id) === String(mId)); 
@@ -324,23 +310,12 @@ class CloudInventoryManager {
                 } 
             }
         }
-        
-        let hasError = false;
-        for (const [pid, newReady] of Object.entries(readyUpdates)) { 
-            const { error } = await db.from('products').update({ ready: newReady }).eq('id', pid);
-            if (error) { console.error(error); hasError = true; }
-        }
+        for (const [pid, newReady] of Object.entries(readyUpdates)) { await db.from('products').update({ ready: newReady }).eq('id', pid); }
         for (const [mId, newAssembly] of Object.entries(assemblyUpdates)) { 
             const targets = pxfAngleSync[mId] || [mId]; 
-            for (let targetId of targets) { 
-                const { error } = await db.from('products').update({ assembly: newAssembly }).eq('id', targetId);
-                if (error) { console.error(error); hasError = true; }
-            } 
+            for (let targetId of targets) { await db.from('products').update({ assembly: newAssembly }).eq('id', targetId); } 
         }
-        
-        if (hasError) {
-            showToast('Błąd zapisu produkcji PXF!', 'error');
-        } else if(tpReal > 0) { 
+        if(tpReal > 0) { 
             await this.addHistory('Ustawienie Mocy (PXF)', `Skonfigurowano sztuk: ${tpReal}`); 
             showToast('Skonfigurowano moce PXF', 'success'); 
             await this.fetchData();
@@ -362,7 +337,6 @@ class CloudInventoryManager {
         await Promise.all(upds); await this.addHistory('Przezbrojenie (PXF)', `Konwersja z ${fromAngle}° na ${toAngle}° (${power}W). Ilość: ${qty} szt.`); showToast('Kąty zostały zamienione!', 'success'); await this.fetchData();
     }
 
-    // --- WYSYŁKI ---
     async addShipment(s) { 
         if (currentRole === 'viewer') return;
         const { error } = await db.from('shipments').insert([{ date: s.date, location: s.location, company: s.company, products: s.products, status: 'planned', is_confirmed: false, is_replacement: s.is_replacement, brand: s.brand }]); 
@@ -421,7 +395,6 @@ class CloudInventoryManager {
         await this.addHistory(Object.keys(smis).length > 0 ? `Wydano część braków` : `Wydano zaległe braki (komplet)`, s.location); await this.fetchData();
     }
 
-    // --- REGULACJE, SERWIS I KOMPONENTY ---
     async addAdjustment(date, location) { if (currentRole === 'viewer') return; await db.from('adjustments').insert([{ date, location }]); await this.addHistory('Planowanie regulacji', `${location} - ${date}`); await this.fetchData(); }
     async updateAdjustmentDate(id, newDate) { if (currentRole === 'viewer') return; const a = this.adjustments.find(x => String(x.id) === String(id)); if (a) { a.date = newDate; await db.from('adjustments').update({ date: newDate }).eq('id', id); await this.addHistory('Zmiana terminu serwisu', `${a.location} na ${newDate}`); await this.fetchData(); } }
     async deleteAdjustment(id) { if (currentRole !== 'admin') return; this.adjustments = this.adjustments.filter(a => String(a.id) !== String(id)); await db.from('adjustments').delete().eq('id', id); await this.addHistory('Usunięcie regulacji z kalendarza', `Rekord skasowany`); await this.fetchData(); }
@@ -457,7 +430,6 @@ class CloudInventoryManager {
         if (currentRole === 'viewer') return; await db.from('components').update({ [f]: v }).eq('id', 1); await this.addHistory('Korekta ręczna komponentów', `Zaktualizowano stan bazy.`); await this.fetchData();
     }
 
-    // --- PREDYKCJA (Burn-down V2.1) ---
     renderPredictions() {
         const container = document.getElementById('prediction-cards-container');
         if (!container) return;
@@ -571,7 +543,6 @@ class CloudInventoryManager {
         container.innerHTML = html;
     }
 
-    // --- RENDEROWANIE WIDOKÓW TABEL I INTERFEJSU ---
     getTotals() {
         const sImp = new Set(); let tAImp = 0; 
         const sPxf = new Set(); let tAPxf = 0;
@@ -590,8 +561,6 @@ class CloudInventoryManager {
 
     updateDashboard() {
         try {
-            // USUNIĘTO EARLY RETURN - System wymusi narysowanie widoków i kalendarza nawet jeśli myśli, że tabele są puste.
-            
             const t = this.getTotals();
             const elTotal = document.querySelector('[data-stat="total"]'); if(elTotal) elTotal.textContent = t.totalAll || 0; 
             const elReady = document.querySelector('[data-stat="ready"]'); if(elReady) elReady.textContent = t.totalReady || 0;
@@ -603,16 +572,15 @@ class CloudInventoryManager {
             if(c) { if((parseInt(c.ps_raw)||0)<50) lc.push('Zasilacze'); if((parseInt(c.clips_normal)||0)<50) lc.push('Klapki Zwykłe'); if((parseInt(c.clips_pass)||0)<50) lc.push('Klapki Przelotowe'); }
             if(lc.length>0 && alertsContainer) { alertsContainer.innerHTML = `<div class="alert-banner critical"><span class="material-symbols-outlined">warning_amber</span><div><strong>Krytyczny stan!</strong> Pilnie domów: ${lc.join(', ')}.</div></div>`; }
 
-            // Renderowanie z tarczami ochronnymi
-            try { this.renderPredictions(); } catch(e) { console.error("Błąd Predykcji:", e); }
+            try { this.renderPredictions(); } catch(e) { displayFatalError("Predykcja błąd", e); }
 
             let rMap = {};
-            try { rMap = getShipmentsReadinessMap(); } catch(e) { console.error("Błąd Mapy Gotowości:", e); }
+            try { rMap = window.getShipmentsReadinessMap(); } catch(e) { displayFatalError("Gotowość błąd", e); }
             
-            try { renderCalendar(rMap); } catch(e) { console.error("Błąd Kalendarza:", e); }
+            try { window.renderCalendar(rMap); } catch(e) { displayFatalError("Kalendarz błąd", e); }
             
             if(document.getElementById('tab-dashboard').classList.contains('active')) { 
-                try { updateMapMarkers(this.shipments, this.adjustments); } catch(e) { console.error("Błąd Rysowania Mapy:", e); } 
+                try { window.updateMapMarkers(this.shipments, this.adjustments); } catch(e) { displayFatalError("Mapa błąd", e); } 
             }
 
             const itb = document.getElementById('dashboard-recent-incoming');
@@ -635,19 +603,18 @@ class CloudInventoryManager {
                 }
             }
 
-            try { updateInventoryTable(); } catch(e) { console.error("Inwentarz Błąd:", e); }
-            try { updateShipmentsTables(rMap); } catch(e) { console.error("Wysyłki Błąd:", e); }
-            try { updateAdjustmentsTable(); } catch(e) { console.error("Regulacje Błąd:", e); }
-            if(currentRole !== 'worker') { try { updateHistoryTable(); } catch(e) { console.error("Historia Błąd:", e); } }
-            try { updateServiceCasesTable(); } catch(e) { console.error("RMA Błąd:", e); }
-            try { updateComponentsDisplay(); } catch(e) { console.error("Komponenty Błąd:", e); }
+            try { window.updateInventoryTable(); } catch(e) { displayFatalError("Inwentarz Błąd", e); }
+            try { window.updateShipmentsTables(rMap); } catch(e) { displayFatalError("Wysyłki Błąd", e); }
+            try { window.updateAdjustmentsTable(); } catch(e) { displayFatalError("Regulacje Błąd", e); }
+            if(currentRole !== 'worker') { try { window.updateHistoryTable(); } catch(e) { displayFatalError("Historia Błąd", e); } }
+            try { window.updateServiceCasesTable(); } catch(e) { displayFatalError("RMA Błąd", e); }
+            try { window.updateComponentsDisplay(); } catch(e) { displayFatalError("Komponenty Błąd", e); }
 
         } catch (err) { 
-            console.error("Krytyczny Błąd Głównego Renderowania:", err); 
+            displayFatalError('Główne Renderowanie Dashboardu', err);
         }
     }
 
-    // --- BINDOWANIE FORMULARZY ---
     bindForms() {
         const bind = (id, handler) => { const f = document.getElementById(id); if(f) f.addEventListener('submit', handler); };
         
@@ -760,7 +727,7 @@ window.logoutUser = async function() { clearTimeout(inactivityTimer); showLoadin
 checkSession();
 
 // --- ZEWNĘTRZNE FUNKCJE TABEL ---
-function getShipmentsReadinessMap() {
+window.getShipmentsReadinessMap = function() {
     const m = {}; if (!window.inventory || !window.inventory.products) return m;
     let vR = {}, vA = {}; 
     window.inventory.products.forEach(p => { 
@@ -797,20 +764,20 @@ function getShipmentsReadinessMap() {
     }); return m;
 }
 
-function updateShipmentsTables(readinessMap) {
+window.updateShipmentsTables = function(readinessMap) {
     const tbodyUnconf = document.getElementById('shipments-unconfirmed-table'); const tbodyConf = document.getElementById('shipments-confirmed-table'); const tbodyComp = document.getElementById('shipments-completed-table');
     if(!tbodyUnconf || !tbodyConf || !tbodyComp) return;
     tbodyUnconf.innerHTML = ''; tbodyConf.innerHTML = ''; tbodyComp.innerHTML = '';
     let confCount = 0; const sortedShipments = [...window.inventory.shipments].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
     sortedShipments.forEach(s => {
-        if (s.status === 'completed') { tbodyComp.innerHTML += renderShipmentRow(s, readinessMap, false); } 
-        else if (s.is_confirmed) { tbodyConf.innerHTML += renderShipmentRow(s, readinessMap, true); confCount++; } 
-        else { tbodyUnconf.innerHTML += renderShipmentRow(s, readinessMap, true); }
+        if (s.status === 'completed') { tbodyComp.innerHTML += window.renderShipmentRow(s, readinessMap, false); } 
+        else if (s.is_confirmed) { tbodyConf.innerHTML += window.renderShipmentRow(s, readinessMap, true); confCount++; } 
+        else { tbodyUnconf.innerHTML += window.renderShipmentRow(s, readinessMap, true); }
     });
     const c = document.getElementById('shipments-count'); if(c) c.textContent = confCount + ' rekordów';
 }
 
-function renderShipmentRow(s, readinessMap, showActions = true) {
+window.renderShipmentRow = function(s, readinessMap, showActions = true) {
     let total = s.products ? Object.values(s.products).reduce((a, b) => parseInt(a) + parseInt(b), 0) : 0;
     let statusBadge = s.status === 'completed' ? '<span class="status-badge status-ok">Zrealizowana</span>' : (s.status === 'partial' ? '<span class="status-badge status-warning">Niepełna</span>' : (s.is_confirmed ? '<span class="status-badge status-neutral">Potwierdzona</span>' : '<span class="status-badge status-warning">Oczekująca</span>'));
     let readinessBadge = s.status === 'completed' ? '<span style="color: var(--text-light); font-size: 0.85em;">-</span>' : (readinessMap && readinessMap[s.id] ? '<span class="status-badge status-ok">Komplet</span>' : '<span class="status-badge status-error">Braki</span>');
@@ -838,7 +805,7 @@ function renderShipmentRow(s, readinessMap, showActions = true) {
     </tr>`;
 }
 
-function updateInventoryTable() {
+window.updateInventoryTable = function() {
     const tbImp = document.getElementById('products-imperial-table'); const tbPxf = document.getElementById('products-pxf-table'); const tbSrv = document.getElementById('service-table');
     if(!tbImp || !tbPxf || !tbSrv) return;
     tbImp.innerHTML = ''; tbPxf.innerHTML = ''; tbSrv.innerHTML = ''; 
@@ -874,7 +841,7 @@ function updateInventoryTable() {
     });
 }
 
-function updateAdjustmentsTable() {
+window.updateAdjustmentsTable = function() {
     const tbody = document.getElementById('adjustments-table'); if(!tbody) return; tbody.innerHTML = '';
     window.inventory.adjustments.forEach(a => {
         let action = currentRole === 'admin' ? `<td data-label="Akcja"><button class="btn-small btn-secondary" onclick="deleteAdjustment('${a.id}')" style="margin:0;"><span class="material-symbols-outlined" style="color:var(--accent-red); margin:0;">delete</span></button></td>` : `<td class="admin-only-col"></td>`;
@@ -882,7 +849,7 @@ function updateAdjustmentsTable() {
     });
 }
 
-function updateHistoryTable() {
+window.updateHistoryTable = function() {
     const tbody = document.getElementById('history-table'); if(!tbody) return; tbody.innerHTML = '';
     window.inventory.history.forEach(h => {
         const match = (h.details || '').match(/\(przez: (.*?)\)/); const worker = match ? match[1] : 'System'; const cleanDetails = (h.details || '').replace(/\(przez:.*?\)/, '').trim();
@@ -890,7 +857,7 @@ function updateHistoryTable() {
     });
 }
 
-function updateServiceCasesTable() {
+window.updateServiceCasesTable = function() {
     const tbody = document.getElementById('service-cases-table'); if(!tbody) return; tbody.innerHTML = '';
     if (!window.inventory.serviceCases || window.inventory.serviceCases.length === 0) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 2rem !important; color: gray;">Brak historii serwisowej.</td></tr>'; return; }
     window.inventory.serviceCases.forEach(c => {
@@ -899,7 +866,7 @@ function updateServiceCasesTable() {
     });
 }
 
-function updateComponentsDisplay() {
+window.updateComponentsDisplay = function() {
     if(!window.inventory.components) return; const c = window.inventory.components;
     const els = { 'ps-raw-cell': c.ps_raw, 'clips-normal-cell': c.clips_normal, 'clips-pass-cell': c.clips_pass, 'reflector-22-cell': c.reflector_22, 'reflector-37-cell': c.reflector_37, 'reflector-58-cell': c.reflector_58 };
     for (const [id, val] of Object.entries(els)) { let el = document.getElementById(id); if (el) el.innerHTML = `<strong>${val || 0} szt.</strong>`; }
@@ -935,7 +902,6 @@ window.completeRemainingShipmentUI = async function(id) { if (confirm('Wydano br
 window.deleteShipment = async function(id) { if (currentRole === 'admin' && confirm('Usunąć zamówienie?')) { showLoading(); await window.inventory.deleteShipment(id); hideLoading(); showToast('Usunięto', 'success'); } }
 window.deleteAdjustment = async function(id) { if (currentRole === 'admin' && confirm('Usunąć wpis z regulacji?')) { showLoading(); await window.inventory.deleteAdjustment(id); hideLoading(); showToast('Usunięto', 'success'); } }
 
-// --- EDYCJA ZAMÓWIENIA W OKIENKU (MODAL) ---
 window.openShipmentDetails = function(id) {
     if (currentRole === 'viewer') return;
     const shipment = window.inventory.shipments.find(s => String(s.id) === String(id)); if (!shipment) return;
@@ -963,7 +929,7 @@ window.openShipmentDetails = function(id) {
                 </div>
             </div>
             
-            <button class="btn-primary" onclick="saveEditedShipment('${id}')" style="width:100%; margin-top: 1rem;"><span class="material-symbols-outlined">save</span> Zapisz Zmiany</button>
+            <button class="btn-primary" onclick="window.saveEditedShipment('${id}')" style="width:100%; margin-top: 1rem;"><span class="material-symbols-outlined">save</span> Zapisz Zmiany</button>
         </div>
     `;
     
@@ -1007,19 +973,19 @@ window.showAnglesDemand = function(id) {
 
 window.openReceiveDamagedUI = function() {
     let opts = window.inventory.products.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
-    let html = `<div class="form-group"><label>Model oprawy (zwrot)</label><select id="rma_prod_id" style="width:100%; padding:0.75rem; border-radius:10px; font-family:'Inter',sans-serif; border:1px solid #D1D5DB;">${opts}</select></div><div class="form-group"><label>Zwróconych (uszkodzonych) sztuk</label><input type="number" id="rma_qty" min="1" value="1"></div><div class="form-group" style="background:#ECFDF5; padding:1rem; border-radius:8px; border:1px solid #A7F3D0;"><label style="color:#065F46; font-size:0.8rem;">Odzyskanych zasilaczy?</label><input type="number" id="rma_salvaged" min="0" value="0"></div><div class="form-group"><label>Opis usterki</label><input type="text" id="rma_desc" placeholder="np. uszkodzony klosz..."></div><button class="btn-primary" onclick="submitDamagedReturn()" style="width:100%; margin-top:10px;"><span class="material-symbols-outlined">assignment_return</span> Przyjmij zwrot</button>`;
+    let html = `<div class="form-group"><label>Model oprawy (zwrot)</label><select id="rma_prod_id" style="width:100%; padding:0.75rem; border-radius:10px; font-family:'Inter',sans-serif; border:1px solid #D1D5DB;">${opts}</select></div><div class="form-group"><label>Zwróconych (uszkodzonych) sztuk</label><input type="number" id="rma_qty" min="1" value="1"></div><div class="form-group" style="background:#ECFDF5; padding:1rem; border-radius:8px; border:1px solid #A7F3D0;"><label style="color:#065F46; font-size:0.8rem;">Odzyskanych zasilaczy?</label><input type="number" id="rma_salvaged" min="0" value="0"></div><div class="form-group"><label>Opis usterki</label><input type="text" id="rma_desc" placeholder="np. uszkodzony klosz..."></div><button class="btn-primary" onclick="window.submitDamagedReturn()" style="width:100%; margin-top:10px;"><span class="material-symbols-outlined">assignment_return</span> Przyjmij zwrot</button>`;
     showModal('Przyjęcie zwrotu RMA', html);
 }
 window.submitDamagedReturn = async function() { let id = document.getElementById('rma_prod_id').value; let qty = parseInt(document.getElementById('rma_qty').value)||0; let sal = parseInt(document.getElementById('rma_salvaged').value)||0; let desc = document.getElementById('rma_desc').value.trim(); if(qty>0) { closeModal(); showLoading(); await window.inventory.processDamagedReturn(id, qty, sal, desc); hideLoading(); } }
 
 window.openSendToServiceUI = function(id, name, available) {
-    let html = `<p style="margin-bottom:1rem; font-size:0.95rem;">Wysyłasz oprawy <strong>${name}</strong> na naprawę. Dostępne (uszkodzone): <strong>${available}</strong> szt.</p><div class="form-group"><label>Ilość do wydania:</label><input type="number" id="rma_send_qty" min="1" max="${available}" value="1"></div><div class="form-group"><label>Opis / Notatka</label><input type="text" id="rma_send_desc" placeholder="np. wysłano DPD..."></div><button class="btn-primary" onclick="submitSendService('${id}')" style="width:100%;"><span class="material-symbols-outlined">handyman</span> Wydaj do Serwisu</button>`;
+    let html = `<p style="margin-bottom:1rem; font-size:0.95rem;">Wysyłasz oprawy <strong>${name}</strong> na naprawę. Dostępne (uszkodzone): <strong>${available}</strong> szt.</p><div class="form-group"><label>Ilość do wydania:</label><input type="number" id="rma_send_qty" min="1" max="${available}" value="1"></div><div class="form-group"><label>Opis / Notatka</label><input type="text" id="rma_send_desc" placeholder="np. wysłano DPD..."></div><button class="btn-primary" onclick="window.submitSendService('${id}')" style="width:100%;"><span class="material-symbols-outlined">handyman</span> Wydaj do Serwisu</button>`;
     showModal('Wydanie na naprawę', html);
 }
 window.submitSendService = async function(id) { let qty = parseInt(document.getElementById('rma_send_qty').value)||0; let desc = document.getElementById('rma_send_desc').value.trim(); if(qty>0) { closeModal(); showLoading(); await window.inventory.sendToService(id, qty, desc); hideLoading(); } }
 
 window.openReceiveFromServiceUI = function(id, name, inService) {
-    let html = `<p style="margin-bottom:1rem; font-size:0.95rem;">Odbierasz oprawy <strong>${name}</strong> po naprawie. W serwisie: <strong>${inService}</strong> szt.</p><div class="form-group"><label>Odebranych sztuk:</label><input type="number" id="rma_rec_qty" min="1" max="${inService}" value="1"></div><div class="form-group" style="background:#FEF2F2; padding:1rem; border-radius:8px; border:1px solid #FECACA;"><label style="color:#991B1B; font-size:0.8rem;">Zużytych NOWYCH zasilaczy?</label><input type="number" id="rma_used_ps" min="0" value="0"></div><div class="form-group"><label>Notatka</label><input type="text" id="rma_rec_desc" placeholder="..."></div><button class="btn-primary" onclick="submitReceiveService('${id}')" style="width:100%; margin-top:10px;"><span class="material-symbols-outlined">task_alt</span> Zakończ Naprawę</button>`;
+    let html = `<p style="margin-bottom:1rem; font-size:0.95rem;">Odbierasz oprawy <strong>${name}</strong> po naprawie. W serwisie: <strong>${inService}</strong> szt.</p><div class="form-group"><label>Odebranych sztuk:</label><input type="number" id="rma_rec_qty" min="1" max="${inService}" value="1"></div><div class="form-group" style="background:#FEF2F2; padding:1rem; border-radius:8px; border:1px solid #FECACA;"><label style="color:#991B1B; font-size:0.8rem;">Zużytych NOWYCH zasilaczy?</label><input type="number" id="rma_used_ps" min="0" value="0"></div><div class="form-group"><label>Notatka</label><input type="text" id="rma_rec_desc" placeholder="..."></div><button class="btn-primary" onclick="window.submitReceiveService('${id}')" style="width:100%; margin-top:10px;"><span class="material-symbols-outlined">task_alt</span> Zakończ Naprawę</button>`;
     showModal('Odbiór z naprawy', html);
 }
 window.submitReceiveService = async function(id) { let qty = parseInt(document.getElementById('rma_rec_qty').value)||0; let used = parseInt(document.getElementById('rma_used_ps').value)||0; let desc = document.getElementById('rma_rec_desc').value.trim(); if(qty>0) { closeModal(); showLoading(); await window.inventory.receiveFromService(id, qty, used, desc); hideLoading(); } }
@@ -1028,7 +994,7 @@ window.showMissingItems = function(id) {
     if (!window.inventory) return; const s = window.inventory.shipments.find(x => String(x.id) === String(id)); if (!s || !s.partial_missing) return;
     let c = `<div style="margin-bottom:1rem; padding:1.5rem; background:#F9FAFB; border-radius:12px; border:1px solid #E5E7EB;">Cel wysyłki: <b>${escapeHTML(s.location)}</b><br>Data wyjazdu: ${s.date}</div><div class="table-responsive" style="margin-bottom:1.5rem;"><table style="width:100%;"><thead><tr><th style="text-align:left;">Model Oprawy</th><th>Ilość Brakująca</th></tr></thead><tbody>`;
     let tot = 0; Object.entries(s.partial_missing).forEach(([pid, qty]) => { const p = window.inventory.products.find(x => String(x.id) === String(pid)); if(p) { c += `<tr><td>${p.name}</td><td style="color:var(--accent-red); font-weight:bold; text-align:center;">${qty} szt.</td></tr>`; tot += qty; } });
-    c += `</tbody></table></div><div style="display:flex; justify-content:space-between; align-items:center;"><b>Łącznie do dosłania: <span style="color:var(--accent-red); font-size:1.2em;">${tot} szt.</span></b><button class="btn-primary" onclick="printMissingPdf('${id}')"><span class="material-symbols-outlined">print</span> Drukuj Raport</button></div>`;
+    c += `</tbody></table></div><div style="display:flex; justify-content:space-between; align-items:center;"><b>Łącznie do dosłania: <span style="color:var(--accent-red); font-size:1.2em;">${tot} szt.</span></b><button class="btn-primary" onclick="window.printMissingPdf('${id}')"><span class="material-symbols-outlined">print</span> Drukuj Raport</button></div>`;
     showModal('Szczegóły Braków', c);
 }
 
@@ -1085,6 +1051,6 @@ window.scanOfferFromPDF = async function(file) {
         document.getElementById('form-city').value = city; document.getElementById('form-target').value = target; document.getElementById('form-date').value = new Date().toISOString().split('T')[0]; document.getElementById('form-company').value = "Do ustalenia";
         document.getElementById('form-p1').value = p1; document.getElementById('form-p2').value = p2; document.getElementById('form-p3').value = p3; document.getElementById('form-p4').value = p4; document.getElementById('form-p5').value = p5;
         showToast('PDF przeskanowany! Wybierz pulę (Imperial/PXF).', 'success');
-    } catch (error) { showModal('Błąd odczytu PDF', `<p style="color:var(--accent-red); font-weight:500;">Nie udało się przetworzyć pliku.</p>`); } 
+    } catch (error) { displayFatalError('Skanowanie PDF', error); } 
     finally { btn.innerHTML = originalText; btn.disabled = false; document.getElementById('pdf-input').value = ''; }
 }
