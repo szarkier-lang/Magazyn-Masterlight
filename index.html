@@ -89,6 +89,7 @@
 
             <div class="main-wrapper">
                 <div class="content">
+                    <!-- ZAKŁADKA: DASHBOARD -->
                     <div id="tab-dashboard" class="tab-content active">
                         <div id="dashboard-alerts"></div>
                         
@@ -99,9 +100,10 @@
                             <div class="stat-card"><h3>Oprawy w Serwisie</h3><div class="value" data-stat="service" style="color: var(--error-status);">0</div></div>
                         </div>
 
+                        <!-- SEKCJA PREDYKCJI -->
                         <div class="section">
                             <div class="section-header">
-                                <h2><span class="material-symbols-outlined">insights</span> Analiza dostępności komponentów (Prognoza)</h2>
+                                <h2><span class="material-symbols-outlined">insights</span> Analiza dostępności (Prognoza)</h2>
                             </div>
                             <div class="section-content">
                                 <div class="stats-bar" id="prediction-cards-container" style="margin-bottom: 0;">
@@ -109,6 +111,7 @@
                                 </div>
                             </div>
                         </div>
+
                         <div class="section">
                             <div class="section-header">
                                 <h2><span class="material-symbols-outlined">calendar_month</span> Harmonogram Działań (Kalendarz)</h2>
@@ -151,7 +154,9 @@
                         </div>
                     </div>
 
+                    <!-- ZAKŁADKA: INWENTARZ -->
                     <div id="tab-inventory" class="tab-content">
+                        <!-- TABELA IMPERIAL -->
                         <div class="section">
                             <div class="section-header">
                                 <h2><span class="material-symbols-outlined">inventory_2</span> Stan Magazynowy: IMPERIAL (Składane)</h2>
@@ -167,6 +172,7 @@
                             </div>
                         </div>
 
+                        <!-- TABELA PXF -->
                         <div class="section section-pxf">
                             <div class="section-header">
                                 <h2><span class="material-symbols-outlined">lightbulb</span> Stan Magazynowy: PXF (Zintegrowane)</h2>
@@ -174,13 +180,14 @@
                             <div class="section-content" style="padding:0;">
                                 <div class="table-responsive">
                                     <table>
-                                        <thead><tr><th>Kąt Oprawy</th><th>Gotowe 15W</th><th>Gotowe 20W</th><th>Serwis (Suma)</th><th>Łącznie Suma</th><th>Dostępność</th></tr></thead>
+                                        <thead><tr><th>Kąt Oprawy</th><th>Gotowe 15W</th><th>Gotowe 20W</th><th>Surowe (W Montażu)</th><th>Serwis (Suma)</th><th>Łącznie Suma</th><th>Dostępność</th></tr></thead>
                                         <tbody id="products-pxf-table"></tbody>
                                     </table>
                                 </div>
                             </div>
                         </div>
 
+                        <!-- SERWIS / RMA -->
                         <div class="section" style="max-width: 1200px;">
                             <div class="section-header">
                                 <h2><span class="material-symbols-outlined">plumbing</span> Stan Serwisowy Opraw (RMA)</h2>
@@ -211,8 +218,10 @@
                         </div>
                     </div>
 
+                    <!-- ZAKŁADKA: WYSYŁKI -->
                     <div id="tab-shipments" class="tab-content">
                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 1.5rem; margin-bottom: 2.5rem;">
+                            <!-- Przyjęcie IMPERIAL -->
                             <div id="form-incoming-imperial-container" class="section" style="margin-bottom:0;">
                                 <div class="section-header"><h2><span class="material-symbols-outlined">move_to_inbox</span> Przyjęcie z Huty (IMPERIAL)</h2></div>
                                 <div class="section-content">
@@ -228,26 +237,26 @@
                                 </div>
                             </div>
 
+                            <!-- Przyjęcie PXF -->
                             <div id="form-incoming-pxf-container" class="section section-pxf" style="margin-bottom:0;">
                                 <div class="section-header">
-                                    <h2><span class="material-symbols-outlined">local_shipping</span> Przyjęcie Gotowych (PXF)</h2>
+                                    <h2><span class="material-symbols-outlined">local_shipping</span> Przyjęcie Surowych (PXF)</h2>
                                 </div>
                                 <div class="section-content">
                                     <form id="incomingPxfForm">
                                         <div class="form-group" style="margin-bottom: 1rem;"><label>Dostawca</label><input type="text" name="supplier" required placeholder="np. PXF Lighting"></div>
                                         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1rem;">
-                                            <div class="form-group"><label>22° - 15W</label><input type="number" name="p6" value="0" min="0"></div>
-                                            <div class="form-group"><label>37° - 15W</label><input type="number" name="p7" value="0" min="0"></div>
-                                            <div class="form-group"><label>58° - 15W</label><input type="number" name="p8" value="0" min="0"></div>
-                                            <div class="form-group"><label>37° - 20W</label><input type="number" name="p9" value="0" min="0"></div>
-                                            <div class="form-group"><label>58° - 20W</label><input type="number" name="p10" value="0" min="0"></div>
+                                            <div class="form-group"><label>Surowe 22°</label><input type="number" name="p6" value="0" min="0"></div>
+                                            <div class="form-group"><label>Surowe 37°</label><input type="number" name="p7" value="0" min="0"></div>
+                                            <div class="form-group"><label>Surowe 58°</label><input type="number" name="p8" value="0" min="0"></div>
                                         </div>
-                                        <button type="submit" class="btn-primary btn-pxf" style="width:100%;"><span class="material-symbols-outlined">add_circle</span> Przyjmij gotowe lampy</button>
+                                        <button type="submit" class="btn-primary btn-pxf" style="width:100%;"><span class="material-symbols-outlined">add_circle</span> Przyjmij surowe oprawy</button>
                                     </form>
                                 </div>
                             </div>
                         </div>
 
+                        <!-- Dodawanie Wysyłki -->
                         <div id="form-shipment-container" class="section">
                             <div class="section-header">
                                 <h2><span class="material-symbols-outlined">add_location_alt</span> Dodaj Zamówienie / Plan Wysyłki</h2>
@@ -296,6 +305,7 @@
                             </div>
                         </div>
 
+                        <!-- Listy wysyłek -->
                         <div class="section">
                             <div class="section-header"><h2><span class="material-symbols-outlined" style="color:var(--warning-status);">pending_actions</span> 1. Zamówienia Oczekujące (Brak Potwierdzenia Terminu)</h2></div>
                             <div class="section-content" style="padding:0;">
@@ -338,6 +348,7 @@
                         </div>
                     </div>
 
+                    <!-- ZAKŁADKA: REGULACJE -->
                     <div id="tab-adjustments" class="tab-content">
                         <div class="section" id="adj-map-section-container">
                             <div class="section-header">
@@ -381,6 +392,7 @@
                         </div>
                     </div>
 
+                    <!-- ZAKŁADKA: HISTORIA -->
                     <div id="tab-history" class="tab-content">
                         <div class="section">
                             <div class="section-header">
@@ -398,6 +410,7 @@
                         </div>
                     </div>
 
+                    <!-- ZAKŁADKA: KOMPONENTY -->
                     <div id="tab-components" class="tab-content">
                         <div class="stats-bar">
                             <div class="stat-card pxf-card"><h3>Odbłyśniki PXF 22°</h3><div class="value text-pxf" id="stat-refl-22">0</div></div>
@@ -446,8 +459,10 @@
                         </div>
                     </div>
 
+                    <!-- ZAKŁADKA: PRODUKCJA -->
                     <div id="tab-reports" class="tab-content">
                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 1.5rem;">
+                            <!-- Produkcja Imperial -->
                             <div id="form-production-container" class="section">
                                 <div class="section-header"><h2><span class="material-symbols-outlined">precision_manufacturing</span> Rejestracja Produkcji (IMPERIAL)</h2></div>
                                 <div class="section-content">
@@ -472,6 +487,34 @@
                                 </div>
                             </div>
 
+                            <!-- Ustawienie Mocy PXF -->
+                            <div class="section section-pxf">
+                                <div class="section-header">
+                                    <h2><span class="material-symbols-outlined">precision_manufacturing</span> Ustawienie Mocy (PXF)</h2>
+                                </div>
+                                <div class="section-content">
+                                    <form id="productionPxfForm">
+                                        <div style="background-color: var(--pxf-light); border: 1px solid #D1D9E0; padding: 1.5rem; border-radius: 12px; margin-bottom: 1.5rem;">
+                                            <h3 style="font-size: 0.9rem; color: #1E3A8A; text-transform:uppercase; letter-spacing:1px; margin-bottom: 1rem;">Skonfiguruj zasilacze w surowych PXF</h3>
+                                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1.25rem;">
+                                                <div class="form-group"><label>22° -> 15W</label><input type="number" name="p6" value="0" min="0"></div>
+                                                <div class="form-group"><label>37° -> 15W</label><input type="number" name="p7" value="0" min="0"></div>
+                                                <div class="form-group"><label>58° -> 15W</label><input type="number" name="p8" value="0" min="0"></div>
+                                                <div class="form-group"><label>37° -> 20W</label><input type="number" name="p9" value="0" min="0"></div>
+                                                <div class="form-group"><label>58° -> 20W</label><input type="number" name="p10" value="0" min="0"></div>
+                                            </div>
+                                        </div>
+                                        <div style="text-align: right;">
+                                            <button type="submit" class="btn-primary btn-pxf" style="padding: 0 2.5rem;"><span class="material-symbols-outlined">task_alt</span> Ustaw Moce</button>
+                                        </div>
+                                    </form>
+                                    <div style="margin-top: 1rem; background: #EFF6FF; padding: 1rem; border-radius: 12px; font-size: 0.8rem; color: #1E3A8A;">
+                                        <p>System zdejmuje "Surowe" oprawy PXF. Proces NIE ZUŻYWA osobnych zasilaczy z magazynu.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Przezbrajanie PXF -->
                             <div class="section section-pxf">
                                 <div class="section-header">
                                     <h2><span class="material-symbols-outlined">swap_horiz</span> Przezbrojenie kątów (PXF)</h2>
@@ -508,9 +551,6 @@
                                             <button type="submit" class="btn-primary btn-pxf" style="padding: 0 2.5rem;"><span class="material-symbols-outlined">sync</span> Wykonaj Konwersję</button>
                                         </div>
                                     </form>
-                                    <div style="margin-top: 1rem; background: #FFFBEB; padding: 1rem; border-radius: 12px; font-size: 0.8rem; color: #B45309;">
-                                        <p>System automatycznie zamieni odbłyśniki w lampach oraz zaksięguje zdemontowane odbłyśniki na magazynie komponentów.</p>
-                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -520,15 +560,13 @@
                         <p>© 2026 Masterlight Sp. z o.o. - Wszelkie prawa zastrzeżone</p>
                         <p style="font-size: 0.75rem; color: var(--text-light); margin-top: 5px;">Cloud WMS Engine v4.0 | Zalogowano jako: <span id="footer-user">...</span></p>
                     </footer>
-                </div> <aside id="details-panel">
-                    <div class="panel-header">
-                        <h2 id="panel-title" style="margin: 0; color: var(--primary-dark); font-size: 1.2rem;">Szczegóły</h2>
-                        <button class="btn-secondary btn-small" onclick="closeSidePanel()" style="margin:0; padding: 4px; border:none; background:transparent;"><span class="material-symbols-outlined" style="margin:0; color: var(--text-light); font-size: 1.5rem;">close</span></button>
-                    </div>
-                    <div id="panel-content" class="panel-content">
-                        </div>
-                </aside>
-                </div> </div> </div> <div id="modal" class="modal">
+                </div> <!-- Koniec .content -->
+
+            </div> <!-- Koniec .main-wrapper -->
+        </div> <!-- Koniec .main-content -->
+    </div> <!-- Koniec #app-container -->
+
+    <div id="modal" class="modal">
         <div class="modal-dialog">
             <div class="modal-header">
                 <h2 id="modal-title-old">...</h2>
@@ -538,6 +576,7 @@
         </div>
     </div>
 
+    <!-- POBIERANIE SKRYPTU (To musi być na samym dole pliku!) -->
     <script src="app.js"></script>
 </body>
 </html>
