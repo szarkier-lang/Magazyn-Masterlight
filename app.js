@@ -1,14 +1,8 @@
-// --- TRYB DIAGNOSTYCZNY (Wykrywanie krytycznych błędów) ---
+// --- TRYB DIAGNOSTYCZNY (Nigdy więcej cichych błędów) ---
 window.addEventListener('error', function(event) {
-    const errorMsg = `KRYTYCZNY BŁĄD JS: ${event.message} w pliku ${event.filename} (Linia: ${event.lineno})`;
-    console.error(errorMsg);
-    // Tylko wypisujemy w konsoli, żeby nie blokować aplikacji czerwonym oknem, jeśli to drobnostka
+    console.error(`BŁĄD JS: ${event.message} (Linia: ${event.lineno})`);
     const alertsContainer = document.getElementById('dashboard-alerts');
-    if(alertsContainer) alertsContainer.innerHTML += `<div style="background:#B91C1C; color:white; padding:10px; border-radius:5px; margin-bottom:10px; font-size:12px;">${errorMsg}</div>`;
-});
-
-window.addEventListener('unhandledrejection', function(event) {
-    console.error(`KRYTYCZNY BŁĄD BAZY/PROMISE: ${event.reason}`);
+    if(alertsContainer) alertsContainer.innerHTML += `<div style="background:#FEF2F2; border:1px solid #FECACA; color:#991B1B; padding:10px; border-radius:8px; margin-bottom:10px; font-size:12px;"><strong>Zignorowany błąd poboczny:</strong> ${event.message} w linii ${event.lineno}</div>`;
 });
 
 // --- KONFIGURACJA SUPABASE ---
@@ -43,7 +37,7 @@ const imperialAngleSync = { '1': ['1'], '2': ['2','4'], '3': ['3','5'] };
 const pxfAngleMaster = { '6': '6', '7': '7', '9': '7', '8': '8', '10': '8' };
 const pxfAngleSync = { '6': ['6'], '7': ['7','9'], '8': ['8','10'] };
 
-// --- MAPY (DEFINICJE PRZENIESIONE WYŻEJ ABY UNIKNĄĆ BŁĘDU INITMAP) ---
+// --- BEZPIECZNE INICJOWANIE MAP ---
 const boundsPoland = L.latLngBounds(L.latLng(48.9, 14.1), L.latLng(54.9, 24.2));
 window.initMap = function() { 
     if (map) return; 
@@ -119,7 +113,6 @@ window.switchTab = function(tabId) {
         document.getElementById('mobile-overlay').classList.remove('active');
     }
     
-    // Bezpieczne ładowanie map
     if (tabId === 'tab-dashboard') {
         setTimeout(() => { 
             try {
@@ -194,6 +187,9 @@ class CloudInventoryManager {
             console.error("KRYTYCZNY Błąd Bazy Danych:", e); 
             hideLoading();
             showToast(`Błąd Bazy: ${e.message || 'Nieznany błąd'}`, 'error');
+            const alerts = document.getElementById('dashboard-alerts');
+            if (alerts) alerts.innerHTML = `<div class="alert-banner critical"><span class="material-symbols-outlined">error</span><div><strong>Utracono połączenie z bazą!</strong> ${e.message}. System może działać nieprawidłowo.</div></div>`;
+            this.updateDashboard(); // Wymuszamy rysowanie nawet z błędem, by nie blokować aplikacji
         }
     }
 
@@ -282,13 +278,8 @@ class CloudInventoryManager {
                     
                     for (let targetId of idsToUpdate) { 
                         const { error } = await db.from('products').update({ assembly: newAssembly }).eq('id', targetId);
-                        if (error) {
-                            console.error('Supabase Error PXF:', error);
-                            hasError = true;
-                        } else {
-                            const targetProduct = this.products.find(p => String(p.id) === String(targetId)); 
-                            if(targetProduct) targetProduct.assembly = newAssembly;
-                        }
+                        if (error) { console.error('Supabase Error PXF:', error); hasError = true; } 
+                        else { const targetProduct = this.products.find(p => String(p.id) === String(targetId)); if(targetProduct) targetProduct.assembly = newAssembly; }
                     }
                     totalAdded += qty;
                 }
@@ -599,23 +590,30 @@ class CloudInventoryManager {
 
     updateDashboard() {
         try {
-            if(!this.products || this.products.length === 0) return;
+            // USUNIĘTO EARLY RETURN - System wymusi narysowanie widoków i kalendarza nawet jeśli myśli, że tabele są puste.
+            
             const t = this.getTotals();
-            const elTotal = document.querySelector('[data-stat="total"]'); if(elTotal) elTotal.textContent = t.totalAll; 
-            const elReady = document.querySelector('[data-stat="ready"]'); if(elReady) elReady.textContent = t.totalReady;
-            const elShipments = document.querySelector('[data-stat="shipments"]'); if(elShipments) elShipments.textContent = this.shipments.filter(s => s.status!=='completed'&&s.is_confirmed).length;
-            const elService = document.querySelector('[data-stat="service"]'); if(elService) elService.textContent = t.totalService;
+            const elTotal = document.querySelector('[data-stat="total"]'); if(elTotal) elTotal.textContent = t.totalAll || 0; 
+            const elReady = document.querySelector('[data-stat="ready"]'); if(elReady) elReady.textContent = t.totalReady || 0;
+            const elShipments = document.querySelector('[data-stat="shipments"]'); if(elShipments) elShipments.textContent = this.shipments.filter(s => s.status!=='completed'&&s.is_confirmed).length || 0;
+            const elService = document.querySelector('[data-stat="service"]'); if(elService) elService.textContent = t.totalService || 0;
             
             const alertsContainer = document.getElementById('dashboard-alerts'); if(alertsContainer) alertsContainer.innerHTML = '';
             const c = this.components; let lc = [];
             if(c) { if((parseInt(c.ps_raw)||0)<50) lc.push('Zasilacze'); if((parseInt(c.clips_normal)||0)<50) lc.push('Klapki Zwykłe'); if((parseInt(c.clips_pass)||0)<50) lc.push('Klapki Przelotowe'); }
             if(lc.length>0 && alertsContainer) { alertsContainer.innerHTML = `<div class="alert-banner critical"><span class="material-symbols-outlined">warning_amber</span><div><strong>Krytyczny stan!</strong> Pilnie domów: ${lc.join(', ')}.</div></div>`; }
 
-            try { this.renderPredictions(); } catch(e) { console.error("Predykcja błąd:", e); }
+            // Renderowanie z tarczami ochronnymi
+            try { this.renderPredictions(); } catch(e) { console.error("Błąd Predykcji:", e); }
 
-            const rMap = getShipmentsReadinessMap();
-            try { renderCalendar(rMap); } catch(e) { console.error("Kalendarz błąd:", e); }
-            if(document.getElementById('tab-dashboard').classList.contains('active')) { updateMapMarkers(this.shipments, this.adjustments); }
+            let rMap = {};
+            try { rMap = getShipmentsReadinessMap(); } catch(e) { console.error("Błąd Mapy Gotowości:", e); }
+            
+            try { renderCalendar(rMap); } catch(e) { console.error("Błąd Kalendarza:", e); }
+            
+            if(document.getElementById('tab-dashboard').classList.contains('active')) { 
+                try { updateMapMarkers(this.shipments, this.adjustments); } catch(e) { console.error("Błąd Rysowania Mapy:", e); } 
+            }
 
             const itb = document.getElementById('dashboard-recent-incoming');
             if (itb && this.history) {
