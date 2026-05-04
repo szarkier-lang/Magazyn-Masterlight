@@ -69,12 +69,19 @@ function toggleSidebar() {
     document.getElementById('mobile-overlay').classList.toggle('active');
 }
 
+function closeSidePanel() {
+    const panel = document.getElementById('details-panel');
+    if(panel) panel.classList.remove('open');
+}
+
 function switchTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
     document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
     document.getElementById(tabId).classList.add('active');
     const clickedNav = Array.from(document.querySelectorAll('.nav-item')).find(item => item.getAttribute('onclick').includes(tabId));
     if (clickedNav) clickedNav.classList.add('active');
+    
+    closeSidePanel(); 
     
     if (window.innerWidth <= 768) {
         document.querySelector('.sidebar').classList.remove('open');
@@ -126,6 +133,8 @@ class CloudInventoryManager {
             ]);
 
             if (prodsRes.error) throw prodsRes.error;
+            if (compsRes.error) throw compsRes.error;
+
             this.products = prodsRes.data || [];
             this.components = compsRes.data || { ps_raw: 0, clips_normal: 0, clips_pass: 0, reflector_22:0, reflector_37:0, reflector_58:0 };
             this.shipments = shipsRes.data || [];
@@ -144,7 +153,12 @@ class CloudInventoryManager {
             if (upds.length > 0) await Promise.all(upds);
             
             this.updateDashboard();
-        } catch(e) { console.error("Błąd Bazy:", e); hideLoading(); }
+        } catch(e) { 
+            console.error("KRYTYCZNY Błąd Bazy Danych:", e); 
+            hideLoading();
+            showToast(`Błąd Bazy: ${e.message || 'Nieznany błąd'}`, 'error');
+            document.getElementById('dashboard-alerts').innerHTML = `<div class="alert-banner critical"><span class="material-symbols-outlined">error</span><div><strong>Utracono połączenie z Supabase!</strong> ${e.message}. Sprawdź konsolę (F12).</div></div>`;
+        }
     }
 
     setupRealtime() { db.channel('public:all').on('postgres_changes', { event: '*', schema: 'public' }, () => { clearTimeout(this.realtimeTimeout); this.realtimeTimeout = setTimeout(() => this.fetchData(), 500); }).subscribe(); }
@@ -325,7 +339,7 @@ class CloudInventoryManager {
     async addShipment(s) { 
         if (currentRole === 'viewer') return;
         const { error } = await db.from('shipments').insert([{ date: s.date, location: s.location, company: s.company, products: s.products, status: 'planned', is_confirmed: false, is_replacement: s.is_replacement, brand: s.brand }]); 
-        if (error) { console.error("Błąd Supabase:", error); showToast('Błąd bazy danych (sprawdź konsolę F12).', 'error'); return; }
+        if (error) { console.error("Błąd Supabase:", error); showToast('Błąd bazy danych przy dodawaniu zamówienia.', 'error'); return; }
         await this.addHistory(s.is_replacement ? 'Utworzono Wysyłkę SERWISOWĄ' : 'Dodano zamówienie', `${s.location} [${s.brand.toUpperCase()}]`); 
         await this.fetchData(); 
     }
@@ -347,7 +361,7 @@ class CloudInventoryManager {
         const s = this.shipments.find(x => String(x.id) === String(id)); 
         if (s) { 
             const { error } = await db.from('shipments').update(data).eq('id', id); 
-            if (error) { console.error("Błąd edycji Supabase:", error); showToast('Błąd zapisu! Sprawdź konsolę (F12).', 'error'); return; }
+            if (error) { console.error("Błąd edycji Supabase:", error); showToast('Błąd zapisu w chmurze!', 'error'); return; }
             Object.assign(s, data); 
             await this.addHistory('Edycja szczegółów zamówienia', s.location); 
             await this.fetchData(); 
@@ -561,10 +575,10 @@ class CloudInventoryManager {
             if(c) { if((parseInt(c.ps_raw)||0)<50) lc.push('Zasilacze'); if((parseInt(c.clips_normal)||0)<50) lc.push('Klapki Zwykłe'); if((parseInt(c.clips_pass)||0)<50) lc.push('Klapki Przelotowe'); }
             if(lc.length>0 && alertsContainer) { alertsContainer.innerHTML = `<div class="alert-banner critical"><span class="material-symbols-outlined">warning_amber</span><div><strong>Krytyczny stan!</strong> Pilnie domów: ${lc.join(', ')}.</div></div>`; }
 
-            this.renderPredictions();
+            try { this.renderPredictions(); } catch(e) { console.error("Predykcja - Błąd:", e); }
 
             const rMap = getShipmentsReadinessMap();
-            renderCalendar(rMap);
+            try { renderCalendar(rMap); } catch(e) { console.error("Kalendarz - Błąd:", e); }
             if(document.getElementById('tab-dashboard').classList.contains('active')) { updateMapMarkers(this.shipments, this.adjustments); }
 
             const itb = document.getElementById('dashboard-recent-incoming');
@@ -587,14 +601,14 @@ class CloudInventoryManager {
                 }
             }
 
-            updateInventoryTable();
-            updateShipmentsTables(rMap); 
-            updateAdjustmentsTable(); 
-            if(currentRole !== 'worker') updateHistoryTable(); 
-            updateServiceCasesTable();
-            updateComponentsDisplay();
+            try { updateInventoryTable(); } catch(e) { console.error("Inwentarz - Błąd:", e); }
+            try { updateShipmentsTables(rMap); } catch(e) { console.error("Wysyłki - Błąd:", e); }
+            try { updateAdjustmentsTable(); } catch(e) { console.error("Regulacje - Błąd:", e); }
+            if(currentRole !== 'worker') { try { updateHistoryTable(); } catch(e) {} }
+            try { updateServiceCasesTable(); } catch(e) {}
+            try { updateComponentsDisplay(); } catch(e) {}
 
-        } catch (err) { console.error("Błąd rysowania interfejsu:", err); }
+        } catch (err) { console.error("Błąd rysowania całego interfejsu:", err); }
     }
 
     // --- BINDOWANIE FORMULARZY ---
