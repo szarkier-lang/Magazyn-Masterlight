@@ -20,7 +20,8 @@ const ROLES = {
     'm.olejnik@masterlight.pl': 'viewer',         
     'f.robert@interia.pl': 'viewer',         
     'd.lewandowska@masterlight.pl': 'worker',
-    'm.czyzewska@masterlight.pl': 'worker'
+    'm.czyzewska@masterlight.pl': 'worker',
+    'pk303@masterlight.pl': 'driver' // <--- TUTAJ WPISZ MAILA KIEROWCY
 };
 
 // --- ZMIENNE GLOBALNE ---
@@ -100,7 +101,7 @@ window.updateAdjMapMarkers = async function(adjustments) {
     } catch(e) {}
 }
 
-// --- KALENDARZ (PRZYWRÓCONY) ---
+// --- KALENDARZ ---
 window.changeMonth = function(dir) { 
     currentCalendarDate.setMonth(currentCalendarDate.getMonth() + dir); 
     if(window.inventory) window.inventory.updateDashboard(); 
@@ -113,7 +114,7 @@ window.handleDragStart = function(event, type, id) {
 
 window.handleCalendarDrop = async function(event, targetDate) {
     event.preventDefault(); 
-    if (currentRole === 'viewer') { showToast('Brak uprawnień.', 'warning'); return; }
+    if (currentRole === 'viewer' || currentRole === 'driver') { showToast('Brak uprawnień.', 'warning'); return; }
     try {
         const dataStr = event.dataTransfer.getData('application/json'); if (!dataStr) return;
         const data = JSON.parse(dataStr); if (!data.type || !data.id) return;
@@ -306,7 +307,7 @@ class CloudInventoryManager {
     getStatus(id) { const p = this.products.find(x => String(x.id) === String(id)); if (!p) return 'unknown'; const t = (parseInt(p.ready)||0) + (parseInt(p.assembly)||0) + (parseInt(p.service)||0); return t === 0 ? 'error' : (t >= 50 ? 'ok' : 'warning'); }
     
     async updateProduct(id, updates) {
-        if (currentRole === 'viewer') return;
+        if (currentRole === 'viewer' || currentRole === 'driver') return;
         const p = this.products.find(x => String(x.id) === String(id));
         if (p) { 
             Object.assign(p, updates); this.updateDashboard(); await db.from('products').update(updates).eq('id', id); 
@@ -326,7 +327,7 @@ class CloudInventoryManager {
     }
 
     async addIncomingImperial(supplier, newProducts) {
-        if (currentRole === 'viewer') return;
+        if (currentRole === 'viewer' || currentRole === 'driver') return;
         let totalAdded = 0; const dbUpdates = [];
         for (const [masterId, qtyStr] of Object.entries(newProducts)) {
             let qty = parseInt(qtyStr);
@@ -344,7 +345,7 @@ class CloudInventoryManager {
     }
 
     async registerProduction(prod) {
-        if (currentRole === 'viewer') return;
+        if (currentRole === 'viewer' || currentRole === 'driver') return;
         const tp = Object.values(prod).reduce((a,b) => a + parseInt(b||0), 0); if (tp === 0) return;
         const minC = Math.min(parseInt(this.components.ps_raw)||0, parseInt(this.components.clips_normal)||0, parseInt(this.components.clips_pass)||0);
         if (tp > minC) { showToast('Brak zasilaczy lub klapek na magazynie!', 'error'); return; }
@@ -368,7 +369,7 @@ class CloudInventoryManager {
     }
 
     async addIncomingPxf(supplier, newProducts) {
-        if (currentRole === 'viewer') return;
+        if (currentRole === 'viewer' || currentRole === 'driver') return;
         let totalAdded = 0; 
         let hasError = false;
 
@@ -399,7 +400,7 @@ class CloudInventoryManager {
     }
 
     async registerProductionPxf(prod) {
-        if (currentRole === 'viewer') return;
+        if (currentRole === 'viewer' || currentRole === 'driver') return;
         const tp = Object.values(prod).reduce((a,b) => a + parseInt(b||0), 0); if (tp === 0) return;
         
         const req = {}; 
@@ -452,7 +453,7 @@ class CloudInventoryManager {
     }
 
     async swapPxfAngle(fromAngle, toAngle, power, qty) {
-        if (currentRole === 'viewer') return;
+        if (currentRole === 'viewer' || currentRole === 'driver') return;
         const getPxfId = (a, p) => { if (a === '22' && p === '15') return 6; if (a === '37' && p === '15') return 7; if (a === '58' && p === '15') return 8; if (a === '37' && p === '20') return 9; if (a === '58' && p === '20') return 10; return null; };
         const sourceId = getPxfId(fromAngle, power); const targetId = getPxfId(toAngle, power);
         if (!sourceId || !targetId) { showToast('Nieprawidłowa kombinacja.', 'error'); return; }
@@ -467,7 +468,7 @@ class CloudInventoryManager {
     }
 
     async addShipment(s) { 
-        if (currentRole === 'viewer') return;
+        if (currentRole === 'viewer' || currentRole === 'driver') return;
         const { error } = await db.from('shipments').insert([{ date: s.date, location: s.location, company: s.company, products: s.products, status: 'planned', is_confirmed: false, is_replacement: s.is_replacement, brand: s.brand }]); 
         if (error) { console.error("Błąd Supabase:", error); showToast('Błąd bazy danych przy dodawaniu zamówienia.', 'error'); return; }
         await this.addHistory(s.is_replacement ? 'Utworzono Wysyłkę SERWISOWĄ' : 'Dodano zamówienie', `${s.location} [${s.brand.toUpperCase()}]`); 
@@ -475,7 +476,7 @@ class CloudInventoryManager {
     }
 
     async confirmShipment(id) { 
-        if (currentRole === 'viewer') return;
+        if (currentRole === 'viewer' || currentRole === 'driver') return;
         const s = this.shipments.find(x => String(x.id) === String(id)); 
         if (s) { s.is_confirmed = true; await db.from('shipments').update({ is_confirmed: true }).eq('id', id); await this.addHistory('Potwierdzenie daty wyjazdu', s.location); await this.fetchData(); } 
     }
@@ -487,7 +488,7 @@ class CloudInventoryManager {
     }
 
     async updateShipmentInDB(id, data) { 
-        if (currentRole === 'viewer') return;
+        if (currentRole === 'viewer' || currentRole === 'driver') return;
         const s = this.shipments.find(x => String(x.id) === String(id)); 
         if (s) { 
             const { error } = await db.from('shipments').update(data).eq('id', id); 
@@ -499,7 +500,7 @@ class CloudInventoryManager {
     }
     
     async completeShipment(id) {
-        if (currentRole === 'viewer') return;
+        if (currentRole === 'viewer' || currentRole === 'driver') return;
         const s = this.shipments.find(x => String(x.id) === String(id)); if (!s) return;
         const mis = {}, upds = [];
         for (const [pId, qty] of Object.entries(s.products || {})) {
@@ -512,7 +513,7 @@ class CloudInventoryManager {
     }
 
     async completeRemainingShipment(id) {
-        if (currentRole === 'viewer') return;
+        if (currentRole === 'viewer' || currentRole === 'driver') return;
         const s = this.shipments.find(x => String(x.id) === String(id)); if (!s || s.status !== 'partial' || !s.partial_missing) return;
         const mis = s.partial_missing, smis = {}, upds = [];
         for (const [pId, needStr] of Object.entries(mis)) {
@@ -524,8 +525,8 @@ class CloudInventoryManager {
         await this.addHistory(Object.keys(smis).length > 0 ? `Wydano część braków` : `Wydano zaległe braki (komplet)`, s.location); await this.fetchData();
     }
 
-    async addAdjustment(date, location) { if (currentRole === 'viewer') return; await db.from('adjustments').insert([{ date, location }]); await this.addHistory('Planowanie regulacji', `${location} - ${date}`); await this.fetchData(); }
-    async updateAdjustmentDate(id, newDate) { if (currentRole === 'viewer') return; const a = this.adjustments.find(x => String(x.id) === String(id)); if (a) { a.date = newDate; await db.from('adjustments').update({ date: newDate }).eq('id', id); await this.addHistory('Zmiana terminu serwisu', `${a.location} na ${newDate}`); await this.fetchData(); } }
+    async addAdjustment(date, location) { if (currentRole === 'viewer' || currentRole === 'driver') return; await db.from('adjustments').insert([{ date, location }]); await this.addHistory('Planowanie regulacji', `${location} - ${date}`); await this.fetchData(); }
+    async updateAdjustmentDate(id, newDate) { if (currentRole === 'viewer' || currentRole === 'driver') return; const a = this.adjustments.find(x => String(x.id) === String(id)); if (a) { a.date = newDate; await db.from('adjustments').update({ date: newDate }).eq('id', id); await this.addHistory('Zmiana terminu serwisu', `${a.location} na ${newDate}`); await this.fetchData(); } }
     async deleteAdjustment(id) { if (currentRole !== 'admin') return; this.adjustments = this.adjustments.filter(a => String(a.id) !== String(id)); await db.from('adjustments').delete().eq('id', id); await this.addHistory('Usunięcie regulacji z kalendarza', `Rekord skasowany`); await this.fetchData(); }
 
     async processDamagedReturn(productId, qty, salvagedPsQty, desc) {
@@ -550,13 +551,13 @@ class CloudInventoryManager {
     }
 
     async addComponentsShipment(sup, nc) { 
-        if (currentRole === 'viewer') return;
+        if (currentRole === 'viewer' || currentRole === 'driver') return;
         const u = { ps_raw: (parseInt(this.components.ps_raw)||0) + (parseInt(nc.ps_raw)||0), clips_normal: (parseInt(this.components.clips_normal)||0) + (parseInt(nc.clips_normal)||0), clips_pass: (parseInt(this.components.clips_pass)||0) + (parseInt(nc.clips_pass)||0), reflector_22: (parseInt(this.components.reflector_22)||0) + (parseInt(nc.reflector_22)||0), reflector_37: (parseInt(this.components.reflector_37)||0) + (parseInt(nc.reflector_37)||0), reflector_58: (parseInt(this.components.reflector_58)||0) + (parseInt(nc.reflector_58)||0) };
         await db.from('components').update(u).eq('id', 1); await this.addHistory('Dostawa komponentów', sup); await this.fetchData();
     }
 
     async updateComponent(f, v) { 
-        if (currentRole === 'viewer') return; await db.from('components').update({ [f]: v }).eq('id', 1); await this.addHistory('Korekta ręczna komponentów', `Zaktualizowano stan bazy.`); await this.fetchData();
+        if (currentRole === 'viewer' || currentRole === 'driver') return; await db.from('components').update({ [f]: v }).eq('id', 1); await this.addHistory('Korekta ręczna komponentów', `Zaktualizowano stan bazy.`); await this.fetchData();
     }
 
     renderPredictions() {
@@ -748,14 +749,14 @@ class CloudInventoryManager {
         const bind = (id, handler) => { const f = document.getElementById(id); if(f) f.addEventListener('submit', handler); };
         
         bind('incomingImperialForm', async (e) => { 
-            e.preventDefault(); if (currentRole === 'viewer') return;
+            e.preventDefault(); if (currentRole === 'viewer' || currentRole === 'driver') return;
             const btn = e.target.querySelector('button[type="submit"]'); const txt = btn.innerHTML; btn.innerHTML = 'Zapisywanie...'; btn.disabled = true;
             const fd = new FormData(e.target); await this.addIncomingImperial(fd.get('supplier'), { 1:parseInt(fd.get('p1'))||0, 2:parseInt(fd.get('p2'))||0, 3:parseInt(fd.get('p3'))||0 }); 
             e.target.reset(); btn.innerHTML = txt; btn.disabled = false; 
         });
 
         bind('incomingPxfForm', async (e) => { 
-            e.preventDefault(); if (currentRole === 'viewer') return;
+            e.preventDefault(); if (currentRole === 'viewer' || currentRole === 'driver') return;
             const btn = e.target.querySelector('button[type="submit"]'); const txt = btn.innerHTML; btn.innerHTML = 'Zapisywanie...'; btn.disabled = true;
             const fd = new FormData(e.target); 
             showLoading();
@@ -765,14 +766,14 @@ class CloudInventoryManager {
         });
 
         bind('productionForm', async (e) => { 
-            e.preventDefault(); if (currentRole === 'viewer') return;
+            e.preventDefault(); if (currentRole === 'viewer' || currentRole === 'driver') return;
             const btn = e.target.querySelector('button[type="submit"]'); const txt = btn.innerHTML; btn.innerHTML = 'Przetwarzanie...'; btn.disabled = true;
             const fd = new FormData(e.target); await this.registerProduction({ 1:parseInt(fd.get('p1'))||0, 2:parseInt(fd.get('p2'))||0, 3:parseInt(fd.get('p3'))||0, 4:parseInt(fd.get('p4'))||0, 5:parseInt(fd.get('p5'))||0 }); 
             e.target.reset(); btn.innerHTML = txt; btn.disabled = false; 
         });
 
         bind('productionPxfForm', async (e) => { 
-            e.preventDefault(); if (currentRole === 'viewer') return;
+            e.preventDefault(); if (currentRole === 'viewer' || currentRole === 'driver') return;
             const btn = e.target.querySelector('button[type="submit"]'); const txt = btn.innerHTML; btn.innerHTML = 'Przetwarzanie...'; btn.disabled = true;
             const fd = new FormData(e.target); 
             showLoading();
@@ -782,14 +783,14 @@ class CloudInventoryManager {
         });
 
         bind('pxfSwapForm', async (e) => { 
-            e.preventDefault(); if (currentRole === 'viewer') return;
+            e.preventDefault(); if (currentRole === 'viewer' || currentRole === 'driver') return;
             const btn = e.target.querySelector('button[type="submit"]'); const txt = btn.innerHTML; btn.innerHTML = 'Konwersja...'; btn.disabled = true;
             const fd = new FormData(e.target); showLoading(); await this.swapPxfAngle(fd.get('angleFrom'), fd.get('angleTo'), fd.get('swapPower'), parseInt(fd.get('swapQty'))||0); 
             e.target.reset(); btn.innerHTML = txt; btn.disabled = false; hideLoading();
         });
 
         bind('shipmentForm', async (e) => { 
-            e.preventDefault(); if (currentRole === 'viewer') return; 
+            e.preventDefault(); if (currentRole === 'viewer' || currentRole === 'driver') return; 
             const btn = e.target.querySelector('button[type="submit"]'); const txt = btn.innerHTML; btn.innerHTML = 'Przetwarzanie...'; btn.disabled = true; 
             const fd = new FormData(e.target); const brand = document.getElementById('form-brand').value;
             let prods = brand === 'imperial' ? { 1:parseInt(fd.get('p_22_15'))||0, 2:parseInt(fd.get('p_37_15'))||0, 3:parseInt(fd.get('p_58_15'))||0, 4:parseInt(fd.get('p_37_20'))||0, 5:parseInt(fd.get('p_58_20'))||0 } : { 6:parseInt(fd.get('p_22_15'))||0, 7:parseInt(fd.get('p_37_15'))||0, 8:parseInt(fd.get('p_58_15'))||0, 9:parseInt(fd.get('p_37_20'))||0, 10:parseInt(fd.get('p_58_20'))||0 };
@@ -799,7 +800,7 @@ class CloudInventoryManager {
         });
 
         bind('componentsIncomingForm', async (e) => { 
-            e.preventDefault(); if (currentRole === 'viewer') return;
+            e.preventDefault(); if (currentRole === 'viewer' || currentRole === 'driver') return;
             const btn = e.target.querySelector('button[type="submit"]'); const txt = btn.innerHTML; btn.innerHTML = 'Zapisywanie...'; btn.disabled = true;
             const fd = new FormData(e.target); showLoading(); 
             await this.addComponentsShipment(fd.get('supplier'), { ps_raw:parseInt(fd.get('ps_raw'))||0, clips_normal:parseInt(fd.get('clips_normal'))||0, clips_pass:parseInt(fd.get('clips_pass'))||0, reflector_22:parseInt(fd.get('r22'))||0, reflector_37:parseInt(fd.get('r37'))||0, reflector_58:parseInt(fd.get('r58'))||0 }); 
@@ -807,7 +808,7 @@ class CloudInventoryManager {
         });
 
         bind('adjustmentForm', async (e) => { 
-            e.preventDefault(); if (currentRole === 'viewer') return;
+            e.preventDefault(); if (currentRole === 'viewer' || currentRole === 'driver') return;
             const btn = e.target.querySelector('button[type="submit"]'); const txt = btn.innerHTML; btn.innerHTML = 'Zapisywanie...'; btn.disabled = true; 
             const fd = new FormData(e.target); let loc = fd.get('adj_city').trim() + (fd.get('adj_street').trim() ? `, ${fd.get('adj_street').trim()}` : '') + (fd.get('adj_target').trim() ? ` (${fd.get('adj_target').trim()})` : ''); 
             showLoading(); await this.addAdjustment(fd.get('adj_date'), loc); hideLoading(); 
@@ -836,7 +837,12 @@ window.checkSession = async function() { const { data: { session } } = await db.
 window.initApp = function(user) { 
     currentUserEmail = user.email; currentRole = ROLES[user.email] || 'viewer'; 
     document.getElementById('logged-email').textContent = currentUserEmail; document.getElementById('footer-user').textContent = currentUserEmail;
-    let roleText = currentRole === 'admin' ? 'Kierownik (Admin)' : (currentRole === 'worker' ? 'Pracownik (Worker)' : 'Obserwator (Viewer)');
+    
+    let roleText = 'Obserwator (Viewer)';
+    if (currentRole === 'admin') roleText = 'Kierownik (Admin)';
+    else if (currentRole === 'worker') roleText = 'Pracownik (Worker)';
+    else if (currentRole === 'driver') roleText = 'Kierowca (Driver)';
+    
     document.getElementById('logged-role').textContent = roleText;
     
     document.getElementById('auth-screen').classList.add('hidden'); document.getElementById('app-container').classList.remove('hidden'); document.getElementById('app-container').style.display = 'flex';
@@ -845,11 +851,23 @@ window.initApp = function(user) {
 }
 
 window.applyPermissions = function() {
-    if (currentRole === 'viewer') {
+    if (currentRole === 'viewer' || currentRole === 'driver') {
         ['form-shipment-container', 'form-incoming-imperial-container', 'form-incoming-pxf-container', 'form-components-container', 'form-production-container', 'form-adjustments-container', 'nav-history', 'nav-reports'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
         document.querySelectorAll('.editable').forEach(el => el.classList.remove('editable')); document.querySelectorAll('.admin-only-col').forEach(el => el.style.display = 'none');
     }
     if (currentRole === 'worker') { ['nav-history'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; }); }
+    
+    if (currentRole === 'driver') {
+        ['tab-inventory', 'tab-shipments', 'tab-components', 'tab-reports', 'tab-history'].forEach(tab => {
+            const navLink = document.querySelector(`a[onclick*="${tab}"]`);
+            if (navLink && navLink.parentElement) navLink.parentElement.style.display = 'none';
+        });
+        document.querySelectorAll('.stats-bar').forEach(el => el.style.display = 'none');
+        const predContainer = document.getElementById('prediction-cards-container');
+        if (predContainer) predContainer.closest('.section').style.display = 'none';
+        const recIncoming = document.getElementById('dashboard-recent-incoming');
+        if (recIncoming) recIncoming.closest('.section').style.display = 'none';
+    }
 }
 
 window.logoutUser = async function() { clearTimeout(inactivityTimer); showLoading(); await db.auth.signOut(); window.location.reload(); }
@@ -914,7 +932,7 @@ window.renderShipmentRow = function(s, readinessMap, showActions = true) {
     let brandBadge = s.brand === 'pxf' ? `<strong style="color:#1E3A8A;">PXF</strong>` : `<strong style="color:var(--primary-dark);">IMPERIAL</strong>`;
 
     let actionButtons = '<div class="action-cell-flex">';
-    if (currentRole !== 'viewer' && showActions) {
+    if (currentRole !== 'viewer' && currentRole !== 'driver' && showActions) {
         actionButtons += `<button class="btn-small btn-secondary" onclick="window.openShipmentDetails('${s.id}')" title="Edytuj dane"><span class="material-symbols-outlined" style="margin:0;">edit</span></button>`;
         if (currentRole === 'admin') actionButtons += `<button class="btn-small btn-secondary" onclick="window.deleteShipment('${s.id}')" title="Usuń trwale"><span class="material-symbols-outlined" style="color:var(--accent-red); margin:0;">delete</span></button>`;
         if (s.status === 'planned' && !s.is_confirmed) actionButtons = `<button class="btn-small btn-primary" onclick="window.confirmShipmentDateUI('${s.id}')">Zatwierdź</button>` + actionButtons;
@@ -930,7 +948,7 @@ window.renderShipmentRow = function(s, readinessMap, showActions = true) {
         <td data-label="${dateLabel}"><strong>${escapeHTML(s.date || '-')}</strong></td>
         <td data-label="Pula">${brandBadge}</td><td data-label="Cel">${escapeHTML(s.location)}</td><td data-label="Typ">${typeBadge}</td><td data-label="Sztuk"><strong>${total}</strong></td>
         <td data-label="Kąty"><button class="btn-small btn-secondary" onclick="window.showAnglesDemand('${s.id}')" style="margin:0;">Zestawienie</button></td>${s.status !== 'completed' ? `<td data-label="Magazyn">${readinessBadge}</td>` : ''}<td data-label="Status">${statusBadge}</td>
-        ${showActions ? `<td data-label="Akcja" class="${currentRole === 'viewer' ? 'admin-only-col' : ''}">${actionButtons}</td>` : ''}
+        ${showActions ? `<td data-label="Akcja" class="${(currentRole === 'viewer' || currentRole === 'driver') ? 'admin-only-col' : ''}">${actionButtons}</td>` : ''}
     </tr>`;
 }
 
@@ -938,7 +956,7 @@ window.updateInventoryTable = function() {
     const tbImp = document.getElementById('products-imperial-table'); const tbPxf = document.getElementById('products-pxf-table'); const tbSrv = document.getElementById('service-table');
     if(!tbImp || !tbPxf || !tbSrv) return;
     tbImp.innerHTML = ''; tbPxf.innerHTML = ''; tbSrv.innerHTML = ''; 
-    const isViewer = currentRole === 'viewer'; const getP = (id) => window.inventory.products.find(x => String(x.id) === String(id)) || {};
+    const isViewer = currentRole === 'viewer' || currentRole === 'driver'; const getP = (id) => window.inventory.products.find(x => String(x.id) === String(id)) || {};
 
     [{ name: 'IMPERIAL 22°', id15: 1, id20: null, idAssm: 1 }, { name: 'IMPERIAL 37°', id15: 2, id20: 4, idAssm: 2 }, { name: 'IMPERIAL 58°', id15: 3, id20: 5, idAssm: 3 }].forEach(a => {
         const p15 = getP(a.id15); const p20 = a.id20 ? getP(a.id20) : null; const pAssm = getP(a.idAssm);
@@ -1000,14 +1018,14 @@ window.updateComponentsDisplay = function() {
     const els = { 'ps-raw-cell': c.ps_raw, 'clips-normal-cell': c.clips_normal, 'clips-pass-cell': c.clips_pass, 'reflector-22-cell': c.reflector_22, 'reflector-37-cell': c.reflector_37, 'reflector-58-cell': c.reflector_58 };
     for (const [id, val] of Object.entries(els)) { let el = document.getElementById(id); if (el) el.innerHTML = `<strong>${val || 0} szt.</strong>`; }
     ['stat-refl-22', 'stat-refl-37', 'stat-refl-58'].forEach((id, i) => { let el = document.getElementById(id); if (el) el.textContent = c[`reflector_${[22, 37, 58][i]}`] || 0; });
-    if (currentRole !== 'viewer') { document.querySelectorAll('#tab-components .table-responsive td:nth-child(2)').forEach(td => td.classList.add('editable')); }
+    if (currentRole !== 'viewer' && currentRole !== 'driver') { document.querySelectorAll('#tab-components .table-responsive td:nth-child(2)').forEach(td => td.classList.add('editable')); }
 }
 
 window.getStatusClass = function(productId) { const status = window.inventory.getStatus(productId); return status === 'ok' ? 'status-ok' : status === 'warning' ? 'status-warning' : 'status-error'; }
 window.getStatusText = function(productId) { const status = window.inventory.getStatus(productId); return status === 'ok' ? '<span class="material-symbols-outlined">check_circle</span> OK' : status === 'warning' ? '<span class="material-symbols-outlined">warning</span> Mało' : '<span class="material-symbols-outlined">error</span> Brak'; }
 
 window.editCell = function(cell, field, productId) {
-    if (currentRole === 'viewer') return; if (cell.querySelector('input')) return;
+    if (currentRole === 'viewer' || currentRole === 'driver') return; if (cell.querySelector('input')) return;
     const product = window.inventory.products.find(p => String(p.id) === String(productId));
     const input = document.createElement('input'); input.type = 'number'; input.value = product[field] || 0; input.style.width = '100%'; input.style.textAlign = 'inherit';
     const originalHTML = cell.innerHTML; cell.innerHTML = ''; cell.appendChild(input); cell.classList.remove('editable'); input.focus(); input.select();
@@ -1016,7 +1034,7 @@ window.editCell = function(cell, field, productId) {
 }
 
 window.editComponentCell = function(cell, field) {
-    if (currentRole === 'viewer') return; if (cell.querySelector('input')) return;
+    if (currentRole === 'viewer' || currentRole === 'driver') return; if (cell.querySelector('input')) return;
     const currentVal = window.inventory.components[field] || 0;
     const input = document.createElement('input'); input.type = 'number'; input.value = currentVal; input.style.width = '100%'; input.style.textAlign = 'inherit';
     const originalHTML = cell.innerHTML; cell.innerHTML = ''; cell.appendChild(input); cell.classList.remove('editable'); input.focus(); input.select();
@@ -1031,8 +1049,9 @@ window.completeRemainingShipmentUI = async function(id) { if (confirm('Wydano br
 window.deleteShipment = async function(id) { if (currentRole === 'admin' && confirm('Usunąć zamówienie?')) { showLoading(); await window.inventory.deleteShipment(id); hideLoading(); showToast('Usunięto', 'success'); } }
 window.deleteAdjustment = async function(id) { if (currentRole === 'admin' && confirm('Usunąć wpis z regulacji?')) { showLoading(); await window.inventory.deleteAdjustment(id); hideLoading(); showToast('Usunięto', 'success'); } }
 
+// --- EDYCJA ZAMÓWIENIA W OKIENKU (MODAL) ---
 window.openShipmentDetails = function(id) {
-    if (currentRole === 'viewer') return;
+    if (currentRole === 'viewer' || currentRole === 'driver') return;
     const shipment = window.inventory.shipments.find(s => String(s.id) === String(id)); if (!shipment) return;
     const p = shipment.products || {}; const isPartial = shipment.status === 'partial'; const disableProducts = isPartial ? 'disabled' : '';
     const b = shipment.brand || 'imperial';
