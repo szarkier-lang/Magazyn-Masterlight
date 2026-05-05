@@ -9,6 +9,17 @@ window.addEventListener('unhandledrejection', function(event) {
     console.error(`BŁĄD BAZY/PROMISE: ${event.reason}`);
 });
 
+// --- STYLE DLA ZNACZNIKÓW MAPY (Wstrzykiwane automatycznie) ---
+const mapStyle = document.createElement('style');
+mapStyle.innerHTML = `
+    .custom-map-marker { color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.5); font-family: sans-serif; text-shadow: 0px 0px 2px rgba(0,0,0,0.8); }
+    .marker-home { background-color: #1E3A8A; z-index: 1000 !important; }
+    .marker-planned { background-color: #F59E0B; }
+    .marker-confirmed { background-color: #10B981; }
+    .marker-adjustment { background-color: #8B5CF6; }
+`;
+document.head.appendChild(mapStyle);
+
 // --- KONFIGURACJA SUPABASE ---
 const supabaseUrl = 'https://ghdswvjhqpxupzcrixlu.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdoZHN3dmpocXB4dXB6Y3JpeGx1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4NTEwMDAsImV4cCI6MjA4NzQyNzAwMH0._sk7mCv27tC153DTvqp_7O3CUyYsk3iuYuf0f93GCfo';
@@ -21,7 +32,7 @@ const ROLES = {
     'f.robert@interia.pl': 'viewer',         
     'd.lewandowska@masterlight.pl': 'worker',
     'm.czyzewska@masterlight.pl': 'worker',
-    'pk303@masterlight.pl': 'driver' // <--- TUTAJ WPISZ MAILA KIEROWCY
+    'pk303@masterlight.pl': 'driver'
 };
 
 // --- ZMIENNE GLOBALNE ---
@@ -61,43 +72,92 @@ window.initAdjMap = function() {
 }
 
 window.geocodeLocation = async function(locationStr) {
-    let searchStr = locationStr.split('(')[0].trim(); if (geocodeCache[searchStr]) return geocodeCache[searchStr];
-    try { let res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchStr)}&countrycodes=pl&limit=1`); let data = await res.json(); if (data && data.length > 0) { geocodeCache[searchStr] = [data[0].lat, data[0].lon]; return geocodeCache[searchStr]; } } catch (e) { } geocodeCache[searchStr] = null; return null;
+    // Czyszczenie nazwy dla map (usuwanie "Sklep nr X" itp.)
+    let searchStr = locationStr.split('(')[0].replace(/Sklep nr \d+/gi, '').trim(); 
+    if (geocodeCache[searchStr]) return geocodeCache[searchStr];
+    try { 
+        let res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchStr)}&countrycodes=pl&limit=1`); 
+        let data = await res.json(); 
+        if (data && data.length > 0) { 
+            geocodeCache[searchStr] = [data[0].lat, data[0].lon]; 
+            return geocodeCache[searchStr]; 
+        } 
+    } catch (e) { console.error("Geocoding API error:", e); } 
+    geocodeCache[searchStr] = null; 
+    return null;
 }
 
 window.updateMapMarkers = async function(shipments, adjustments) {
     if (isUpdatingMap || !window.inventory) return; isUpdatingMap = true;
     try {
-        if (!map) window.initMap(); const statusEl = document.getElementById('map-status'); if(statusEl) statusEl.innerHTML = '<span class="material-symbols-outlined" style="font-size:1em; animation: spin 1s linear infinite;">autorenew</span> Rysowanie tras...';
+        if (!map) window.initMap(); 
+        const statusEl = document.getElementById('map-status'); 
+        if(statusEl) statusEl.innerHTML = '<span class="material-symbols-outlined" style="font-size:1em; animation: spin 1s linear infinite;">autorenew</span> Wyszukiwanie adresów... (to może potrwać)';
+        
         mapMarkers.forEach(m => map.removeLayer(m)); mapMarkers = [];
         const homeMarker = L.marker([51.7592, 19.4560], {icon: L.divIcon({html: `<div class="custom-map-marker marker-home" style="width:28px; height:28px;"><span class="material-symbols-outlined" style="font-size:16px;">home</span></div>`, className: '', iconSize: [28,28], iconAnchor: [14,14]})}).addTo(map).bindPopup('<b>Baza Masterlight</b>');
-        const allPoints = [homeMarker]; let tasks = [];
+        const allPoints = [homeMarker]; 
+        let tasks = [];
+        
         (shipments || []).filter(s => s.status !== 'completed').forEach(s => { tasks.push({ ...s, type: 'Wysyłka' }); });
         (adjustments || []).forEach(a => { tasks.push({ ...a, type: 'Regulacja' }); });
-        tasks.sort((a, b) => (a.date || '').localeCompare(b.date || '')); let shipCounter = 1; let adjCounter = 1;
+        tasks.sort((a, b) => (a.date || '').localeCompare(b.date || '')); 
+        
+        let shipCounter = 1; let adjCounter = 1;
+        
         for (let i = 0; i < tasks.length; i++) {
-            const t = tasks[i]; if(!t.location) continue; const coords = await window.geocodeLocation(t.location);
+            const t = tasks[i]; if(!t.location) continue; 
+            const coords = await window.geocodeLocation(t.location);
             if (coords) {
                 let mClass = '', title = '', details = '', displayNum = 0;
-                if (t.type === 'Wysyłka') { displayNum = shipCounter++; const total = t.products ? Object.values(t.products).reduce((a, b) => parseInt(a) + parseInt(b), 0) : 0; mClass = t.is_confirmed ? 'marker-confirmed' : 'marker-planned'; title = 'Wysyłka'; details = `Sztuk: <strong>${total}</strong><br>Spedytor: ${escapeHTML(t.company)}`; } 
-                else { displayNum = adjCounter++; mClass = 'marker-adjustment'; title = 'Regulacja'; details = 'Wyjazd Serwisowy'; }
+                if (t.type === 'Wysyłka') { 
+                    displayNum = shipCounter++; 
+                    const total = t.products ? Object.values(t.products).reduce((a, b) => parseInt(a) + parseInt(b), 0) : 0; 
+                    mClass = t.is_confirmed ? 'marker-confirmed' : 'marker-planned'; 
+                    title = 'Wysyłka'; 
+                    details = `Sztuk: <strong>${total}</strong><br>Spedytor: ${escapeHTML(t.company)}`; 
+                } else { 
+                    displayNum = adjCounter++; 
+                    mClass = 'marker-adjustment'; 
+                    title = 'Regulacja'; 
+                    details = 'Wyjazd Serwisowy'; 
+                }
                 const popupText = `<b>${escapeHTML(t.location)}</b><br><span style="font-size:0.85rem;color:gray;">[#${displayNum}] ${title}</span><br>Termin: ${escapeHTML(t.date)}<br>${details}`;
                 const marker = L.marker(coords, { icon: L.divIcon({html: `<div class="custom-map-marker ${mClass}" style="width:24px; height:24px; font-size:11px;">${displayNum}</div>`, className: '', iconSize: [24,24], iconAnchor: [12,12]})}).addTo(map).bindPopup(popupText);
                 mapMarkers.push(marker); allPoints.push(marker);
-            } await new Promise(r => setTimeout(r, 150));
+            } 
+            // BARDZO WAŻNE: OpenStreetMap ma limit 1 zapytania na sekundę. Inaczej blokuje IP.
+            await new Promise(r => setTimeout(r, 1100)); 
         }
-        if (allPoints.length > 1) { map.fitBounds(new L.featureGroup(allPoints).getBounds(), { padding: [50, 50], maxZoom: 9 }); } else { map.setView([51.7592, 19.4560], 6); }
+        
+        if (allPoints.length > 1) { map.fitBounds(new L.featureGroup(allPoints).getBounds(), { padding: [50, 50], maxZoom: 9 }); } 
+        else { map.setView([51.7592, 19.4560], 6); }
+        
         if(statusEl) statusEl.innerHTML = '<span class="material-symbols-outlined" style="color: var(--success-status);">check_circle</span> Gotowa';
     } catch(e) { console.error(e); } finally { isUpdatingMap = false; }
 }
 
 window.updateAdjMapMarkers = async function(adjustments) {
     try {
-        if (!mapAdj) window.initAdjMap(); mapAdjMarkers.forEach(m => mapAdj.removeLayer(m)); mapAdjMarkers = [];
+        if (!mapAdj) window.initAdjMap(); 
+        const statusEl = document.getElementById('map-adj-status'); 
+        if(statusEl) statusEl.innerHTML = '<span class="material-symbols-outlined" style="font-size:1em; animation: spin 1s linear infinite;">autorenew</span> Rysowanie...';
+
+        mapAdjMarkers.forEach(m => mapAdj.removeLayer(m)); mapAdjMarkers = [];
         const homeMarker = L.marker([51.7592, 19.4560], {icon: L.divIcon({html: `<div class="custom-map-marker marker-home" style="width:28px; height:28px;"><span class="material-symbols-outlined" style="font-size:16px;">home</span></div>`, className: '', iconSize: [28,28], iconAnchor: [14,14]})}).addTo(mapAdj).bindPopup('<b>Baza Masterlight</b>');
         const allPoints = [homeMarker]; let sortedAdjs = [...(adjustments||[])].sort((a,b) => (a.date||'').localeCompare(b.date||''));
-        for (let i = 0; i < sortedAdjs.length; i++) { const coords = await window.geocodeLocation(sortedAdjs[i].location); if (coords) { const marker = L.marker(coords, { icon: L.divIcon({html: `<div class="custom-map-marker marker-adjustment" style="width:24px; height:24px; font-size:11px;">${i+1}</div>`, className: '', iconSize: [24,24], iconAnchor: [12,12]})}).addTo(mapAdj).bindPopup(`<b>${escapeHTML(sortedAdjs[i].location)}</b><br>Serwis: ${escapeHTML(sortedAdjs[i].date)}`); mapAdjMarkers.push(marker); allPoints.push(marker); } await new Promise(r => setTimeout(r, 100)); }
-        if (allPoints.length > 1) mapAdj.fitBounds(new L.featureGroup(allPoints).getBounds(), { padding: [50, 50], maxZoom: 9 });
+        
+        for (let i = 0; i < sortedAdjs.length; i++) { 
+            const coords = await window.geocodeLocation(sortedAdjs[i].location); 
+            if (coords) { 
+                const marker = L.marker(coords, { icon: L.divIcon({html: `<div class="custom-map-marker marker-adjustment" style="width:24px; height:24px; font-size:11px;">${i+1}</div>`, className: '', iconSize: [24,24], iconAnchor: [12,12]})}).addTo(mapAdj).bindPopup(`<b>${escapeHTML(sortedAdjs[i].location)}</b><br>Serwis: ${escapeHTML(sortedAdjs[i].date)}`); 
+                mapAdjMarkers.push(marker); allPoints.push(marker); 
+            } 
+            await new Promise(r => setTimeout(r, 1100)); // Limit 1 zapytanie / sek
+        }
+        
+        if (allPoints.length > 1) { mapAdj.fitBounds(new L.featureGroup(allPoints).getBounds(), { padding: [50, 50], maxZoom: 9 }); }
+        if(statusEl) statusEl.innerHTML = '';
     } catch(e) {}
 }
 
@@ -188,7 +248,7 @@ function resetInactivityTimer() {
     clearTimeout(inactivityTimer);
     if (currentUserEmail) { 
         inactivityTimer = setTimeout(async () => {
-            showToast('Sesja wygasła z powodu braku aktywności (5 min).', 'warning');
+            showToast('Sesja wygasła z powodu braku aktywności.', 'warning');
             await db.auth.signOut();
             window.location.reload();
         }, INACTIVITY_TIME_MS);
@@ -841,7 +901,7 @@ window.initApp = function(user) {
     let roleText = 'Obserwator (Viewer)';
     if (currentRole === 'admin') roleText = 'Kierownik (Admin)';
     else if (currentRole === 'worker') roleText = 'Pracownik (Worker)';
-    else if (currentRole === 'driver') roleText = 'Kierowca (Driver)';
+    else if (currentRole === 'driver') roleText = 'Kierowca (Kierowca)';
     
     document.getElementById('logged-role').textContent = roleText;
     
@@ -857,12 +917,18 @@ window.applyPermissions = function() {
     }
     if (currentRole === 'worker') { ['nav-history'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; }); }
     
+    // Specjalne blokady tylko dla Kierowcy
     if (currentRole === 'driver') {
+        // Blokada całych zakładek
         ['tab-inventory', 'tab-shipments', 'tab-components', 'tab-reports', 'tab-history'].forEach(tab => {
             const navLink = document.querySelector(`a[onclick*="${tab}"]`);
             if (navLink && navLink.parentElement) navLink.parentElement.style.display = 'none';
         });
+        
+        // Ukrywanie statystyk na głównym widoku
         document.querySelectorAll('.stats-bar').forEach(el => el.style.display = 'none');
+        
+        // Ukrywanie niepotrzebnych kontenerów
         const predContainer = document.getElementById('prediction-cards-container');
         if (predContainer) predContainer.closest('.section').style.display = 'none';
         const recIncoming = document.getElementById('dashboard-recent-incoming');
@@ -1199,6 +1265,6 @@ window.scanOfferFromPDF = async function(file) {
         document.getElementById('form-city').value = city; document.getElementById('form-target').value = target; document.getElementById('form-date').value = new Date().toISOString().split('T')[0]; document.getElementById('form-company').value = "Do ustalenia";
         document.getElementById('form-p1').value = p1; document.getElementById('form-p2').value = p2; document.getElementById('form-p3').value = p3; document.getElementById('form-p4').value = p4; document.getElementById('form-p5').value = p5;
         showToast('PDF przeskanowany! Wybierz pulę (Imperial/PXF).', 'success');
-    } catch (error) { displayFatalError('Skanowanie PDF', error); } 
+    } catch (error) { console.error('Skanowanie PDF', error); } 
     finally { btn.innerHTML = originalText; btn.disabled = false; document.getElementById('pdf-input').value = ''; }
 }
