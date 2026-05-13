@@ -21,7 +21,7 @@ const ROLES = {
     'f.robert@interia.pl': 'viewer',         
     'd.lewandowska@masterlight.pl': 'worker',
     'm.czyzewska@masterlight.pl': 'worker',
-    'pk303@masterlight.pl': 'driver' // <--- TUTAJ WPISZ MAILA KIEROWCY
+    'pk303@masterlight.pl': 'driver'
 };
 
 // --- ZMIENNE GLOBALNE ---
@@ -560,26 +560,20 @@ class CloudInventoryManager {
         if (currentRole === 'viewer' || currentRole === 'driver') return; await db.from('components').update({ [f]: v }).eq('id', 1); await this.addHistory('Korekta ręczna komponentów', `Zaktualizowano stan bazy.`); await this.fetchData();
     }
 
+    // --- ZAKTUALIZOWANY KOD PREDYKCYJNY (Tylko PXF) ---
     renderPredictions() {
         const container = document.getElementById('prediction-cards-container');
         if (!container) return;
 
         let readyMap = {};
-        let assemblyMap = { '1': 0, '2': 0, '3': 0, '6': 0, '7': 0, '8': 0 };
+        let assemblyMap = { '6': 0, '7': 0, '8': 0 };
 
         this.products.forEach(p => {
             readyMap[p.id] = parseInt(p.ready) || 0;
-            if (p.id == 1) assemblyMap['1'] = parseInt(p.assembly) || 0;
-            if (p.id == 2) assemblyMap['2'] = parseInt(p.assembly) || 0;
-            if (p.id == 3) assemblyMap['3'] = parseInt(p.assembly) || 0;
             if (p.id == 6) assemblyMap['6'] = parseInt(p.assembly) || 0;
             if (p.id == 7) assemblyMap['7'] = parseInt(p.assembly) || 0;
             if (p.id == 8) assemblyMap['8'] = parseInt(p.assembly) || 0;
         });
-
-        let ps = parseInt(this.components.ps_raw) || 0;
-        let clipsN = parseInt(this.components.clips_normal) || 0;
-        let clipsP = parseInt(this.components.clips_pass) || 0;
 
         const upcoming = this.shipments
             .filter(s => s.status !== 'completed')
@@ -589,10 +583,7 @@ class CloudInventoryManager {
                 return da - db;
             });
 
-        let shortages = { 'ps': null, 'cn': null, 'cp': null };
         let fixtureShortages = {}; 
-
-        const imperialMasterName = { '1': 'Surowe Imperial 22°', '2': 'Surowe Imperial 37°', '3': 'Surowe Imperial 58°' };
 
         for (let s of upcoming) {
             let req = s.status === 'partial' ? s.partial_missing : s.products;
@@ -603,36 +594,21 @@ class CloudInventoryManager {
                 let needed = parseInt(qtyStr) || 0;
                 if (needed <= 0) continue;
 
-                let availableReady = readyMap[pid] || 0;
+                // Sprawdzamy wyłącznie oprawy PXF (ID 6, 7, 8, 9, 10)
+                if (['6','7','8','9','10'].includes(pid)) {
+                    let availableReady = readyMap[pid] || 0;
 
-                if (availableReady >= needed) {
-                    readyMap[pid] -= needed;
-                } else {
-                    let missingReady = needed - availableReady;
-                    readyMap[pid] = 0;
+                    if (availableReady >= needed) {
+                        readyMap[pid] -= needed;
+                    } else {
+                        let missingReady = needed - availableReady;
+                        readyMap[pid] = 0;
 
-                    if (['1','2','3','4','5'].includes(pid)) {
-                        let masterId = imperialAngleMaster[pid];
-                        
-                        ps -= missingReady;
-                        clipsN -= missingReady;
-                        clipsP -= missingReady;
-
-                        if (ps < 0 && !shortages['ps']) shortages['ps'] = s.date;
-                        if (clipsN < 0 && !shortages['cn']) shortages['cn'] = s.date;
-                        if (clipsP < 0 && !shortages['cp']) shortages['cp'] = s.date;
-
-                        assemblyMap[masterId] -= missingReady;
-                        if (assemblyMap[masterId] < 0) {
-                            let name = imperialMasterName[masterId];
-                            if (!fixtureShortages[name]) fixtureShortages[name] = s.date;
-                        }
-                    } else if (['6','7','8','9','10'].includes(pid)) {
                         let masterId = pxfAngleMaster[pid];
                         assemblyMap[masterId] -= missingReady;
                         if (assemblyMap[masterId] < 0) {
                             let pObj = this.products.find(x => String(x.id) === masterId);
-                            let name = pObj ? `Surowe PXF ${pObj.name.split(' ')[1]}` : `PXF ID:${pid}`;
+                            let name = pObj ? `Oprawy PXF ${pObj.name.split(' ')[1]}` : `PXF ID:${pid}`;
                             if (!fixtureShortages[name]) fixtureShortages[name] = s.date;
                         }
                     }
@@ -640,34 +616,30 @@ class CloudInventoryManager {
             }
         }
 
-        const createCard = (title, currentVal, shortageDate, isWarningCard = false) => {
-            const isCritical = shortageDate !== null;
+        const createCard = (title, isCritical, shortageDate) => {
             let dateStr = 'Zapas OK';
             if (isCritical) { let d = new Date(shortageDate); dateStr = isNaN(d.getTime()) ? shortageDate : d.toLocaleDateString('pl-PL'); }
             const statusClass = isCritical ? 'predictive critical' : 'predictive';
             const labelStr = isCritical ? `Brak na: ${dateStr}` : dateStr;
             const icon = isCritical ? 'warning' : 'check_circle';
             
-            let valHtml = currentVal;
-            if (typeof currentVal === 'number') { valHtml = `${currentVal} <span style="font-size:1rem; color:var(--text-secondary);">szt</span>`; }
-
             return `
-                <div class="stat-card ${statusClass}" style="${isWarningCard ? 'background-color: #FEF2F2; border-color: #FECACA;' : ''}">
-                    <h3 style="${isWarningCard ? 'color: #991B1B;' : ''}">${title}</h3>
-                    <div class="value" style="font-size: 1.8rem; ${isWarningCard ? 'color: #991B1B;' : ''}">${valHtml}</div>
+                <div class="stat-card ${statusClass}" style="${isCritical ? 'background-color: #FEF2F2; border-color: #FECACA;' : 'border-left-color: #3B82F6;'}">
+                    <h3 style="${isCritical ? 'color: #991B1B;' : 'color: #1E3A8A;'}">${title}</h3>
+                    <div class="value" style="font-size: 1.5rem; ${isCritical ? 'color: #991B1B;' : 'color: #1E3A8A;'}">${isCritical ? 'BRAKI' : 'DOSTĘPNE'}</div>
                     <span class="prediction-label"><span class="material-symbols-outlined" style="font-size:1.1em; margin-right:4px; vertical-align:-0.2em;">${icon}</span>${labelStr}</span>
                 </div>
             `;
         };
 
         let html = '';
-        html += createCard('Zasilacze LED', this.components.ps_raw || 0, shortages['ps']);
-        html += createCard('Klapki Zwykłe', this.components.clips_normal || 0, shortages['cn']);
 
         if (Object.keys(fixtureShortages).length > 0) {
-            for (const [name, date] of Object.entries(fixtureShortages)) { html += createCard(`BRAKUJE OPRAW`, name, date, true); }
+            for (const [name, date] of Object.entries(fixtureShortages)) { 
+                html += createCard(`ZABRAKNIE: ${name}`, true, date); 
+            }
         } else {
-            html += createCard('Zapas Opraw', 'Dostępne', null);
+            html += createCard('Zapas Opraw PXF', false, null);
         }
 
         container.innerHTML = html;
@@ -698,9 +670,7 @@ class CloudInventoryManager {
             const elService = document.querySelector('[data-stat="service"]'); if(elService) elService.textContent = t.totalService || 0;
             
             const alertsContainer = document.getElementById('dashboard-alerts'); if(alertsContainer) alertsContainer.innerHTML = '';
-            const c = this.components; let lc = [];
-            if(c) { if((parseInt(c.ps_raw)||0)<50) lc.push('Zasilacze'); if((parseInt(c.clips_normal)||0)<50) lc.push('Klapki Zwykłe'); if((parseInt(c.clips_pass)||0)<50) lc.push('Klapki Przelotowe'); }
-            if(lc.length>0 && alertsContainer) { alertsContainer.innerHTML = `<div class="alert-banner critical"><span class="material-symbols-outlined">warning_amber</span><div><strong>Krytyczny stan!</strong> Pilnie domów: ${lc.join(', ')}.</div></div>`; }
+            // Usunięto banery ostrzegające o braku zasilaczy/klapek (teraz skupiamy się tylko na PXF)
 
             try { this.renderPredictions(); } catch(e) { console.error("Predykcja błąd:", e); }
 
@@ -1049,7 +1019,6 @@ window.completeRemainingShipmentUI = async function(id) { if (confirm('Wydano br
 window.deleteShipment = async function(id) { if (currentRole === 'admin' && confirm('Usunąć zamówienie?')) { showLoading(); await window.inventory.deleteShipment(id); hideLoading(); showToast('Usunięto', 'success'); } }
 window.deleteAdjustment = async function(id) { if (currentRole === 'admin' && confirm('Usunąć wpis z regulacji?')) { showLoading(); await window.inventory.deleteAdjustment(id); hideLoading(); showToast('Usunięto', 'success'); } }
 
-// --- EDYCJA ZAMÓWIENIA W OKIENKU (MODAL) ---
 window.openShipmentDetails = function(id) {
     if (currentRole === 'viewer' || currentRole === 'driver') return;
     const shipment = window.inventory.shipments.find(s => String(s.id) === String(id)); if (!shipment) return;
@@ -1199,6 +1168,6 @@ window.scanOfferFromPDF = async function(file) {
         document.getElementById('form-city').value = city; document.getElementById('form-target').value = target; document.getElementById('form-date').value = new Date().toISOString().split('T')[0]; document.getElementById('form-company').value = "Do ustalenia";
         document.getElementById('form-p1').value = p1; document.getElementById('form-p2').value = p2; document.getElementById('form-p3').value = p3; document.getElementById('form-p4').value = p4; document.getElementById('form-p5').value = p5;
         showToast('PDF przeskanowany! Wybierz pulę (Imperial/PXF).', 'success');
-    } catch (error) { displayFatalError('Skanowanie PDF', error); } 
+    } catch (error) { console.error('Skanowanie PDF', error); } 
     finally { btn.innerHTML = originalText; btn.disabled = false; document.getElementById('pdf-input').value = ''; }
 }
