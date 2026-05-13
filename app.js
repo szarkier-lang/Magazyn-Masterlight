@@ -560,7 +560,7 @@ class CloudInventoryManager {
         if (currentRole === 'viewer' || currentRole === 'driver') return; await db.from('components').update({ [f]: v }).eq('id', 1); await this.addHistory('Korekta ręczna komponentów', `Zaktualizowano stan bazy.`); await this.fetchData();
     }
 
-    // --- ZAKTUALIZOWANY KOD PREDYKCYJNY (Tylko PXF) ---
+    // --- ZAKTUALIZOWANA PREDYKCJA TYLKO DLA PXF ---
     renderPredictions() {
         const container = document.getElementById('prediction-cards-container');
         if (!container) return;
@@ -594,7 +594,7 @@ class CloudInventoryManager {
                 let needed = parseInt(qtyStr) || 0;
                 if (needed <= 0) continue;
 
-                // Sprawdzamy wyłącznie oprawy PXF (ID 6, 7, 8, 9, 10)
+                // Uwzględniamy TYLKO PXF (id 6-10)
                 if (['6','7','8','9','10'].includes(pid)) {
                     let availableReady = readyMap[pid] || 0;
 
@@ -606,28 +606,43 @@ class CloudInventoryManager {
 
                         let masterId = pxfAngleMaster[pid];
                         assemblyMap[masterId] -= missingReady;
+                        
                         if (assemblyMap[masterId] < 0) {
                             let pObj = this.products.find(x => String(x.id) === masterId);
-                            let name = pObj ? `Oprawy PXF ${pObj.name.split(' ')[1]}` : `PXF ID:${pid}`;
-                            if (!fixtureShortages[name]) fixtureShortages[name] = s.date;
+                            let name = pObj ? `PXF ${pObj.name.split(' ')[1]}` : `PXF ID:${pid}`;
+                            
+                            if (!fixtureShortages[name]) fixtureShortages[name] = [];
+                            
+                            // Zapisujemy tylko pierwsze wystąpienia, żeby uniknąć spamu
+                            if (!fixtureShortages[name].some(x => x.id === s.id)) {
+                                fixtureShortages[name].push({ 
+                                    id: s.id, 
+                                    date: s.date, 
+                                    location: s.location.split('(')[0].trim() 
+                                });
+                            }
                         }
                     }
                 }
             }
         }
 
-        const createCard = (title, isCritical, shortageDate) => {
-            let dateStr = 'Zapas OK';
-            if (isCritical) { let d = new Date(shortageDate); dateStr = isNaN(d.getTime()) ? shortageDate : d.toLocaleDateString('pl-PL'); }
+        const createCard = (title, isCritical, infoHtml) => {
             const statusClass = isCritical ? 'predictive critical' : 'predictive';
-            const labelStr = isCritical ? `Brak na: ${dateStr}` : dateStr;
+            const labelStr = isCritical ? `<div style="margin-top:2px; font-weight:normal; line-height:1.4; font-size:0.75rem;">${infoHtml}</div>` : 'Zapas OK';
             const icon = isCritical ? 'warning' : 'check_circle';
             
             return `
                 <div class="stat-card ${statusClass}" style="${isCritical ? 'background-color: #FEF2F2; border-color: #FECACA;' : 'border-left-color: #3B82F6;'}">
                     <h3 style="${isCritical ? 'color: #991B1B;' : 'color: #1E3A8A;'}">${title}</h3>
-                    <div class="value" style="font-size: 1.5rem; ${isCritical ? 'color: #991B1B;' : 'color: #1E3A8A;'}">${isCritical ? 'BRAKI' : 'DOSTĘPNE'}</div>
-                    <span class="prediction-label"><span class="material-symbols-outlined" style="font-size:1.1em; margin-right:4px; vertical-align:-0.2em;">${icon}</span>${labelStr}</span>
+                    <div class="value" style="font-size: 1.4rem; ${isCritical ? 'color: #991B1B;' : 'color: #1E3A8A;'}">${isCritical ? 'BRAKI' : 'DOSTĘPNE'}</div>
+                    <span class="prediction-label" style="display:flex; flex-direction:column; align-items:flex-start;">
+                        <div style="display:flex; align-items:center; font-weight:bold;">
+                            <span class="material-symbols-outlined" style="font-size:1.1em; margin-right:4px;">${icon}</span>
+                            ${isCritical ? 'Gdzie zabraknie:' : 'Stan:'}
+                        </div>
+                        ${labelStr}
+                    </span>
                 </div>
             `;
         };
@@ -635,8 +650,20 @@ class CloudInventoryManager {
         let html = '';
 
         if (Object.keys(fixtureShortages).length > 0) {
-            for (const [name, date] of Object.entries(fixtureShortages)) { 
-                html += createCard(`ZABRAKNIE: ${name}`, true, date); 
+            for (const [name, shortagesList] of Object.entries(fixtureShortages)) { 
+                // Pokazujemy max 2 pierwsze sklepy, żeby nie rozciągać karty
+                let displayList = shortagesList.slice(0, 2);
+                let text = displayList.map(sh => {
+                    let d = new Date(sh.date);
+                    let dStr = isNaN(d.getTime()) ? sh.date : `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}`;
+                    return `• ${dStr} - <strong>${escapeHTML(sh.location)}</strong>`;
+                }).join('<br>');
+                
+                if (shortagesList.length > 2) {
+                    text += `<br><span style="color:#991B1B; font-size:0.7rem;">+ ${shortagesList.length - 2} innych wysyłek</span>`;
+                }
+
+                html += createCard(`ZABRAKNIE: ${name}`, true, text); 
             }
         } else {
             html += createCard('Zapas Opraw PXF', false, null);
@@ -670,8 +697,9 @@ class CloudInventoryManager {
             const elService = document.querySelector('[data-stat="service"]'); if(elService) elService.textContent = t.totalService || 0;
             
             const alertsContainer = document.getElementById('dashboard-alerts'); if(alertsContainer) alertsContainer.innerHTML = '';
-            // Usunięto banery ostrzegające o braku zasilaczy/klapek (teraz skupiamy się tylko na PXF)
-
+            
+            // Usunięto powiadomienia o zasilaczach i klapkach
+            
             try { this.renderPredictions(); } catch(e) { console.error("Predykcja błąd:", e); }
 
             let rMap = {};
@@ -1019,6 +1047,7 @@ window.completeRemainingShipmentUI = async function(id) { if (confirm('Wydano br
 window.deleteShipment = async function(id) { if (currentRole === 'admin' && confirm('Usunąć zamówienie?')) { showLoading(); await window.inventory.deleteShipment(id); hideLoading(); showToast('Usunięto', 'success'); } }
 window.deleteAdjustment = async function(id) { if (currentRole === 'admin' && confirm('Usunąć wpis z regulacji?')) { showLoading(); await window.inventory.deleteAdjustment(id); hideLoading(); showToast('Usunięto', 'success'); } }
 
+// --- EDYCJA ZAMÓWIENIA W OKIENKU (MODAL) ---
 window.openShipmentDetails = function(id) {
     if (currentRole === 'viewer' || currentRole === 'driver') return;
     const shipment = window.inventory.shipments.find(s => String(s.id) === String(id)); if (!shipment) return;
